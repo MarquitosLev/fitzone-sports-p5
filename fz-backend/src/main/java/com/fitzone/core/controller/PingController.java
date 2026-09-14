@@ -9,15 +9,14 @@ import java.time.Instant;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/health")
-public class HealthController {
+@RequestMapping("/ping")
+public class PingController {
 
     @GetMapping
-    public ResponseEntity<Map<String, Object>> healthCheck() {
+    public ResponseEntity<Map<String, Object>> ping() {
         return ResponseEntity.ok(Map.of(
-                "status", "UP",
+                "status", "OK",
                 "app", "FitZone API",
-                "timestamp", Instant.now().toString()
-        ));
+                "timestamp", Instant.now().toString()));
     }
 }
