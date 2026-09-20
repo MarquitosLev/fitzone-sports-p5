@@ -57,14 +57,17 @@ npm run dev
 
 ---
 
-## 🛡️ Flujo de Ramas y Trabajo en Equipo
+## 🛡️ Flujo de Ramas y Trabajo en Equipo (Jira GitFlow)
 
-* **Rama de desarrollo:** `develop`
+* **Rama de desarrollo e integración:** `develop`
 * **Rama de producción:** `main`
-* Cada funcionalidad se desarrolla en una rama propia que se desprende de `develop`:
+* **Nomenclatura de ramas:** Se utiliza estrictamente el código del ticket de Jira asignado (ej: `SCRUM-54`, `SCRUM-29`).
+* **Flujo de trabajo:**
   ```bash
   git checkout develop
   git pull origin develop
-  git checkout -b feature/nombre-funcionalidad
+  git checkout -b SCRUM-<NUMERO>
   ```
-* Al finalizar, se abre un **Pull Request (PR)** hacia `develop`.
+* Al finalizar el desarrollo y verificar los tests, se abre un **Pull Request (PR)** hacia `develop`.
+* **Mensajes de Commit:**
+  `feat(scope): [SCRUM-26] descripcion concisa del cambio`
