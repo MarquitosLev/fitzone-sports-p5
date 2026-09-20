@@ -1,4 +1,0 @@
--- Script de inicialización opcional para PostgreSQL Local en Docker
--- Si el proyecto llegara a requerir funciones criptográficas o UUIDs a nivel motor de base de datos, descomentar:
--- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
--- CREATE EXTENSION IF NOT EXISTS "pgcrypto";
