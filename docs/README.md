@@ -1,6 +1,6 @@
 # 📚 Documentación Técnica y Guías del Proyecto FitZone Sports
 
-Esta carpeta contiene la documentación viva, las especificaciones de arquitectura y las directivas de trabajo del proyecto **FitZone Sports (P5 Grupo 2)**.
+Esta carpeta contiene la documentación viva, las especificaciones de arquitectura y las directivas de trabajo del proyecto **FitZone Sports (P5 Grupo 5)**.
 
 ---
 

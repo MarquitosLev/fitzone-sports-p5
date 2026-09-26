@@ -1,6 +1,6 @@
 # GUÍA MAESTRA Y CONTEXTO DE ENTRENAMIENTO PARA IA DE DESARROLLO
 **Proyecto:** FitZone Sports  
-**Cátedra:** Programación V — Grupo 2  
+**Cátedra:** Programación V — Grupo 5  
 **Ubicación:** `Integrador/docs/AI_DEVELOPMENT_GUIDE.md`
 
 > **INSTRUCCIÓN SUPREMA PARA CUALQUIER AGENTE O IA DE DESARROLLO:**  
