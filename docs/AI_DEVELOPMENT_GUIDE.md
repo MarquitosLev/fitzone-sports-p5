@@ -108,9 +108,10 @@ Todo el backend vive en el mismo repositorio (`fz-backend`), organizado en 5 mó
   - `fz_cls_*`: Clases (`fz_cls_clases`, `fz_cls_reservas`, `fz_cls_lista_espera`)
   - `fz_cch_*`: Canchas (`fz_cch_canchas`, `fz_cch_reservas`)
   - `fz_pag_*`: Pagos (`fz_pag_planes`, `fz_pag_membresias`, `fz_pag_transacciones`, `fz_pag_comprobantes`)
-- **Claves Primarias (PK):**
-  - **UUID v4** en todas las tablas transaccionales y operativas (`id_usuario`, `id_reserva_cancha`, etc.).
-  - **INT** únicamente en catálogos estáticos pequeños (`id_plan` en `fz_pag_planes`).
+- **Claves Primarias (PK) y Estrategia de ID:**
+  - **`Long` con autoincremental (`GenerationType.IDENTITY` / `BIGSERIAL`)** para todas las entidades (`id_usuario`, `id_sede`, etc.).
+  - Cada entidad define su propio `@Id` (ej: `idUsuario`, `idSede`), ya que `BaseEntity` es una `@MappedSuperclass` sin `@Id` para otorgar flexibilidad en el nombrado de claves.
+  - **Identificador de Supabase Auth (`auth_id`):** Para la autenticación de Supabase **no** se utiliza el ID de la tabla como UUID. Se utiliza una columna independiente `auth_id UUID UNIQUE` (nullable para `EXTERNO` y obligatoria para `SOCIO`, `RECEPCIONISTA`, `GERENTE`), desacoplando la clave primaria interna del sistema (`Long IDENTITY`) del identificador de cuenta externo de Supabase (`UUID`).
 - **Enums Nativos:** Usar siempre los tipos enum de PostgreSQL (`fz_enum_tipo_usuario`, `fz_enum_estado_membresia`, etc.).
 
 ### B. Backend (Java 21 + Spring Boot 3.4)
@@ -225,8 +226,8 @@ A continuación se detalla cada anotación y dependencia utilizada en el backend
 ### C. Spring Data JPA & Hibernate (Persistencia)
 * **`@Entity`**: Declara que la clase Java representa una entidad persistente mapeada a una tabla de base de datos relacional.
 * **`@Table(name = "...")`**: Especifica el nombre físico exacto de la tabla en PostgreSQL (siguiendo nuestra convención snake_case, ej: `fz_usr_usuarios`, `fz_sedes`).
-* **`@Id`**: Identifica el atributo como la Clave Primaria (PK) de la entidad.
-* **`@GeneratedValue(strategy = GenerationType.UUID)`**: Le indica al proveedor de JPA (Hibernate) que genere automáticamente un identificador único global UUID v4 para la clave primaria al persistir.
+* **`@Id`**: Identifica el atributo como la Clave Primaria (PK) de la entidad (declarado de tipo `Long` en cada entidad concreta).
+* **`@GeneratedValue(strategy = GenerationType.IDENTITY)`**: Le indica al proveedor de JPA (Hibernate) que delegue la generación del identificador autonumérico (`BIGSERIAL` / `Long`) al motor de base de datos relacional.
 * **`@Column(name = "...", nullable = ..., unique = ..., length = ...)`**: Configura las restricciones de la columna en la base de datos:
   - `name`: Nombre físico de la columna en snake_case.
   - `nullable = false`: Aplica restricción NOT NULL.
