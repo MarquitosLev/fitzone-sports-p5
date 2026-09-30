@@ -1,4 +1,4 @@
-package com.fitzone.modulo.usuarios.models;
+package com.fitzone.modulo.gimnasio.models;
 
 import com.fitzone.core.domain.common.BaseEntity;
 import jakarta.persistence.Column;

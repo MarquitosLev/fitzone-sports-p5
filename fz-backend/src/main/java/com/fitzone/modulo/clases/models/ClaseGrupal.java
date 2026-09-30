@@ -1,9 +1,18 @@
 package com.fitzone.modulo.clases.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fitzone.core.domain.common.BaseEntity;
-import jakarta.persistence.AttributeOverride;
+import com.fitzone.modulo.gimnasio.models.Sede;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,11 +21,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
-@Table(name = "fz_cls_clases")
-@AttributeOverride(name = "id", column = @Column(name = "id_clase", nullable = false, updatable = false))
+@Table(name = "fz_cls_clases_grupales")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,8 +31,15 @@ import java.util.UUID;
 @Builder
 public class ClaseGrupal extends BaseEntity {
 
-    @Column(name = "id_sede", nullable = false)
-    private UUID idSede;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_clase", nullable = false)
+    private Long idClase;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_sede", nullable = false, foreignKey = @ForeignKey(name = "fk_cls_clases_sedes"))
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) 
+    private Sede sede;
 
     @Column(name = "nombre_actividad", nullable = false, length = 100)
     private String nombreActividad;
@@ -41,12 +55,4 @@ public class ClaseGrupal extends BaseEntity {
 
     @Column(name = "cupo_disponible", nullable = false)
     private Integer cupoDisponible;
-
-    public UUID getIdClase() {
-        return getId();
-    }
-
-    public void setIdClase(UUID idClase) {
-        setId(idClase);
-    }
 }
