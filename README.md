@@ -1,4 +1,4 @@
-# FitZone Sports (P5 Grupo 2)
+# FitZone Sports (P5 Grupo 5)
 
 Plataforma integral de gestión deportiva y administrativa para cadenas de gimnasios.
 
