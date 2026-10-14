@@ -11,5 +11,5 @@ public interface ComprobanteRepository extends JpaRepository<Comprobante, Long> 
 
     Optional<Comprobante> findByTransaccion_IdTransaccion(Long idTransaccion);
 
-    Optional<Comprobante> findByNumeroComprobante(String numeroComprobante);
+    Optional<Comprobante> findByNumeroFactura(String numeroFactura);
 }
