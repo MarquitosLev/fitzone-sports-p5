@@ -10,7 +10,8 @@ import java.util.Optional;
 @Repository
 public interface CanchaRepository extends JpaRepository<Cancha, Long> {
 
-    Optional<Cancha> findBySede_IdSede(Long idSede);
+    // Una sede tiene varias canchas
+    List<Cancha> findBySede_IdSede(Long idSede);
 
     Optional<Cancha> findByNombre(String nombre);
 

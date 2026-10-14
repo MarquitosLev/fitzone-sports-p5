@@ -12,12 +12,14 @@ import java.util.List;
 @Repository
 public interface MembresiaRepository extends JpaRepository<Membresia, Long> {
 
-    Membresia findByUsuario(Usuario usuario);
+    // Un usuario puede tener varias membresías (renovaciones), por eso devuelven List
+    List<Membresia> findByUsuario(Usuario usuario);
 
-    Membresia findByUsuarioIdUsuario(Long idUsuario);
+    List<Membresia> findByUsuarioIdUsuario(Long idUsuario);
 
     List<Membresia> findByEstado(EstadoMembresia estado);
 
-    List<Membresia> findByBetweenFechas(LocalDate fechaInicio, LocalDate fechaVencimiento);
+    // Membresías cuya fecha de inicio cae dentro del rango [desde, hasta]
+    List<Membresia> findByFechaInicioBetween(LocalDate desde, LocalDate hasta);
 
 }
