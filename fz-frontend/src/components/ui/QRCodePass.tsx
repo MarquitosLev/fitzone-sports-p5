@@ -3,7 +3,21 @@ import { QRCodeSVG } from 'qrcode.react';
 import { ShieldCheck, WifiOff, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Badge } from './Badge';
 
-export function QRCodePass({ user, sede = 'Sede Palermo', isExpired = false }) {
+export interface QRCodeUser {
+  name: string;
+  memberId?: string;
+  plan?: string;
+  validUntil?: string;
+  [key: string]: any;
+}
+
+export interface QRCodePassProps {
+  user: QRCodeUser;
+  sede?: string;
+  isExpired?: boolean;
+}
+
+export function QRCodePass({ user, sede = 'Sede Palermo', isExpired = false }: QRCodePassProps) {
   const [secondsLeft, setSecondsLeft] = useState(42);
   const [qrPayload, setQrPayload] = useState('');
 

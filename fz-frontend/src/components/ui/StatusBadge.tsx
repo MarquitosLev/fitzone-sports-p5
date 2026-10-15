@@ -1,7 +1,10 @@
 import React from 'react';
 
+export type StatusVariant = 'green' | 'red' | 'gold' | 'navy' | 'coral' | 'neutral';
+export type StatusBadgeSize = 'xs' | 'sm' | 'md' | 'lg';
+
 // Status resolution map for backend domain states
-const STATUS_CONFIG_MAP = {
+const STATUS_CONFIG_MAP: Record<string, { variant: StatusVariant; label: string }> = {
   // Success / Active states (FitZone Green)
   ACTIVO: { variant: 'green', label: 'Activo' },
   ACTIVA: { variant: 'green', label: 'Activa' },
@@ -61,17 +64,26 @@ const STATUS_CONFIG_MAP = {
   DESCONOCIDO: { variant: 'neutral', label: 'Desconocido' },
 };
 
+export interface StatusBadgeProps {
+  status?: string | number | null;
+  label?: React.ReactNode;
+  variant?: StatusVariant;
+  size?: StatusBadgeSize;
+  showDot?: boolean;
+  className?: string;
+}
+
 export function StatusBadge({
   status = '',
   label,
-  variant, // Optional manual override: 'green' | 'red' | 'gold' | 'navy' | 'coral' | 'neutral'
-  size = 'sm', // 'xs' | 'sm' | 'md' | 'lg'
+  variant,
+  size = 'sm',
   showDot = false,
   className = '',
-}) {
-  const normalizedStatus = String(status).toUpperCase().trim();
+}: StatusBadgeProps) {
+  const normalizedStatus = String(status || '').toUpperCase().trim();
   const matchedConfig = STATUS_CONFIG_MAP[normalizedStatus] || {
-    variant: 'neutral',
+    variant: 'neutral' as StatusVariant,
     label: status ? String(status).replace(/_/g, ' ') : 'Desconocido',
   };
 
@@ -79,7 +91,7 @@ export function StatusBadge({
   const displayLabel = label !== undefined ? label : matchedConfig.label;
 
   // Visual variants using FitZone Tailwind tokens
-  const variantStyles = {
+  const variantStyles: Record<StatusVariant, { badge: string; dot: string }> = {
     green: {
       badge: 'bg-[#EAF7EE] text-[#2E9E5B] border border-[#2E9E5B]/30',
       dot: 'bg-[#2E9E5B]',
@@ -106,14 +118,14 @@ export function StatusBadge({
     },
   };
 
-  const sizeStyles = {
+  const sizeStyles: Record<StatusBadgeSize, string> = {
     xs: 'px-2 py-0.5 text-[10px] gap-1',
     sm: 'px-2.5 py-0.5 text-xs gap-1.5',
     md: 'px-3 py-1 text-xs gap-1.5',
     lg: 'px-3.5 py-1.5 text-sm gap-2',
   };
 
-  const dotSizeStyles = {
+  const dotSizeStyles: Record<StatusBadgeSize, string> = {
     xs: 'w-1.5 h-1.5',
     sm: 'w-2 h-2',
     md: 'w-2 h-2',

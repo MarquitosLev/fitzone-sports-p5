@@ -1,5 +1,22 @@
 import React from 'react';
 
+export type CardVariant = 'default' | 'glass' | 'flat' | 'navy' | 'highlight';
+
+export interface CardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
+  children?: React.ReactNode;
+  title?: React.ReactNode;
+  subtitle?: React.ReactNode;
+  action?: React.ReactNode;
+  footer?: React.ReactNode;
+  icon?: React.ReactNode | React.ElementType;
+  variant?: CardVariant;
+  interactive?: boolean;
+  hoverable?: boolean; // Alias for interactive
+  padded?: boolean;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
+  className?: string;
+}
+
 export function Card({
   children,
   title,
@@ -7,17 +24,17 @@ export function Card({
   action,
   footer,
   icon: Icon,
-  variant = 'default', // 'default' | 'glass' | 'flat' | 'navy' | 'highlight'
+  variant = 'default',
   interactive = false,
   hoverable = false, // Alias for interactive
   padded = true,
   onClick,
   className = '',
   ...props
-}) {
+}: CardProps) {
   const isInteractive = interactive || hoverable || Boolean(onClick);
 
-  const variantClasses = {
+  const variantClasses: Record<CardVariant, string> = {
     default: 'bg-white border border-slate-100 shadow-card text-slate-800',
     glass: 'glass-panel text-slate-800 shadow-card',
     flat: 'bg-white border border-slate-200/80 shadow-xs text-slate-800',
@@ -30,6 +47,13 @@ export function Card({
     : '';
 
   const isDark = variant === 'navy';
+
+  const renderIcon = (IconInput: React.ReactNode | React.ElementType) => {
+    if (!IconInput) return null;
+    if (React.isValidElement(IconInput)) return IconInput;
+    const Resolved = IconInput as React.ElementType;
+    return <Resolved className="w-5 h-5" />;
+  };
 
   return (
     <div
@@ -58,7 +82,7 @@ export function Card({
                   ${isDark ? 'bg-white/10 text-white' : 'bg-[#1B2A55]/5 text-[#1B2A55]'}
                 `}
               >
-                {React.isValidElement(Icon) ? Icon : <Icon className="w-5 h-5" />}
+                {renderIcon(Icon)}
               </div>
             )}
             <div className="min-w-0">
@@ -109,8 +133,13 @@ export function Card({
   );
 }
 
+export interface CardSectionProps extends React.HTMLAttributes<HTMLDivElement> {
+  children?: React.ReactNode;
+  className?: string;
+}
+
 // Subcomponents for compound pattern
-export function CardHeader({ children, className = '', ...props }) {
+export function CardHeader({ children, className = '', ...props }: CardSectionProps) {
   return (
     <div className={`px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4 ${className}`} {...props}>
       {children}
@@ -118,7 +147,7 @@ export function CardHeader({ children, className = '', ...props }) {
   );
 }
 
-export function CardTitle({ children, className = '', ...props }) {
+export function CardTitle({ children, className = '', ...props }: CardSectionProps) {
   return (
     <h3 className={`text-base sm:text-lg font-black text-[#1B2A55] font-outfit tracking-tight ${className}`} {...props}>
       {children}
@@ -126,7 +155,7 @@ export function CardTitle({ children, className = '', ...props }) {
   );
 }
 
-export function CardDescription({ children, className = '', ...props }) {
+export function CardDescription({ children, className = '', ...props }: CardSectionProps) {
   return (
     <p className={`text-xs text-slate-500 mt-0.5 leading-relaxed ${className}`} {...props}>
       {children}
@@ -134,7 +163,7 @@ export function CardDescription({ children, className = '', ...props }) {
   );
 }
 
-export function CardContent({ children, className = '', ...props }) {
+export function CardContent({ children, className = '', ...props }: CardSectionProps) {
   return (
     <div className={`p-6 ${className}`} {...props}>
       {children}
@@ -142,7 +171,7 @@ export function CardContent({ children, className = '', ...props }) {
   );
 }
 
-export function CardFooter({ children, className = '', ...props }) {
+export function CardFooter({ children, className = '', ...props }: CardSectionProps) {
   return (
     <div className={`px-6 py-4 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between gap-3 ${className}`} {...props}>
       {children}

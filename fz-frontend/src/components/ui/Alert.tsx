@@ -1,8 +1,28 @@
 import React from 'react';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 
+export type AlertType = 'success' | 'error' | 'warning' | 'info';
+
+export interface AlertErrorObject {
+  title?: string;
+  message?: string;
+  errors?: (string | { message?: string } | unknown)[];
+  details?: string | (string | { message?: string } | unknown)[];
+}
+
+export interface AlertProps {
+  type?: AlertType;
+  title?: React.ReactNode;
+  message?: React.ReactNode | AlertErrorObject | (string | unknown)[];
+  error?: AlertErrorObject | string | null;
+  onClose?: () => void;
+  action?: React.ReactNode;
+  children?: React.ReactNode;
+  className?: string;
+}
+
 export function Alert({
-  type = 'info', // 'success' | 'error' | 'warning' | 'info'
+  type = 'info',
   title,
   message,
   error,
@@ -10,7 +30,7 @@ export function Alert({
   action,
   children,
   className = '',
-}) {
+}: AlertProps) {
   const typeConfig = {
     success: {
       icon: CheckCircle2,
@@ -42,12 +62,12 @@ export function Alert({
   const Icon = currentType.icon;
 
   // Parse backend error structure if provided
-  const targetError = error || (type === 'error' && typeof message === 'object' ? message : null);
+  const targetError = (error || (type === 'error' && typeof message === 'object' && !React.isValidElement(message) ? message : null)) as AlertErrorObject | null;
   let resolvedTitle = title;
-  let resolvedMessage = message;
-  let errorList = [];
+  let resolvedMessage = message as React.ReactNode;
+  let errorList: (string | { message?: string } | unknown)[] = [];
 
-  if (targetError && typeof targetError === 'object') {
+  if (targetError && typeof targetError === 'object' && !React.isValidElement(targetError)) {
     if (targetError.title) resolvedTitle = resolvedTitle || targetError.title;
     if (targetError.message) resolvedMessage = targetError.message;
     if (Array.isArray(targetError.errors)) {
@@ -98,7 +118,7 @@ export function Alert({
             <ul className="mt-2 space-y-1 list-disc list-inside text-xs font-semibold text-slate-700">
               {errorList.map((errItem, idx) => (
                 <li key={idx} className="leading-relaxed">
-                  {typeof errItem === 'object' ? errItem.message || JSON.stringify(errItem) : String(errItem)}
+                  {typeof errItem === 'object' && errItem !== null ? (errItem as { message?: string }).message || JSON.stringify(errItem) : String(errItem)}
                 </li>
               ))}
             </ul>

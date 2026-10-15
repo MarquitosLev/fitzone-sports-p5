@@ -1,7 +1,24 @@
 import React from 'react';
 import { AlertTriangle, AlertCircle, HelpCircle } from 'lucide-react';
-import { Modal } from './Modal';
-import { Button } from './Button';
+import { Modal, ModalSize } from './Modal';
+import { Button, ButtonVariant } from './Button';
+
+export type ConfirmDialogVariant = 'danger' | 'warning' | 'primary';
+
+export interface ConfirmDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  children?: React.ReactNode;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: ConfirmDialogVariant;
+  isLoading?: boolean;
+  icon?: React.ReactNode | React.ElementType;
+  size?: ModalSize;
+}
 
 export function ConfirmDialog({
   isOpen,
@@ -12,12 +29,20 @@ export function ConfirmDialog({
   children,
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
-  variant = 'danger', // 'danger' | 'warning' | 'primary'
+  variant = 'danger',
   isLoading = false,
   icon: CustomIcon,
   size = 'md',
-}) {
-  const variantStyles = {
+}: ConfirmDialogProps) {
+  const variantStyles: Record<
+    ConfirmDialogVariant,
+    {
+      icon: React.ReactNode | React.ElementType;
+      iconBg: string;
+      iconColor: string;
+      confirmButtonVariant: ButtonVariant;
+    }
+  > = {
     danger: {
       icon: CustomIcon || AlertCircle,
       iconBg: 'bg-[#FDECEE]',
@@ -41,6 +66,13 @@ export function ConfirmDialog({
   const style = variantStyles[variant] || variantStyles.danger;
   const DialogIcon = style.icon;
 
+  const renderIcon = (IconInput: React.ReactNode | React.ElementType) => {
+    if (!IconInput) return null;
+    if (React.isValidElement(IconInput)) return IconInput;
+    const Resolved = IconInput as React.ElementType;
+    return <Resolved className="w-8 h-8" />;
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -54,7 +86,7 @@ export function ConfirmDialog({
         <div
           className={`w-16 h-16 rounded-2xl ${style.iconBg} ${style.iconColor} flex items-center justify-center mb-4 shadow-sm animate-pulse-subtle`}
         >
-          <DialogIcon className="w-8 h-8" />
+          {renderIcon(DialogIcon)}
         </div>
 
         {/* Title */}

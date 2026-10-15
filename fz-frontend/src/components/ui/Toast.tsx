@@ -1,6 +1,24 @@
 import React from 'react';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+export interface ToastErrorObject {
+  title?: string;
+  message?: string;
+  errors?: (string | { message?: string } | unknown)[];
+  details?: string | (string | { message?: string } | unknown)[];
+}
+
+export interface ToastProps {
+  type?: ToastType;
+  title?: React.ReactNode;
+  message?: React.ReactNode | ToastErrorObject;
+  onClose?: () => void;
+  icon?: React.ReactNode | React.ElementType;
+  className?: string;
+}
+
 export function Toast({
   type = 'info',
   title,
@@ -8,15 +26,15 @@ export function Toast({
   onClose,
   icon: CustomIcon,
   className = '',
-}) {
-  const iconConfig = {
+}: ToastProps) {
+  const iconConfig: Record<ToastType, React.ReactNode> = {
     success: <CheckCircle2 className="w-5 h-5 text-[#2E9E5B] shrink-0 mt-0.5" />,
     error: <AlertCircle className="w-5 h-5 text-[#E5484D] shrink-0 mt-0.5" />,
     warning: <AlertTriangle className="w-5 h-5 text-[#F0B429] shrink-0 mt-0.5" />,
     info: <Info className="w-5 h-5 text-[#1B2A55] shrink-0 mt-0.5" />,
   };
 
-  const borderConfig = {
+  const borderConfig: Record<ToastType, string> = {
     success: 'border-l-4 border-l-[#2E9E5B]',
     error: 'border-l-4 border-l-[#E5484D]',
     warning: 'border-l-4 border-l-[#F0B429]',
@@ -24,14 +42,22 @@ export function Toast({
   };
 
   // Support structured backend error formats
-  let resolvedMessage = message;
-  let errorDetails = [];
+  let resolvedMessage = message as React.ReactNode;
+  let errorDetails: (string | { message?: string } | unknown)[] = [];
 
-  if (message && typeof message === 'object') {
-    if (message.message) resolvedMessage = message.message;
-    if (Array.isArray(message.errors)) errorDetails = message.errors;
-    else if (Array.isArray(message.details)) errorDetails = message.details;
+  if (message && typeof message === 'object' && !React.isValidElement(message)) {
+    const errorObj = message as ToastErrorObject;
+    if (errorObj.message) resolvedMessage = errorObj.message;
+    if (Array.isArray(errorObj.errors)) errorDetails = errorObj.errors;
+    else if (Array.isArray(errorObj.details)) errorDetails = errorObj.details;
   }
+
+  const renderIcon = (IconInput: React.ReactNode | React.ElementType) => {
+    if (!IconInput) return null;
+    if (React.isValidElement(IconInput)) return IconInput;
+    const Resolved = IconInput as React.ElementType;
+    return <Resolved className="w-5 h-5" />;
+  };
 
   return (
     <div
@@ -45,7 +71,7 @@ export function Toast({
     >
       {/* Icon */}
       {CustomIcon ? (
-        <div className="shrink-0 mt-0.5">{React.isValidElement(CustomIcon) ? CustomIcon : <CustomIcon className="w-5 h-5" />}</div>
+        <div className="shrink-0 mt-0.5">{renderIcon(CustomIcon)}</div>
       ) : (
         iconConfig[type] || iconConfig.info
       )}
@@ -69,7 +95,7 @@ export function Toast({
           <ul className="mt-1.5 space-y-0.5 list-disc list-inside text-[11px] text-slate-600 font-semibold">
             {errorDetails.map((detail, idx) => (
               <li key={idx}>
-                {typeof detail === 'object' ? detail.message || JSON.stringify(detail) : String(detail)}
+                {typeof detail === 'object' && detail !== null ? (detail as { message?: string }).message || JSON.stringify(detail) : String(detail)}
               </li>
             ))}
           </ul>

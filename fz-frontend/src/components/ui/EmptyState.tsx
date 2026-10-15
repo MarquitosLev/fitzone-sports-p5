@@ -2,10 +2,23 @@ import React from 'react';
 import { FolderOpen } from 'lucide-react';
 import { Button } from './Button';
 
+export interface EmptyStateProps {
+  icon?: React.ReactNode | React.ElementType;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  actionLabel?: string;
+  onAction?: () => void;
+  actionIcon?: React.ReactNode | React.ElementType;
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
+  className?: string;
+  children?: React.ReactNode;
+}
+
 export function EmptyState({
   icon: Icon = FolderOpen,
   title = 'No hay información para mostrar',
-  description = 'No se encontraron registros disponibles para los criterios seleccionados.',
+  description = 'No se encontraron registros disponibles',
   actionLabel,
   onAction,
   actionIcon,
@@ -13,7 +26,14 @@ export function EmptyState({
   onSecondaryAction,
   className = '',
   children,
-}) {
+}: EmptyStateProps) {
+  const renderIcon = (IconInput: React.ReactNode | React.ElementType) => {
+    if (!IconInput) return null;
+    if (React.isValidElement(IconInput)) return IconInput;
+    const Resolved = IconInput as React.ElementType;
+    return <Resolved className="w-8 h-8 text-[#1B2A55]/70" />;
+  };
+
   return (
     <div
       className={`
@@ -23,11 +43,7 @@ export function EmptyState({
     >
       {/* Icon with soft FitZone Navy/Coral aura */}
       <div className="w-16 h-16 rounded-3xl bg-[#1B2A55]/5 text-[#1B2A55] flex items-center justify-center mb-4 border border-[#1B2A55]/10 shadow-xs">
-        {React.isValidElement(Icon) ? (
-          Icon
-        ) : (
-          <Icon className="w-8 h-8 text-[#1B2A55]/70" />
-        )}
+        {renderIcon(Icon)}
       </div>
 
       {/* Title */}

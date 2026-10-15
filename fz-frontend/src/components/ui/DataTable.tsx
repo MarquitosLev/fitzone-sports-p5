@@ -4,33 +4,66 @@ import { Spinner } from './Spinner';
 import { EmptyState } from './EmptyState';
 import { Button } from './Button';
 
-export function DataTable({
+export interface Column<T = any> {
+  key?: string;
+  header: React.ReactNode;
+  align?: 'left' | 'center' | 'right';
+  width?: string | number;
+  className?: string;
+  cellClassName?: string;
+  render?: (row: T, index: number) => React.ReactNode;
+}
+
+export interface TablePagination {
+  currentPage?: number;
+  totalPages?: number;
+  pageSize?: number;
+  totalItems?: number;
+  onPageChange?: (page: number) => void;
+}
+
+export interface DataTableProps<T = any> {
+  columns: Column<T>[];
+  data?: T[];
+  isLoading?: boolean;
+  loading?: boolean;
+  emptyTitle?: string;
+  emptyMessage?: string;
+  emptyActionLabel?: string;
+  onEmptyAction?: () => void;
+  pagination?: boolean | TablePagination;
+  onRowClick?: (row: T, index: number) => void;
+  keyExtractor?: (row: T, index: number) => string | number;
+  className?: string;
+}
+
+export function DataTable<T extends Record<string, any> = any>({
   columns = [],
   data = [],
   isLoading = false,
-  loading = false, // Alias
+  loading = false,
   emptyTitle = 'Sin datos disponibles',
   emptyMessage = 'No se encontraron registros en esta tabla.',
   emptyActionLabel,
   onEmptyAction,
-  pagination, // boolean or object: { currentPage, totalPages, pageSize, onPageChange, totalItems }
+  pagination,
   onRowClick,
   keyExtractor,
   className = '',
-}) {
+}: DataTableProps<T>) {
   const isTableLoading = isLoading || loading;
   const isDataEmpty = !isTableLoading && (!data || data.length === 0);
 
   // Extract pagination details
   const hasPagination = Boolean(pagination);
-  const currentPage = typeof pagination === 'object' ? pagination.currentPage || 1 : 1;
-  const totalPages = typeof pagination === 'object' ? pagination.totalPages || 1 : 1;
-  const pageSize = typeof pagination === 'object' ? pagination.pageSize : null;
-  const totalItems = typeof pagination === 'object' ? pagination.totalItems : data.length;
-  const onPageChange = typeof pagination === 'object' ? pagination.onPageChange : null;
+  const paginationObj = typeof pagination === 'object' ? pagination : null;
+  const currentPage = paginationObj?.currentPage || 1;
+  const totalPages = paginationObj?.totalPages || 1;
+  const totalItems = paginationObj?.totalItems ?? data.length;
+  const onPageChange = paginationObj?.onPageChange;
 
   // Alignment helper
-  const getAlignClass = (align) => {
+  const getAlignClass = (align?: 'left' | 'center' | 'right') => {
     switch (align) {
       case 'center':
         return 'text-center justify-center';
@@ -114,7 +147,7 @@ export function DataTable({
                 return (
                   <tr
                     key={rowKey}
-                    onClick={() => isClickable && onRowClick(row, rowIdx)}
+                    onClick={() => isClickable && onRowClick?.(row, rowIdx)}
                     className={`
                       transition-colors duration-150
                       hover:bg-slate-50/80

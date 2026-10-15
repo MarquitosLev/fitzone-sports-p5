@@ -1,23 +1,47 @@
 import React from 'react';
 
+export type BadgeVariant =
+  | 'default'
+  | 'navy'
+  | 'navy-soft'
+  | 'coral'
+  | 'coral-soft'
+  | 'green'
+  | 'green-soft'
+  | 'gold'
+  | 'gold-soft'
+  | 'red'
+  | 'red-soft'
+  | 'dark';
+
+export type BadgeSize = 'xs' | 'sm' | 'md' | 'lg';
+
+export interface BadgeProps {
+  children?: React.ReactNode;
+  variant?: BadgeVariant;
+  size?: BadgeSize;
+  showDot?: boolean;
+  className?: string;
+}
+
 export function Badge({
   children,
   variant = 'default',
   size = 'md',
   showDot = false,
   className = '',
-}) {
+}: BadgeProps) {
   const baseClasses =
     'inline-flex items-center font-bold tracking-wide uppercase rounded-full select-none transition-colors';
 
-  const sizeClasses = {
+  const sizeClasses: Record<BadgeSize, string> = {
     xs: 'px-2 py-0.5 text-[10px] gap-1',
     sm: 'px-2.5 py-0.5 text-xs gap-1.5',
     md: 'px-3 py-1 text-xs gap-1.5',
     lg: 'px-3.5 py-1.5 text-sm gap-2',
   };
 
-  const variantClasses = {
+  const variantClasses: Record<BadgeVariant, string> = {
     default: 'bg-slate-100 text-slate-700 border border-slate-200',
     navy: 'bg-[#1B2A55] text-white',
     'navy-soft': 'bg-[#1B2A55]/10 text-[#1B2A55] border border-[#1B2A55]/20',
@@ -32,7 +56,7 @@ export function Badge({
     dark: 'bg-slate-900 text-white',
   };
 
-  const dotColorClasses = {
+  const dotColorClasses: Record<BadgeVariant, string> = {
     default: 'bg-slate-400',
     navy: 'bg-white',
     'navy-soft': 'bg-[#1B2A55]',

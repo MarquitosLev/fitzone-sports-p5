@@ -1,7 +1,5 @@
-import { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import confetti from 'canvas-confetti';
-
-const AppContext = createContext();
 
 export const ROLES = {
   SOCIO_ACTIVO: 'SOCIO_ACTIVO',
@@ -9,7 +7,55 @@ export const ROLES = {
   EXTERNO: 'EXTERNO',
   RECEPCION: 'RECEPCION',
   GERENTE_CENTRAL: 'GERENTE_CENTRAL',
-};
+} as const;
+
+export type Role = (typeof ROLES)[keyof typeof ROLES];
+
+export interface ToastItem {
+  id: number;
+  title: string;
+  message: string;
+  type?: 'info' | 'success' | 'warning' | 'error';
+}
+
+export interface AppContextType {
+  currentRole: Role;
+  currentUser: any;
+  currentRoute: string;
+  routeParams: Record<string, any>;
+  selectedSede: string;
+  setSelectedSede: (sede: string) => void;
+  sedes: any[];
+  classes: any[];
+  courts: any[];
+  courtBookings: any[];
+  payments: any[];
+  accessLogs: any[];
+  cashRegister: any;
+  toasts: ToastItem[];
+  isMobileMenuOpen: boolean;
+  setIsMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  switchRole: (newRole: Role) => void;
+  navigate: (route: string, params?: Record<string, any>) => void;
+  addToast: (title: string, message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
+  removeToast: (id: number) => void;
+  triggerConfetti: () => void;
+  reserveClass: (classId: string) => void;
+  toggleWaitlist: (classId: string, preference?: string) => void;
+  startCourtBooking: (court: any, slot: any, dateStr?: string) => void;
+  processPayment: (bookingOrConcept: any, paymentMethod: string, voucherType?: string, cuit?: string) => void;
+  cancelCourtBooking: (bookingId: string) => void;
+  registerCashPayment: (userQuery: string, conceptType: string, conceptDetail: string, amount: number | string) => void;
+  logAccessScan: (name?: string, memberId?: string, forceDenied?: boolean) => any;
+  updateAttendance: (classId: string, studentCode: string, status: string) => void;
+  addCourt: (newCourtData: any) => void;
+  setCourtMaintenance: (courtId: string, reason: string, fromDate: string, toDate: string) => void;
+  cancelClassByAdmin: (classId: string, reason?: string) => void;
+  editClassByAdmin: (classId: string, updatedData: any) => void;
+  addNewClassByAdmin: (newClassData: any) => void;
+}
+
+const AppContext = createContext<AppContextType | null>(null);
 
 const initialUsers = {
   [ROLES.SOCIO_ACTIVO]: {
@@ -512,21 +558,21 @@ const initialAccessLogs = [
   { id: 6, name: 'Pablo Suárez', type: 'Intento Ingreso', time: '09:31', date: '28 Sep 2026', status: 'DENEGADO', reason: 'Ya registrado en otra sede (Sede Belgrano)', memberId: 'FZ-0157', sede: 'Sede Palermo' },
 ];
 
-export function AppProvider({ children }) {
-  const [currentRole, setCurrentRole] = useState(ROLES.SOCIO_ACTIVO);
-  const [currentUser, setCurrentUser] = useState(initialUsers[ROLES.SOCIO_ACTIVO]);
-  const [currentRoute, setCurrentRoute] = useState('home'); // home, classes, class-detail, waitlist, courts, court-confirm, reservations, checkout, voucher, history, profile, sedes, qr, recepcion-dashboard, recepcion-scanner, recepcion-aforo, recepcion-agenda, recepcion-attendance, recepcion-courts, recepcion-cash, gerente-dashboard, login, register
-  const [routeParams, setRouteParams] = useState({});
-  const [selectedSede, setSelectedSede] = useState('Sede Palermo');
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [currentRole, setCurrentRole] = useState<Role>(ROLES.SOCIO_ACTIVO);
+  const [currentUser, setCurrentUser] = useState<any>(initialUsers[ROLES.SOCIO_ACTIVO]);
+  const [currentRoute, setCurrentRoute] = useState<string>('home'); // home, classes, class-detail, waitlist, courts, court-confirm, reservations, checkout, voucher, history, profile, sedes, qr, recepcion-dashboard, recepcion-scanner, recepcion-aforo, recepcion-agenda, recepcion-attendance, recepcion-courts, recepcion-cash, gerente-dashboard, login, register
+  const [routeParams, setRouteParams] = useState<Record<string, any>>({});
+  const [selectedSede, setSelectedSede] = useState<string>('Sede Palermo');
   
   // Data stores
-  const [sedes, setSedes] = useState(initialSedes);
-  const [classes, setClasses] = useState(initialClasses);
-  const [courts, setCourts] = useState(initialCourts);
-  const [courtBookings, setCourtBookings] = useState(initialCourtBookings);
-  const [payments, setPayments] = useState(initialPayments);
-  const [accessLogs, setAccessLogs] = useState(initialAccessLogs);
-  const [cashRegister, setCashRegister] = useState({
+  const [sedes, setSedes] = useState<any[]>(initialSedes);
+  const [classes, setClasses] = useState<any[]>(initialClasses);
+  const [courts, setCourts] = useState<any[]>(initialCourts);
+  const [courtBookings, setCourtBookings] = useState<any[]>(initialCourtBookings);
+  const [payments, setPayments] = useState<any[]>(initialPayments);
+  const [accessLogs, setAccessLogs] = useState<any[]>(initialAccessLogs);
+  const [cashRegister, setCashRegister] = useState<any>({
     status: 'ABIERTA',
     totalCollected: 286400,
     membershipsCollected: 210000,
@@ -539,10 +585,10 @@ export function AppProvider({ children }) {
   });
 
   // UI helpers
-  const [toasts, setToasts] = useState([]);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
-  const addToast = (title, message, type = 'info') => {
+  const addToast = (title: string, message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, title, message, type }]);
     setTimeout(() => {
@@ -550,12 +596,12 @@ export function AppProvider({ children }) {
     }, 4000);
   };
 
-  const removeToast = (id) => {
+  const removeToast = (id: number) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
   // Switch role and update route accordingly (sin toasts de notificación de rol)
-  const switchRole = (newRole) => {
+  const switchRole = (newRole: Role) => {
     setCurrentRole(newRole);
     setCurrentUser(initialUsers[newRole]);
     setIsMobileMenuOpen(false);
@@ -573,7 +619,7 @@ export function AppProvider({ children }) {
     }
   };
 
-  const navigate = (route, params = {}) => {
+  const navigate = (route: string, params: Record<string, any> = {}) => {
     setCurrentRoute(route);
     setRouteParams(params);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -594,7 +640,7 @@ export function AppProvider({ children }) {
   };
 
   // Actions for Socio / Externo
-  const reserveClass = (classId) => {
+  const reserveClass = (classId: string) => {
     setClasses(prev => prev.map(c => {
       if (c.id === classId) {
         const isEnrolled = c.isReservedByCurrentUser;
@@ -604,7 +650,7 @@ export function AppProvider({ children }) {
             ...c,
             enrolledCount: Math.max(0, c.enrolledCount - 1),
             isReservedByCurrentUser: false,
-            enrolledStudents: c.enrolledStudents.filter(s => s.name !== currentUser.name),
+            enrolledStudents: c.enrolledStudents.filter((s: any) => s.name !== currentUser.name),
             status: c.status === 'COMPLETA' ? 'PROGRAMADA' : c.status,
           };
         } else {
@@ -631,7 +677,7 @@ export function AppProvider({ children }) {
     }
   };
 
-  const toggleWaitlist = (classId, preference = 'Push') => {
+  const toggleWaitlist = (classId: string, preference: string = 'Push') => {
     setClasses(prev => prev.map(c => {
       if (c.id === classId) {
         const inList = c.isInWaitlistByCurrentUser;
@@ -639,7 +685,7 @@ export function AppProvider({ children }) {
           return {
             ...c,
             isInWaitlistByCurrentUser: false,
-            waitlist: c.waitlist.filter(w => w.name !== currentUser.name),
+            waitlist: c.waitlist.filter((w: any) => w.name !== currentUser.name),
           };
         } else {
           const nextPos = c.waitlist.length + 1;
@@ -663,7 +709,7 @@ export function AppProvider({ children }) {
   };
 
   // Actions for Booking Court & Checkout Flow
-  const startCourtBooking = (court, slot, dateStr) => {
+  const startCourtBooking = (court: any, slot: any, dateStr?: string) => {
     const isMember = currentRole === ROLES.SOCIO_ACTIVO;
     const base = slot.isPeak ? court.basePrice * 1.2 : court.basePrice;
     const discount = isMember ? -(base * 0.15) : 0;
@@ -694,7 +740,7 @@ export function AppProvider({ children }) {
     navigate('court-confirm', { booking: newBooking });
   };
 
-  const processPayment = (bookingOrConcept, paymentMethod, voucherType = 'Factura B', cuit = '') => {
+  const processPayment = (bookingOrConcept: any, paymentMethod: string, voucherType: string = 'Factura B', cuit: string = '') => {
     const isCourtBooking = !!bookingOrConcept.courtName;
     const amount = isCourtBooking ? bookingOrConcept.totalPrice : (bookingOrConcept.amount || currentUser.monthlyPrice);
     const opId = `FZ-P${Math.floor(10000 + Math.random() * 90000)}`;
@@ -727,7 +773,7 @@ export function AppProvider({ children }) {
       setCourtBookings(prev => prev.map(b => b.id === bookingOrConcept.id ? { ...b, status: 'CONFIRMADA' } : b));
     } else {
       // If it was membership renewal
-      setCurrentUser(prev => ({
+      setCurrentUser((prev: any) => ({
         ...prev,
         membershipStatus: 'ACTIVO',
         validUntil: '15 Nov 2026',
@@ -743,13 +789,13 @@ export function AppProvider({ children }) {
     navigate('voucher', { payment: newPayment });
   };
 
-  const cancelCourtBooking = (bookingId) => {
+  const cancelCourtBooking = (bookingId: string) => {
     setCourtBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'CANCELADA' } : b));
     addToast('Reserva Cancelada', `La reserva ${bookingId} fue cancelada.`, 'info');
   };
 
   // Actions for Receptionist
-  const registerCashPayment = (userQuery, conceptType, conceptDetail, amount) => {
+  const registerCashPayment = (userQuery: string, conceptType: string, conceptDetail: string, amount: number | string) => {
     const opId = `FZ-P${Math.floor(10000 + Math.random() * 90000)}`;
     const ticketNumber = `Ticket 0005-0000${Math.floor(8000 + Math.random() * 1000)}`;
     
@@ -771,7 +817,7 @@ export function AppProvider({ children }) {
     };
 
     setPayments(prev => [newPayment, ...prev]);
-    setCashRegister(prev => ({
+    setCashRegister((prev: any) => ({
       ...prev,
       totalCollected: prev.totalCollected + Number(amount),
       membershipsCollected: conceptType === 'Membresía' ? prev.membershipsCollected + Number(amount) : prev.membershipsCollected,
@@ -784,8 +830,8 @@ export function AppProvider({ children }) {
     addToast('Cobro en Efectivo Registrado', `${ticketNumber} emitido a ${userQuery} por $${Number(amount).toLocaleString('es-AR')}.`, 'success');
   };
 
-  const logAccessScan = (name, memberId, forceDenied = false) => {
-    const isDenied = forceDenied || name.includes('Vencida') || name.includes('Camila') || currentRole === ROLES.SOCIO_VENCIDO;
+  const logAccessScan = (name?: string, memberId?: string, forceDenied: boolean = false) => {
+    const isDenied = forceDenied || (name ? name.includes('Vencida') || name.includes('Camila') : false) || currentRole === ROLES.SOCIO_VENCIDO;
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     
@@ -809,12 +855,12 @@ export function AppProvider({ children }) {
     return newLog;
   };
 
-  const updateAttendance = (classId, studentCode, status) => {
+  const updateAttendance = (classId: string, studentCode: string, status: string) => {
     setClasses(prev => prev.map(c => {
       if (c.id === classId) {
         return {
           ...c,
-          enrolledStudents: c.enrolledStudents.map(s => s.code === studentCode ? { ...s, attendance: status } : s)
+          enrolledStudents: c.enrolledStudents.map((s: any) => s.code === studentCode ? { ...s, attendance: status } : s)
         };
       }
       return c;
@@ -822,7 +868,7 @@ export function AppProvider({ children }) {
     addToast('Asistencia Actualizada', `Estado guardado: ${status}`, 'info');
   };
 
-  const addCourt = (newCourtData) => {
+  const addCourt = (newCourtData: any) => {
     const newCourt = {
       id: `court-${Date.now()}`,
       name: newCourtData.name,
@@ -842,7 +888,7 @@ export function AppProvider({ children }) {
     addToast('Cancha Creada', `${newCourt.name} ha sido dada de alta en ${selectedSede}.`, 'success');
   };
 
-  const setCourtMaintenance = (courtId, reason, fromDate, toDate) => {
+  const setCourtMaintenance = (courtId: string, reason: string, fromDate: string, toDate: string) => {
     setCourts(prev => prev.map(c => {
       if (c.id === courtId) {
         return {
@@ -857,7 +903,7 @@ export function AppProvider({ children }) {
     addToast('Mantenimiento Programado', `Cancha inhabilitada temporalmente con protección de reservas.`, 'warning');
   };
 
-  const cancelClassByAdmin = (classId, reason) => {
+  const cancelClassByAdmin = (classId: string, reason?: string) => {
     setClasses(prev => prev.map(c => {
       if (c.id === classId) {
         return {
@@ -872,7 +918,7 @@ export function AppProvider({ children }) {
     addToast('Clase Cancelada', 'Se notificó a los inscriptos y se liberaron los cupos.', 'warning');
   };
 
-  const editClassByAdmin = (classId, updatedData) => {
+  const editClassByAdmin = (classId: string, updatedData: any) => {
     setClasses(prev => prev.map(c => {
       if (c.id === classId) {
         return {
@@ -886,7 +932,7 @@ export function AppProvider({ children }) {
     addToast('Clase Actualizada', 'Los cambios se guardaron en la agenda.', 'success');
   };
 
-  const addNewClassByAdmin = (newClassData) => {
+  const addNewClassByAdmin = (newClassData: any) => {
     const newClass = {
       id: `cls-${Date.now()}`,
       title: newClassData.title,

@@ -1,7 +1,30 @@
 import React from 'react';
 
-export function StatCard({ title, value, change, changeType = 'positive', subtitle, icon: Icon, badge, color = 'navy' }) {
-  const colorMap = {
+export type StatCardColor = 'navy' | 'coral' | 'green' | 'gold' | 'white';
+export type StatCardChangeType = 'positive' | 'negative' | 'neutral';
+
+export interface StatCardProps {
+  title: React.ReactNode;
+  value: React.ReactNode;
+  change?: React.ReactNode;
+  changeType?: StatCardChangeType;
+  subtitle?: React.ReactNode;
+  icon?: React.ReactNode | React.ElementType;
+  badge?: React.ReactNode;
+  color?: StatCardColor;
+}
+
+export function StatCard({
+  title,
+  value,
+  change,
+  changeType = 'positive',
+  subtitle,
+  icon: Icon,
+  badge,
+  color = 'navy',
+}: StatCardProps) {
+  const colorMap: Record<StatCardColor, string> = {
     navy: 'bg-[#1B2A55] text-white',
     coral: 'bg-[#F26D6D] text-white',
     green: 'bg-[#2E9E5B] text-white',
@@ -10,6 +33,13 @@ export function StatCard({ title, value, change, changeType = 'positive', subtit
   };
 
   const isDark = color === 'navy' || color === 'coral' || color === 'green';
+
+  const renderIcon = (IconInput: React.ReactNode | React.ElementType) => {
+    if (!IconInput) return null;
+    if (React.isValidElement(IconInput)) return IconInput;
+    const Resolved = IconInput as React.ElementType;
+    return <Resolved className="w-5 h-5" />;
+  };
 
   return (
     <div className={`rounded-2xl p-5 shadow-card transition-all hover:shadow-card-hover ${colorMap[color] || colorMap.white}`}>
@@ -27,7 +57,7 @@ export function StatCard({ title, value, change, changeType = 'positive', subtit
         </div>
         {Icon && (
           <div className={`p-3 rounded-xl shrink-0 ${isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-[#1B2A55]'}`}>
-            <Icon className="w-5 h-5" />
+            {renderIcon(Icon)}
           </div>
         )}
       </div>

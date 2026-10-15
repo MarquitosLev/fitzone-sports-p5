@@ -1,13 +1,24 @@
 import React from 'react';
 
+export type SpinnerSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+export type SpinnerColor = 'navy' | 'coral' | 'green' | 'gold' | 'red' | 'white' | 'current';
+
+export interface SpinnerProps {
+  size?: SpinnerSize;
+  color?: SpinnerColor;
+  label?: string;
+  inline?: boolean;
+  className?: string;
+}
+
 export function Spinner({ 
   size = 'md', 
   color = 'navy', 
   label, 
-  inline = false,
+  inline = false, 
   className = '' 
-}) {
-  const sizeMap = {
+}: SpinnerProps) {
+  const sizeMap: Record<SpinnerSize, string> = {
     xs: 'w-3.5 h-3.5 border-2',
     sm: 'w-4 h-4 border-2',
     md: 'w-6 h-6 border-[2.5px]',
@@ -15,7 +26,7 @@ export function Spinner({
     xl: 'w-12 h-12 border-4',
   };
 
-  const colorMap = {
+  const colorMap: Record<SpinnerColor, string> = {
     navy: 'border-[#1B2A55]/20 border-t-[#1B2A55]',
     coral: 'border-[#F26D6D]/25 border-t-[#F26D6D]',
     green: 'border-[#2E9E5B]/25 border-t-[#2E9E5B]',

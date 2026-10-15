@@ -1,6 +1,23 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
+export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
+
+export interface ModalProps {
+  isOpen: boolean;
+  onClose?: () => void;
+  title?: React.ReactNode;
+  subtitle?: React.ReactNode;
+  children?: React.ReactNode;
+  footer?: React.ReactNode;
+  icon?: React.ReactNode | React.ElementType;
+  size?: ModalSize;
+  maxWidth?: string;
+  closeOnBackdrop?: boolean;
+  closeOnEsc?: boolean;
+  className?: string;
+}
+
 export function Modal({
   isOpen,
   onClose,
@@ -10,13 +27,13 @@ export function Modal({
   footer,
   icon: Icon,
   size = 'md',
-  maxWidth, // Backward compatibility: if passed (e.g. 'max-w-lg'), it takes priority over size
+  maxWidth,
   closeOnBackdrop = true,
   closeOnEsc = true,
   className = '',
-}) {
+}: ModalProps) {
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (closeOnEsc && e.key === 'Escape' && isOpen) {
         onClose?.();
       }
@@ -35,7 +52,7 @@ export function Modal({
 
   if (!isOpen) return null;
 
-  const sizeClasses = {
+  const sizeClasses: Record<ModalSize, string> = {
     sm: 'max-w-sm',
     md: 'max-w-md',
     lg: 'max-w-lg',
@@ -46,6 +63,13 @@ export function Modal({
   };
 
   const resolvedWidth = maxWidth || sizeClasses[size] || sizeClasses.md;
+
+  const renderIcon = (IconInput: React.ReactNode | React.ElementType) => {
+    if (!IconInput) return null;
+    if (React.isValidElement(IconInput)) return IconInput;
+    const Resolved = IconInput as React.ElementType;
+    return <Resolved className="w-5 h-5" />;
+  };
 
   return (
     <div
@@ -76,7 +100,7 @@ export function Modal({
             <div className="flex items-center gap-3 min-w-0 pr-3">
               {Icon && (
                 <div className="w-10 h-10 rounded-2xl bg-[#1B2A55]/10 text-[#1B2A55] flex items-center justify-center shrink-0">
-                  {React.isValidElement(Icon) ? Icon : <Icon className="w-5 h-5" />}
+                  {renderIcon(Icon)}
                 </div>
               )}
               <div className="min-w-0">

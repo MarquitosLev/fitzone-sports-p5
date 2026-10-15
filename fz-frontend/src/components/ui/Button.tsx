@@ -1,6 +1,25 @@
 import React from 'react';
 import { Spinner } from './Spinner';
 
+export type ButtonVariant = 'primary' | 'coral' | 'secondary' | 'danger' | 'success' | 'outline' | 'ghost';
+export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
+
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  children?: React.ReactNode;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  isLoading?: boolean;
+  loading?: boolean;
+  loadingText?: React.ReactNode;
+  disabled?: boolean;
+  leftIcon?: React.ReactNode | React.ElementType;
+  rightIcon?: React.ReactNode | React.ElementType;
+  icon?: React.ReactNode | React.ElementType;
+  fullWidth?: boolean;
+  className?: string;
+  type?: 'button' | 'submit' | 'reset';
+}
+
 export function Button({
   children,
   variant = 'primary',
@@ -16,7 +35,7 @@ export function Button({
   className = '',
   type = 'button',
   ...props
-}) {
+}: ButtonProps) {
   const isButtonLoading = isLoading || loading;
   const isButtonDisabled = disabled || isButtonLoading;
 
@@ -28,7 +47,7 @@ export function Button({
     'relative inline-flex items-center justify-center font-bold font-manrope rounded-xl transition-all duration-200 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:active:scale-100 cursor-pointer disabled:cursor-not-allowed';
 
   // Variants mapped to FitZone theme tokens
-  const variantClasses = {
+  const variantClasses: Record<ButtonVariant, string> = {
     // Primary: FitZone Navy
     primary:
       'bg-[#1B2A55] text-white hover:bg-[#263B72] focus-visible:ring-[#1B2A55] shadow-sm hover:shadow-md disabled:bg-[#1B2A55]/50 disabled:text-white/70',
@@ -53,7 +72,7 @@ export function Button({
   };
 
   // Size specifications
-  const sizeClasses = {
+  const sizeClasses: Record<ButtonSize, string> = {
     xs: 'px-2.5 py-1 text-xs gap-1.5 min-h-[28px]',
     sm: 'px-3.5 py-1.5 text-xs gap-1.5 min-h-[34px]',
     md: 'px-4 py-2.5 text-sm gap-2 min-h-[42px]',
@@ -61,7 +80,7 @@ export function Button({
   };
 
   // Icon sizing based on button size
-  const iconSizeMap = {
+  const iconSizeMap: Record<ButtonSize, string> = {
     xs: 'w-3 h-3',
     sm: 'w-3.5 h-3.5',
     md: 'w-4 h-4',
@@ -69,7 +88,7 @@ export function Button({
   };
 
   // Spinner color resolution based on variant
-  const getSpinnerColor = () => {
+  const getSpinnerColor = (): 'navy' | 'white' => {
     if (variant === 'secondary' || variant === 'outline' || variant === 'ghost') {
       return 'navy';
     }
@@ -77,12 +96,12 @@ export function Button({
   };
 
   // Render icon helper
-  const renderIcon = (IconComponent) => {
+  const renderIcon = (IconComponent: React.ReactNode | React.ElementType) => {
     if (!IconComponent) return null;
     if (React.isValidElement(IconComponent)) {
       return IconComponent;
     }
-    const Resolved = IconComponent;
+    const Resolved = IconComponent as React.ElementType;
     return <Resolved className={`${iconSizeMap[size] || 'w-4 h-4'} shrink-0`} />;
   };
 

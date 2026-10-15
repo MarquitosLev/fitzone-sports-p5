@@ -1,6 +1,32 @@
 import React from 'react';
 import { AlertCircle, ChevronDown } from 'lucide-react';
 
+export interface SelectOption {
+  value: string | number;
+  label: React.ReactNode;
+  disabled?: boolean;
+}
+
+export interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size'> {
+  label?: React.ReactNode;
+  helperText?: React.ReactNode;
+  error?: string | { message?: string } | null;
+  errorMessage?: string | null;
+  required?: boolean;
+  disabled?: boolean;
+  leftIcon?: React.ReactNode | React.ElementType;
+  fullWidth?: boolean;
+  options?: (SelectOption | string | number)[];
+  placeholder?: string;
+  id?: string;
+  name?: string;
+  value?: string | number | readonly string[];
+  onChange?: React.ChangeEventHandler<HTMLSelectElement>;
+  children?: React.ReactNode;
+  className?: string;
+  selectClassName?: string;
+}
+
 export function Select({
   label,
   helperText,
@@ -20,10 +46,17 @@ export function Select({
   className = '',
   selectClassName = '',
   ...props
-}) {
+}: SelectProps) {
   const selectId = id || name || `select-${Math.random().toString(36).substring(2, 9)}`;
   const resolvedError = errorMessage || (typeof error === 'string' ? error : (error && error.message) ? error.message : null);
   const hasError = Boolean(error || errorMessage);
+
+  const renderLeftIcon = (IconInput: React.ReactNode | React.ElementType) => {
+    if (!IconInput) return null;
+    if (React.isValidElement(IconInput)) return IconInput;
+    const Resolved = IconInput as React.ElementType;
+    return <Resolved className="w-4 h-4" />;
+  };
 
   return (
     <div className={`${fullWidth ? 'w-full' : 'inline-block'} space-y-1.5 ${className}`}>
@@ -54,11 +87,7 @@ export function Select({
         {/* Left Icon */}
         {LeftIcon && (
           <div className="pl-3.5 pr-1 text-slate-400 shrink-0 pointer-events-none">
-            {React.isValidElement(LeftIcon) ? (
-              LeftIcon
-            ) : (
-              <LeftIcon className="w-4 h-4" />
-            )}
+            {renderLeftIcon(LeftIcon)}
           </div>
         )}
 
@@ -89,9 +118,9 @@ export function Select({
           {children
             ? children
             : options.map((opt, idx) => {
-                const optValue = typeof opt === 'object' ? opt.value : opt;
-                const optLabel = typeof opt === 'object' ? opt.label : opt;
-                const optDisabled = typeof opt === 'object' ? opt.disabled : false;
+                const optValue = typeof opt === 'object' && opt !== null ? (opt as SelectOption).value : opt;
+                const optLabel = typeof opt === 'object' && opt !== null ? (opt as SelectOption).label : opt;
+                const optDisabled = typeof opt === 'object' && opt !== null ? (opt as SelectOption).disabled : false;
 
                 return (
                   <option

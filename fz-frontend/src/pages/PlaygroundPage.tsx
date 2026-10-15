@@ -14,6 +14,7 @@ import {
   Toast,
   Spinner,
   EmptyState,
+  Column,
 } from '../components/ui';
 import { useApp } from '../context/AppContext';
 import {
@@ -113,12 +114,12 @@ export function PlaygroundPage() {
   ];
 
   // Table columns definition
-  const tableColumns = [
+  const tableColumns: Column<any>[] = [
     {
       key: 'id',
       header: 'Código',
       width: '120px',
-      render: (row) => (
+      render: (row: any) => (
         <span className="font-mono font-bold text-xs text-[#1B2A55] bg-slate-100 px-2 py-0.5 rounded-md">
           {row.id}
         </span>
@@ -127,7 +128,7 @@ export function PlaygroundPage() {
     {
       key: 'user',
       header: 'Usuario / Socio',
-      render: (row) => (
+      render: (row: any) => (
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-[#1B2A55] text-white flex items-center justify-center font-bold text-xs shrink-0">
             {row.user.substring(0, 2).toUpperCase()}
@@ -139,29 +140,29 @@ export function PlaygroundPage() {
     {
       key: 'sport',
       header: 'Actividad / Cancha',
-      render: (row) => <span className="text-slate-600 font-semibold">{row.sport}</span>,
+      render: (row: any) => <span className="text-slate-600 font-semibold">{row.sport}</span>,
     },
     {
       key: 'date',
       header: 'Horario',
-      render: (row) => <span className="text-slate-500 text-xs">{row.date}</span>,
+      render: (row: any) => <span className="text-slate-500 text-xs">{row.date}</span>,
     },
     {
       key: 'amount',
       header: 'Arancel',
-      render: (row) => <span className="font-black text-[#1B2A55]">{row.amount}</span>,
+      render: (row: any) => <span className="font-black text-[#1B2A55]">{row.amount}</span>,
     },
     {
       key: 'status',
       header: 'Estado Backend',
       align: 'center',
-      render: (row) => <StatusBadge status={row.status} showDot={true} size="xs" />,
+      render: (row: any) => <StatusBadge status={row.status} showDot={true} size="xs" />,
     },
     {
       key: 'actions',
       header: 'Acciones',
       align: 'right',
-      render: (row) => (
+      render: (row: any) => (
         <Button
           size="xs"
           variant="secondary"
@@ -199,7 +200,7 @@ export function PlaygroundPage() {
     { id: 'spinners', label: 'Spinners & Empty' },
   ];
 
-  const shouldShow = (tabId) => activeTab === 'all' || activeTab === tabId;
+  const shouldShow = (tabId: string) => activeTab === 'all' || activeTab === tabId;
 
   return (
     <div className="space-y-10 animate-fade-in max-w-6xl mx-auto pb-24">

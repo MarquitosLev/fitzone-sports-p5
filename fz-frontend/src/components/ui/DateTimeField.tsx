@@ -1,36 +1,50 @@
-import React, { useState } from 'react';
-import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import React from 'react';
+import { Calendar, Clock, AlertCircle } from 'lucide-react';
 
-export function TextField({
+export interface DateTimeFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+  label?: React.ReactNode;
+  helperText?: React.ReactNode;
+  error?: string | { message?: string } | null;
+  errorMessage?: string | null;
+  required?: boolean;
+  disabled?: boolean;
+  type?: 'date' | 'time' | 'datetime-local';
+  id?: string;
+  name?: string;
+  value?: string | number | readonly string[];
+  onChange?: React.ChangeEventHandler<HTMLInputElement>;
+  min?: string | number;
+  max?: string | number;
+  fullWidth?: boolean;
+  className?: string;
+  inputClassName?: string;
+}
+
+export function DateTimeField({
   label,
   helperText,
   error,
   errorMessage,
   required = false,
   disabled = false,
-  leftIcon: LeftIcon,
-  rightIcon: RightIcon,
-  fullWidth = true,
-  type = 'text',
+  type = 'date',
   id,
   name,
-  placeholder,
   value,
   onChange,
+  min,
+  max,
+  fullWidth = true,
   className = '',
   inputClassName = '',
-  showPasswordToggle = true,
   ...props
-}) {
-  const [showPassword, setShowPassword] = useState(false);
-  const inputId = id || name || `input-${Math.random().toString(36).substring(2, 9)}`;
-
-  // Determine error text from error prop or errorMessage prop
+}: DateTimeFieldProps) {
+  const inputId = id || name || `dt-${Math.random().toString(36).substring(2, 9)}`;
   const resolvedError = errorMessage || (typeof error === 'string' ? error : (error && error.message) ? error.message : null);
   const hasError = Boolean(error || errorMessage);
 
-  const isPasswordType = type === 'password';
-  const computedType = isPasswordType ? (showPassword ? 'text' : 'password') : type;
+  const isTime = type === 'time';
+  const Icon = isTime ? Clock : Calendar;
 
   return (
     <div className={`${fullWidth ? 'w-full' : 'inline-block'} space-y-1.5 ${className}`}>
@@ -58,58 +72,31 @@ export function TextField({
           ${disabled ? 'bg-slate-100/80 cursor-not-allowed opacity-75' : ''}
         `}
       >
-        {/* Left Icon */}
-        {LeftIcon && (
-          <div className="pl-3.5 pr-1 text-slate-400 shrink-0 pointer-events-none">
-            {React.isValidElement(LeftIcon) ? (
-              LeftIcon
-            ) : (
-              <LeftIcon className="w-4 h-4" />
-            )}
-          </div>
-        )}
+        {/* Left Icon (Calendar or Clock) */}
+        <div className="pl-3.5 pr-1 text-slate-400 shrink-0 pointer-events-none">
+          <Icon className="w-4 h-4 text-[#1B2A55]/70" />
+        </div>
 
         {/* HTML Input */}
         <input
           id={inputId}
           name={name}
-          type={computedType}
+          type={type}
           disabled={disabled}
           required={required}
           value={value}
           onChange={onChange}
-          placeholder={placeholder}
+          min={min}
+          max={max}
           aria-invalid={hasError}
           aria-describedby={hasError ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
           className={`
-            w-full h-11 px-3.5 text-xs sm:text-sm font-medium text-[#1B2A55] placeholder:text-slate-400
-            bg-transparent focus:outline-none disabled:cursor-not-allowed
+            w-full h-11 px-3 text-xs sm:text-sm font-medium text-[#1B2A55] bg-transparent
+            focus:outline-none disabled:cursor-not-allowed cursor-pointer
             ${inputClassName}
           `}
           {...props}
         />
-
-        {/* Right Icon or Password Visibility Toggle */}
-        {isPasswordType && showPasswordToggle ? (
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            disabled={disabled}
-            tabIndex={-1}
-            className="pr-3.5 pl-1 text-slate-400 hover:text-[#1B2A55] transition-colors focus:outline-none cursor-pointer"
-            aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-          >
-            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        ) : RightIcon ? (
-          <div className="pr-3.5 pl-1 text-slate-400 shrink-0 pointer-events-none">
-            {React.isValidElement(RightIcon) ? (
-              RightIcon
-            ) : (
-              <RightIcon className="w-4 h-4" />
-            )}
-          </div>
-        ) : null}
       </div>
 
       {/* Helper Text or Error Message */}
