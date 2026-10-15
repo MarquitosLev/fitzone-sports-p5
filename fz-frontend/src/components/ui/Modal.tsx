@@ -16,7 +16,12 @@ export interface ModalProps {
   closeOnBackdrop?: boolean;
   closeOnEsc?: boolean;
   className?: string;
+  id?: string;
+  initialFocusRef?: React.RefObject<HTMLElement | null>;
 }
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function Modal({
   isOpen,
@@ -31,31 +36,87 @@ export function Modal({
   closeOnBackdrop = true,
   closeOnEsc = true,
   className = '',
+  id,
+  initialFocusRef,
 }: ModalProps) {
-  const titleId = useId();
+  const generatedId = useId();
+  const modalId = id || generatedId;
+  const titleId = `${modalId}-title`;
+  const descriptionId = `${modalId}-description`;
+
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const modalContentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (!isOpen) return;
+
+    // Save previous active element before opening modal
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = 'hidden';
+
+    // Focus on initialFocusRef if provided, or first focusable element, or modal container
+    const focusTimer = setTimeout(() => {
+      if (initialFocusRef?.current) {
+        initialFocusRef.current.focus();
+      } else if (modalContentRef.current) {
+        const focusableElements = modalContentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+        if (focusableElements.length > 0) {
+          focusableElements[0].focus();
+        } else {
+          modalContentRef.current.focus();
+        }
+      }
+    }, 20);
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (closeOnEsc && e.key === 'Escape' && isOpen) {
+      if (closeOnEsc && e.key === 'Escape') {
+        e.stopPropagation();
         onClose?.();
+        return;
+      }
+
+      // Focus Trap implementation
+      if (e.key === 'Tab' && modalContentRef.current) {
+        const focusableElements = Array.from(
+          modalContentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+        ).filter((el) => !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true');
+
+        if (focusableElements.length === 0) {
+          e.preventDefault();
+          modalContentRef.current.focus();
+          return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement || document.activeElement === modalContentRef.current) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
       }
     };
 
-    if (isOpen) {
-      previousFocusRef.current = document.activeElement as HTMLElement | null;
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
+    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      clearTimeout(focusTimer);
       document.body.style.overflow = 'unset';
       window.removeEventListener('keydown', handleKeyDown);
+
+      // Guaranteed focus restoration
       if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
         previousFocusRef.current.focus();
       }
     };
-  }, [isOpen, onClose, closeOnEsc]);
+  }, [isOpen, onClose, closeOnEsc, initialFocusRef]);
 
   if (!isOpen) return null;
 
@@ -83,6 +144,8 @@ export function Modal({
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? titleId : undefined}
+      aria-describedby={subtitle ? descriptionId : undefined}
+      id={modalId}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1B2A55]/60 backdrop-blur-sm animate-fade-in"
     >
       {/* Backdrop */}
@@ -96,9 +159,11 @@ export function Modal({
 
       {/* Modal Dialog Card */}
       <div
+        ref={modalContentRef}
+        tabIndex={-1}
         className={`
           relative bg-white w-full ${resolvedWidth} rounded-3xl shadow-modal border border-slate-100
-          overflow-hidden z-10 animate-slide-up max-h-[90vh] flex flex-col ${className}
+          overflow-hidden z-10 animate-slide-up max-h-[90vh] flex flex-col focus:outline-none ${className}
         `}
       >
         {/* Header */}
@@ -120,7 +185,10 @@ export function Modal({
                   </h3>
                 )}
                 {subtitle && (
-                  <p className="text-xs text-slate-500 mt-0.5 truncate leading-normal">
+                  <p
+                    id={descriptionId}
+                    className="text-xs text-slate-500 mt-0.5 truncate leading-normal"
+                  >
                     {subtitle}
                   </p>
                 )}
