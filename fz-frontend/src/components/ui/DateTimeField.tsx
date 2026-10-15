@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { Calendar, Clock, AlertCircle } from 'lucide-react';
 
 export interface DateTimeFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
@@ -39,7 +39,8 @@ export function DateTimeField({
   inputClassName = '',
   ...props
 }: DateTimeFieldProps) {
-  const inputId = id || name || `dt-${Math.random().toString(36).substring(2, 9)}`;
+  const generatedId = useId();
+  const inputId = id || name || generatedId;
   const resolvedError = errorMessage || (typeof error === 'string' ? error : (error && error.message) ? error.message : null);
   const hasError = Boolean(error || errorMessage);
 

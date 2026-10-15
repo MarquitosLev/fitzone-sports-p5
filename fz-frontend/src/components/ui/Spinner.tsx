@@ -1,4 +1,3 @@
-import React from 'react';
 
 export type SpinnerSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type SpinnerColor = 'navy' | 'coral' | 'green' | 'gold' | 'red' | 'white' | 'current';

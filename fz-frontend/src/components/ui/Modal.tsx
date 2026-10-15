@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
@@ -32,6 +32,9 @@ export function Modal({
   closeOnEsc = true,
   className = '',
 }: ModalProps) {
+  const titleId = useId();
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (closeOnEsc && e.key === 'Escape' && isOpen) {
@@ -40,6 +43,7 @@ export function Modal({
     };
 
     if (isOpen) {
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
     }
@@ -47,6 +51,9 @@ export function Modal({
     return () => {
       document.body.style.overflow = 'unset';
       window.removeEventListener('keydown', handleKeyDown);
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+        previousFocusRef.current.focus();
+      }
     };
   }, [isOpen, onClose, closeOnEsc]);
 
@@ -75,7 +82,7 @@ export function Modal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-title"
+      aria-labelledby={title ? titleId : undefined}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1B2A55]/60 backdrop-blur-sm animate-fade-in"
     >
       {/* Backdrop */}
@@ -106,7 +113,7 @@ export function Modal({
               <div className="min-w-0">
                 {title && (
                   <h3
-                    id="modal-title"
+                    id={titleId}
                     className="text-lg font-black text-[#1B2A55] font-outfit truncate tracking-tight"
                   >
                     {title}

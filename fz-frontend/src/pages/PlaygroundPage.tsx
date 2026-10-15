@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Button,
   TextField,
@@ -9,35 +9,23 @@ import {
   DataTable,
   Card,
   StatusBadge,
-  Badge,
   Alert,
-  Toast,
   Spinner,
   EmptyState,
-  Column,
 } from '../components/ui';
+import type { Column } from '../components/ui';
 import { useApp } from '../context/AppContext';
 import {
-  Sparkles,
-  Layers,
   CheckCircle2,
   AlertTriangle,
   Trash2,
   Calendar,
-  Clock,
-  Search,
   Mail,
   User,
-  ShieldCheck,
   CreditCard,
-  Info,
-  RefreshCw,
-  Plus,
   ArrowRight,
   Filter,
-  Eye,
   Settings,
-  Bell
 } from 'lucide-react';
 
 export function PlaygroundPage() {
@@ -225,12 +213,29 @@ export function PlaygroundPage() {
       {/* 1. BUTTONS SECTION */}
       {shouldShow('buttons') && (
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-black text-[#1B2A55] font-outfit">1. Componente Button</h2>
               <p className="text-xs text-slate-500">
                 Variantes <code className="text-[#1B2A55] font-mono">primary</code>, <code className="text-[#1B2A55] font-mono">coral</code>, <code className="text-[#1B2A55] font-mono">secondary</code>, <code className="text-[#1B2A55] font-mono">danger</code>, <code className="text-[#1B2A55] font-mono">outline</code>, <code className="text-[#1B2A55] font-mono">ghost</code> con soporte de iconos, tamaños y estado de carga.
               </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="xs"
+                variant={simulateLoading ? 'coral' : 'secondary'}
+                onClick={() => setSimulateLoading(!simulateLoading)}
+              >
+                {simulateLoading ? 'Carga: ON' : 'Simular Loading'}
+              </Button>
+              <Button
+                size="xs"
+                variant={simulateDisabled ? 'danger' : 'secondary'}
+                onClick={() => setSimulateDisabled(!simulateDisabled)}
+              >
+                {simulateDisabled ? 'Disabled: ON' : 'Simular Disabled'}
+              </Button>
             </div>
           </div>
 
@@ -350,11 +355,21 @@ export function PlaygroundPage() {
       {/* 2. FORM FIELDS SECTION */}
       {shouldShow('inputs') && (
         <section className="space-y-4">
-          <div>
-            <h2 className="text-xl font-black text-[#1B2A55] font-outfit">2. Inputs & Controles de Formulario</h2>
-            <p className="text-xs text-slate-500">
-              Componentes <code className="text-[#1B2A55] font-mono">TextField</code>, <code className="text-[#1B2A55] font-mono">Select</code> y <code className="text-[#1B2A55] font-mono">DateTimeField</code> con etiquetas, helper text y validación de errores.
-            </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-[#1B2A55] font-outfit">2. Inputs & Controles de Formulario</h2>
+              <p className="text-xs text-slate-500">
+                Componentes <code className="text-[#1B2A55] font-mono">TextField</code>, <code className="text-[#1B2A55] font-mono">Select</code> y <code className="text-[#1B2A55] font-mono">DateTimeField</code> con etiquetas, helper text y validación de errores.
+              </p>
+            </div>
+
+            <Button
+              size="xs"
+              variant={formHasErrors ? 'danger' : 'secondary'}
+              onClick={() => setFormHasErrors(!formHasErrors)}
+            >
+              {formHasErrors ? 'Simulando Errores: ON' : 'Simular Errores'}
+            </Button>
           </div>
 
           <Card>
@@ -447,11 +462,21 @@ export function PlaygroundPage() {
       {/* 3. STATUS BADGES SECTION */}
       {shouldShow('badges') && (
         <section className="space-y-4">
-          <div>
-            <h2 className="text-xl font-black text-[#1B2A55] font-outfit">3. Componente StatusBadge</h2>
-            <p className="text-xs text-slate-500">
-              Mapea automáticamente los estados del backend a las variantes de color del tema de FitZone.
-            </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-[#1B2A55] font-outfit">3. Componente StatusBadge</h2>
+              <p className="text-xs text-slate-500">
+                Mapea automáticamente los estados del backend a las variantes de color del tema de FitZone.
+              </p>
+            </div>
+
+            <Button
+              size="xs"
+              variant={showStatusDots ? 'primary' : 'secondary'}
+              onClick={() => setShowStatusDots(!showStatusDots)}
+            >
+              {showStatusDots ? 'Puntos Indicadores: ON' : 'Puntos: OFF'}
+            </Button>
           </div>
 
           <Card>

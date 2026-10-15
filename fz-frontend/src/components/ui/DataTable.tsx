@@ -1,6 +1,5 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
-import { Spinner } from './Spinner';
 import { EmptyState } from './EmptyState';
 import { Button } from './Button';
 
@@ -106,7 +105,7 @@ export function DataTable<T extends Record<string, any> = any>({
               <>
                 {[1, 2, 3, 4].map((skeletonIdx) => (
                   <tr key={`skeleton-${skeletonIdx}`} className="animate-pulse bg-slate-50/30">
-                    {columns.map((col, cIdx) => (
+                    {columns.map((_col, cIdx) => (
                       <td key={`skel-col-${cIdx}`} className="px-5 py-4">
                         <div
                           className="h-4 bg-slate-200 rounded-lg"

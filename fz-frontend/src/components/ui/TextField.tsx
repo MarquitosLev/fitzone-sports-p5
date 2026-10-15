@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
@@ -44,7 +44,8 @@ export function TextField({
   ...props
 }: TextFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const inputId = id || name || `input-${Math.random().toString(36).substring(2, 9)}`;
+  const generatedId = useId();
+  const inputId = id || name || generatedId;
 
   // Determine error text from error prop or errorMessage prop
   const resolvedError = errorMessage || (typeof error === 'string' ? error : (error && error.message) ? error.message : null);

@@ -1,7 +1,10 @@
-import React from 'react';
+import { isValidElement } from 'react';
+import type { ReactNode, ElementType } from 'react';
 import { AlertTriangle, AlertCircle, HelpCircle } from 'lucide-react';
-import { Modal, ModalSize } from './Modal';
-import { Button, ButtonVariant } from './Button';
+import { Modal } from './Modal';
+import type { ModalSize } from './Modal';
+import { Button } from './Button';
+import type { ButtonVariant } from './Button';
 
 export type ConfirmDialogVariant = 'danger' | 'warning' | 'primary';
 
@@ -66,10 +69,10 @@ export function ConfirmDialog({
   const style = variantStyles[variant] || variantStyles.danger;
   const DialogIcon = style.icon;
 
-  const renderIcon = (IconInput: React.ReactNode | React.ElementType) => {
+  const renderIcon = (IconInput: ReactNode | ElementType) => {
     if (!IconInput) return null;
-    if (React.isValidElement(IconInput)) return IconInput;
-    const Resolved = IconInput as React.ElementType;
+    if (isValidElement(IconInput)) return IconInput;
+    const Resolved = IconInput as ElementType;
     return <Resolved className="w-8 h-8" />;
   };
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { AlertCircle, ChevronDown } from 'lucide-react';
 
 export interface SelectOption {
@@ -47,7 +47,8 @@ export function Select({
   selectClassName = '',
   ...props
 }: SelectProps) {
-  const selectId = id || name || `select-${Math.random().toString(36).substring(2, 9)}`;
+  const generatedId = useId();
+  const selectId = id || name || generatedId;
   const resolvedError = errorMessage || (typeof error === 'string' ? error : (error && error.message) ? error.message : null);
   const hasError = Boolean(error || errorMessage);
 

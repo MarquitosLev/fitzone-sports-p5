@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { ShieldCheck, WifiOff, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Badge } from './Badge';
@@ -15,14 +15,44 @@ export interface QRCodePassProps {
   user: QRCodeUser;
   sede?: string;
   isExpired?: boolean;
+  /**
+   * Token firmado y emitido por el backend (JWT / HMAC).
+   * Si no se provee, el componente genera una simulación visual con fines demostrativos.
+   */
+  token?: string;
+  /**
+   * Timestamp ISO o string de expiración real del token emitido por el servidor.
+   */
+  expiresAt?: string;
 }
 
-export function QRCodePass({ user, sede = 'Sede Palermo', isExpired = false }: QRCodePassProps) {
+/**
+ * QRCodePass
+ *
+ * NOTA DE ARQUITECTURA Y SEGURIDAD:
+ * En un entorno de producción, el pase de acceso DEBE alimentarse con un token criptográficamente
+ * firmado y validado por el backend (`token`). La generación interna con Math.random() que se
+ * incluye por defecto opera exclusivamente como mockup / demostración visual para prototipado.
+ */
+export function QRCodePass({
+  user,
+  sede = 'Sede Palermo',
+  isExpired = false,
+  token: externalToken,
+  expiresAt,
+}: QRCodePassProps) {
   const [secondsLeft, setSecondsLeft] = useState(42);
   const [qrPayload, setQrPayload] = useState('');
 
   useEffect(() => {
-    const generateToken = () => {
+    // Si viene un token firmado del backend, utilizarlo directamente como payload oficial
+    if (externalToken) {
+      setQrPayload(externalToken);
+      return;
+    }
+
+    // Fallback: Generador demostrativo para desarrollo / mockup UI
+    const generateDemoToken = () => {
       const timestamp = Math.floor(Date.now() / 60000);
       return JSON.stringify({
         memberId: user.memberId || 'FZ-18472',
@@ -30,15 +60,16 @@ export function QRCodePass({ user, sede = 'Sede Palermo', isExpired = false }: Q
         sede: sede,
         status: isExpired ? 'VENCIDA' : 'ACTIVO',
         token: `FZ-${timestamp}-${Math.random().toString(36).substring(2, 7)}`,
+        _demoMock: true,
       });
     };
 
-    setQrPayload(generateToken());
+    setQrPayload(generateDemoToken());
 
     const timer = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
-          setQrPayload(generateToken());
+          setQrPayload(generateDemoToken());
           return 60;
         }
         return prev - 1;
@@ -46,7 +77,7 @@ export function QRCodePass({ user, sede = 'Sede Palermo', isExpired = false }: Q
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [user, sede, isExpired]);
+  }, [user, sede, isExpired, externalToken]);
 
   return (
     <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-slate-100 max-w-md mx-auto text-center relative overflow-hidden">
@@ -142,7 +173,7 @@ export function QRCodePass({ user, sede = 'Sede Palermo', isExpired = false }: Q
           <div>
             <span className="text-slate-400 block text-[11px]">Plan</span>
             <span className="font-bold text-[#1B2A55]">
-              {user.plan} · {isExpired ? 'vencida' : `vence ${user.validUntil}`}
+              {user.plan} · {isExpired ? 'vencida' : `vence ${expiresAt || user.validUntil}`}
             </span>
           </div>
         </div>
