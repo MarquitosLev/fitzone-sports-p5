@@ -1,54 +1,30 @@
-import { useEffect, useState } from 'react'
-import './App.css'
-
-interface PingResponse {
-  status: string
-  app: string
-  timestamp: string
-}
+import { AppProvider } from './context/AppContext';
+import { PlaygroundPage } from './pages/PlaygroundPage';
+import { ToastContainer } from './components/ui/ToastContainer';
 
 export default function App() {
-  const [pingData, setPingData] = useState<PingResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState<boolean>(true)
-
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
-
-  useEffect(() => {
-    fetch(`${apiBaseUrl}/ping`)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Error HTTP: ${res.status}`)
-        }
-        return res.json()
-      })
-      .then((data: PingResponse) => {
-        setPingData(data)
-        setLoading(false)
-      })
-      .catch((err: Error) => {
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [apiBaseUrl])
-
   return (
-    <div className="container">
-      <h1>FitZone Sports</h1>
-      <p className="subtitle">Frontend React + Vite desplegado exitosamente</p>
-
-      <div className="card">
-        <h2>Estado de conexión con Backend:</h2>
-        {loading && <p>Comprobando conexión con la API...</p>}
-        {error && <p className="status-error">No se pudo conectar con la API ({error}). Verificá VITE_API_BASE_URL.</p>}
-        {pingData && (
-          <div className="status-success">
-            <p><strong>Estado Backend:</strong> {pingData.status}</p>
-            <p><strong>Aplicación:</strong> {pingData.app}</p>
-            <p><strong>Hora servidor:</strong> {new Date(pingData.timestamp).toLocaleString()}</p>
+    <AppProvider>
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-manrope text-slate-900 selection:bg-[#F26D6D] selection:text-white">
+        <header className="sticky top-0 z-40 bg-[#1B2A55] text-white shadow-md border-b border-white/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#F26D6D] flex items-center justify-center font-outfit font-black text-xl text-white shadow-sm">
+                FZ
+              </div>
+              <div className="font-outfit font-black text-lg tracking-tight leading-none text-white">
+                FitZone Sports
+              </div>
+            </div>
           </div>
-        )}
+        </header>
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <PlaygroundPage />
+        </main>
+
+        <ToastContainer />
       </div>
-    </div>
-  )
+    </AppProvider>
+  );
 }
