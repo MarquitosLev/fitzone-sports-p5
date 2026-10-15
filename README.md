@@ -19,17 +19,21 @@ Integrador/
 ## 🚀 Guía Rápida para Desarrolladores
 
 ### 1. Levantar Base de Datos Local (Docker)
+
 En la raíz del proyecto (`Integrador/`):
+
 ```bash
 docker compose up -d
 ```
-* **Host:** `localhost`
-* **Puerto:** `5432`
-* **Base de datos:** `fitzone_db`
-* **Usuario:** `fitzone_user`
-* **Contraseña:** `fitzone_password`
+
+- **Host:** `localhost`
+- **Puerto:** `5432`
+- **Base de datos:** `fitzone_db`
+- **Usuario:** `fitzone_user`
+- **Contraseña:** `fitzone_password`
 
 Para detener el contenedor:
+
 ```bash
 docker compose down
 ```
@@ -37,37 +41,41 @@ docker compose down
 ---
 
 ### 2. Levantar el Backend (`fz-backend`)
+
 ```bash
 cd fz-backend
 ./mvnw spring-boot:run
 ```
-* El servidor iniciará en: `http://localhost:8080/api`
-* Healthcheck: `http://localhost:8080/api/health`
-* Perfil activo por defecto: `local` (usa PostgreSQL en Docker).
+
+- El servidor iniciará en: `http://localhost:8080/api`
+- Healthcheck: `http://localhost:8080/api/health`
+- Perfil activo por defecto: `local` (usa PostgreSQL en Docker).
 
 ---
 
 ### 3. Levantar el Frontend (`fz-frontend`)
+
 ```bash
 cd fz-frontend
 npm install
 npm run dev
 ```
-* Disponible en: `http://localhost:5173`
+
+- Disponible en: `http://localhost:5173`
 
 ---
 
 ## 🛡️ Flujo de Ramas y Trabajo en Equipo (Jira GitFlow)
 
-* **Rama de desarrollo e integración:** `develop`
-* **Rama de producción:** `main`
-* **Nomenclatura de ramas:** Se utiliza estrictamente el código del ticket de Jira asignado (ej: `SCRUM-54`, `SCRUM-29`).
-* **Flujo de trabajo:**
+- **Rama de desarrollo e integración:** `develop`
+- **Rama de producción:** `main`
+- **Nomenclatura de ramas:** Se utiliza estrictamente el código del ticket de Jira asignado (ej: `SCRUM-54`, `SCRUM-29`).
+- **Flujo de trabajo:**
   ```bash
   git checkout develop
   git pull origin develop
   git checkout -b SCRUM-<NUMERO>
   ```
-* Al finalizar el desarrollo y verificar los tests, se abre un **Pull Request (PR)** hacia `develop`.
-* **Mensajes de Commit:**
+- Al finalizar el desarrollo y verificar los tests, se abre un **Pull Request (PR)** hacia `develop`.
+- **Mensajes de Commit:**
   `feat(scope): [SCRUM-26] descripcion concisa del cambio`
