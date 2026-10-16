@@ -1,8 +1,9 @@
-import { useApp } from '../../context/AppContext';
+// Migrado de AppContext a ToastContext propio (separación de responsabilidades)
+import { useToast } from '../../context/ToastContext';
 import { Toast } from './Toast';
 
 export function ToastContainer() {
-  const { toasts, removeToast } = useApp();
+  const { toasts, removeToast } = useToast();
 
   if (!toasts || toasts.length === 0) return null;
 
