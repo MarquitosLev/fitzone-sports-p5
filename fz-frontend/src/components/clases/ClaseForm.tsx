@@ -11,7 +11,8 @@ import type { ClaseGrupalDTO } from '../../types';
 export type ClaseFormModo = 'alta' | 'edicion';
 
 /** Payload que emite el formulario hacia el padre */
-export interface ClaseFormPayload extends Omit<ClaseGrupalDTO, 'sede'> {
+export interface ClaseFormPayload extends Omit<ClaseGrupalDTO, 'sede' | 'idClase'> {
+  idClase?: number;
   sede?: ClaseGrupalDTO['sede'];
 }
 
@@ -63,6 +64,13 @@ export function ClaseForm({
     }
     if (!fechaHoraInicio) {
       newErrors.fechaHoraInicio = 'La fecha y hora de inicio son obligatorias';
+    } else {
+      const selectedDate = new Date(fechaHoraInicio);
+      if (isNaN(selectedDate.getTime())) {
+        newErrors.fechaHoraInicio = 'Fecha y hora inválidas';
+      } else if (modo === 'alta' && selectedDate.getTime() < Date.now()) {
+        newErrors.fechaHoraInicio = 'No se puede seleccionar una fecha y hora anterior a la actual';
+      }
     }
     const duracion = parseInt(duracionMinutos, 10);
     if (!duracionMinutos || isNaN(duracion) || duracion < 1) {
@@ -85,7 +93,9 @@ export function ClaseForm({
     const duracion = parseInt(duracionMinutos, 10);
 
     const payload: ClaseFormPayload = {
-      idClase: valoresIniciales?.idClase ?? 0,
+      ...(modo === 'edicion' && valoresIniciales?.idClase !== undefined
+        ? { idClase: valoresIniciales.idClase }
+        : {}),
       nombreActividad: nombreActividad.trim(),
       fechaHoraInicio,
       duracionMinutos: duracion,
@@ -140,6 +150,7 @@ export function ClaseForm({
         name="fechaHoraInicio"
         label="Fecha y Hora de Inicio"
         type="datetime-local"
+        min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
         value={fechaHoraInicio}
         onChange={(e) => {
           setFechaHoraInicio(e.target.value);

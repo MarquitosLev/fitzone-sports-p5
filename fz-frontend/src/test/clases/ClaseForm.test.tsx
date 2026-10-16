@@ -50,12 +50,25 @@ describe('ClaseForm Component — Modo Alta', () => {
     render(<ClaseForm modo="alta" onSubmit={handleSubmit} />);
 
     fireEvent.change(screen.getByLabelText(/nombre de actividad/i), { target: { value: 'Yoga' } });
-    fireEvent.change(screen.getByLabelText(/fecha y hora de inicio/i), { target: { value: '2026-10-21T10:00' } });
+    fireEvent.change(screen.getByLabelText(/fecha y hora de inicio/i), { target: { value: '2028-10-21T10:00' } });
     fireEvent.change(screen.getByLabelText(/cupo máximo/i), { target: { value: '0' } });
 
     fireEvent.click(screen.getByRole('button', { name: /programar clase/i }));
 
     expect(await screen.findByText(/el cupo máximo debe ser al menos 1 persona/i)).toBeInTheDocument();
+    expect(handleSubmit).not.toHaveBeenCalled();
+  });
+
+  it('shows error and does NOT call onSubmit when fechaHoraInicio is in the past in modo alta', async () => {
+    const handleSubmit = vi.fn();
+    render(<ClaseForm modo="alta" onSubmit={handleSubmit} />);
+
+    fireEvent.change(screen.getByLabelText(/nombre de actividad/i), { target: { value: 'Spinning' } });
+    fireEvent.change(screen.getByLabelText(/fecha y hora de inicio/i), { target: { value: '2020-01-01T08:00' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /programar clase/i }));
+
+    expect(await screen.findByText(/no se puede seleccionar una fecha y hora anterior a la actual/i)).toBeInTheDocument();
     expect(handleSubmit).not.toHaveBeenCalled();
   });
 
@@ -79,6 +92,8 @@ describe('ClaseForm Component — Modo Alta', () => {
           cupoMaximo: 15,
         })
       );
+      const calledPayload = handleSubmit.mock.calls[0][0];
+      expect(calledPayload.idClase).toBeUndefined();
     });
   });
 

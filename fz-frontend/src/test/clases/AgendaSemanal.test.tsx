@@ -88,7 +88,7 @@ describe('AgendaSemanal Component', () => {
     const handleEdit = vi.fn();
     render(<AgendaSemanal clases={mockClases} onEdit={handleEdit} />);
 
-    fireEvent.click(screen.getByText('Spinning'));
+    fireEvent.click(screen.getByTestId('clase-card-1'));
     expect(handleEdit).toHaveBeenCalledWith(mockClases[0]);
   });
 
@@ -96,14 +96,15 @@ describe('AgendaSemanal Component', () => {
     const handleDelete = vi.fn();
     render(<AgendaSemanal clases={mockClases} onDelete={handleDelete} />);
 
-    const deleteButtons = screen.getAllByRole('button', { name: /eliminar/i });
-    fireEvent.click(deleteButtons[0]);
+    const deleteBtn = screen.getByTestId('btn-eliminar-clase-1');
+    fireEvent.click(deleteBtn);
     expect(handleDelete).toHaveBeenCalledTimes(1);
+    expect(handleDelete).toHaveBeenCalledWith(mockClases[0]);
   });
 
   it('does NOT render Eliminar buttons when onDelete prop is not provided', () => {
     render(<AgendaSemanal clases={mockClases} />);
-    expect(screen.queryByRole('button', { name: /eliminar/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('btn-eliminar-clase-1')).not.toBeInTheDocument();
   });
 
   it('Eliminar button does not trigger onEdit (stopPropagation works)', () => {
@@ -111,12 +112,19 @@ describe('AgendaSemanal Component', () => {
     const handleDelete = vi.fn();
     render(<AgendaSemanal clases={mockClases} onEdit={handleEdit} onDelete={handleDelete} />);
 
-    const deleteButtons = screen.getAllByRole('button', { name: /eliminar/i });
-    fireEvent.click(deleteButtons[0]);
+    const deleteBtn = screen.getByTestId('btn-eliminar-clase-1');
+    fireEvent.click(deleteBtn);
 
     // onDelete called but NOT onEdit (stopPropagation)
     expect(handleDelete).toHaveBeenCalledTimes(1);
     expect(handleEdit).not.toHaveBeenCalled();
+  });
+
+  it('renders class details via data-testid', () => {
+    render(<AgendaSemanal clases={mockClases} />);
+    expect(screen.getByTestId('clase-nombre-1')).toHaveTextContent('Spinning');
+    expect(screen.getByTestId('clase-card-1')).toBeInTheDocument();
+    expect(screen.getByTestId('agenda-columna-lunes')).toBeInTheDocument();
   });
 
   it('renders with empty class list without errors', () => {
