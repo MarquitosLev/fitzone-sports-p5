@@ -20,7 +20,7 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200/80 sticky top-0 z-30 shadow-sm flex items-center shrink-0">
+    <header className="h-16 bg-fitzone-navy border-b border-white/10 sticky top-0 z-30 shadow-md flex items-center shrink-0">
       <div className="w-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
 
         {/* ── Logo + Hamburguesa móvil ───────────────────────────────── */}
@@ -30,18 +30,18 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
               type="button"
               id="mobile-menu-btn"
               onClick={onToggleMobileMenu}
-              className="lg:hidden p-2 -ml-1 rounded-xl text-slate-600 hover:text-fitzone-navy hover:bg-slate-100 transition-colors cursor-pointer"
+              className="lg:hidden p-2 -ml-1 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               aria-label={isMobileMenuOpen ? 'Cerrar navegación' : 'Abrir navegación'}
             >
               {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           )}
 
-          <div className="w-9 h-9 rounded-xl bg-fitzone-navy flex items-center justify-center shadow-md">
-            <span className="font-outfit font-black text-base text-white leading-none">FZ</span>
+          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-md">
+            <span className="font-outfit font-black text-base text-fitzone-navy leading-none">FZ</span>
           </div>
           <div className="flex flex-col leading-none">
-            <span className="font-outfit font-extrabold text-lg tracking-tight text-fitzone-navy">FitZone</span>
+            <span className="font-outfit font-extrabold text-lg tracking-tight text-white">FitZone</span>
             <span className="text-[9px] font-black text-fitzone-coral tracking-[0.2em]">SPORTS</span>
           </div>
         </div>
@@ -57,7 +57,7 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
             type="button"
             id="sede-selector-btn"
             onClick={() => setSedeDropdownOpen((prev) => !prev)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 hover:border-fitzone-navy/30 hover:bg-slate-50 transition-all text-sm font-semibold text-fitzone-navy cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 border border-white/15 hover:bg-white/15 hover:border-white/25 transition-all text-sm font-semibold text-white cursor-pointer"
             aria-haspopup="listbox"
             aria-expanded={sedeDropdownOpen}
           >
@@ -65,7 +65,7 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
             <span className="max-w-[180px] truncate">
               {sedeActiva?.nombre ?? 'Seleccionar sede'}
             </span>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${sedeDropdownOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-white/70 transition-transform ${sedeDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {/* Dropdown de sedes */}
@@ -117,19 +117,19 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
             type="button"
             id="user-menu-btn"
             onClick={() => setProfileDropdownOpen((prev) => !prev)}
-            className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+            className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
             title="Menú de usuario"
             aria-haspopup="menu"
             aria-expanded={profileDropdownOpen}
           >
-            <div className="w-9 h-9 rounded-xl bg-fitzone-navy text-white flex items-center justify-center font-bold text-xs shadow-sm">
-              <User className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-xl bg-white/15 text-white border border-white/20 flex items-center justify-center font-bold text-xs shadow-sm">
+              <User className="w-4 h-4 text-white" />
             </div>
             <div className="hidden sm:flex flex-col text-left">
-              <span className="text-xs font-extrabold text-fitzone-navy leading-tight">
+              <span className="text-xs font-extrabold text-white leading-tight">
                 Usuario
               </span>
-              <span className="text-[10px] text-slate-400 font-medium">
+              <span className="text-[10px] text-fitzone-gold font-bold">
                 Recepcionista
               </span>
             </div>

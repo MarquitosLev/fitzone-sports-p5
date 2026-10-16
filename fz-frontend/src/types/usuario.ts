@@ -23,3 +23,18 @@ export interface UsuarioDTO {
   tipoUsuario: TipoUsuario;
   idSede: number;
 }
+
+/**
+ * Datos para el formulario de creación o edición de un usuario.
+ */
+export interface UsuarioFormData {
+  dni: string;
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string;
+  fotoUrl?: string | null;
+  tipoUsuario: TipoUsuario;
+  idSede: number;
+}
+
