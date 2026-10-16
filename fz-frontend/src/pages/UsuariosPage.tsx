@@ -153,13 +153,13 @@ export function UsuariosPage() {
               className="w-9 h-9 rounded-xl object-cover border border-slate-100 shrink-0"
             />
           ) : (
-            <div className="w-9 h-9 rounded-xl bg-slate-100 text-[#1B2A55] font-black font-outfit text-xs flex items-center justify-center shrink-0 border border-slate-200">
+            <div className="w-9 h-9 rounded-xl bg-slate-100 text-fitzone-navy font-black font-outfit text-xs flex items-center justify-center shrink-0 border border-slate-200">
               {(row.nombre?.[0] || '').toUpperCase()}
               {(row.apellido?.[0] || '').toUpperCase()}
             </div>
           )}
           <div className="min-w-0">
-            <span className="block font-bold text-[#1B2A55] text-sm truncate font-manrope">
+            <span className="block font-bold text-fitzone-navy text-sm truncate font-manrope">
               {row.nombre} {row.apellido}
             </span>
             <span className="block text-xs text-slate-400 truncate">
@@ -231,12 +231,12 @@ export function UsuariosPage() {
       {/* ─── ENCABEZADO DE PÁGINA ────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#1B2A55] font-outfit tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-fitzone-navy font-outfit tracking-tight">
             Gestión de Usuarios
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Administración de socios, invitados y personal —{' '}
-            <span className="font-bold text-[#1B2A55]">{sedeActiva?.nombre ?? 'FitZone Sports'}</span>
+            <span className="font-bold text-fitzone-navy">{sedeActiva?.nombre ?? 'FitZone Sports'}</span>
           </p>
         </div>
 
@@ -280,7 +280,7 @@ export function UsuariosPage() {
                 size="sm"
                 leftIcon={RotateCcw}
                 onClick={handleResetFiltros}
-                className="text-slate-500 hover:text-[#1B2A55]"
+                className="text-slate-500 hover:text-fitzone-navy"
               >
                 Limpiar
               </Button>
@@ -298,7 +298,7 @@ export function UsuariosPage() {
           </div>
 
           {hayFiltrosActivos && (
-            <span className="text-[#1B2A55] font-semibold">
+            <span className="text-fitzone-navy font-semibold">
               Filtro activo: {filtroDni ? `DNI contiene "${filtroDni}"` : ''}
               {filtroDni && filtroTipo !== 'TODOS' ? ' · ' : ''}
               {filtroTipo !== 'TODOS' ? `Rol: ${filtroTipo}` : ''}
@@ -421,7 +421,7 @@ export function UsuariosPage() {
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
                   Identificador Interno
                 </span>
-                <span className="font-mono font-bold text-sm text-[#1B2A55]">
+                <span className="font-mono font-bold text-sm text-fitzone-navy">
                   ID #{usuarioParaDetalle.idUsuario}
                 </span>
               </div>
@@ -431,7 +431,7 @@ export function UsuariosPage() {
                   Autenticación Supabase
                 </span>
                 <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
-                  <ShieldCheck className="w-4 h-4 text-[#2E9E5B]" />
+                  <ShieldCheck className="w-4 h-4 text-fitzone-green" />
                   <span className="truncate">
                     {usuarioParaDetalle.authId ? usuarioParaDetalle.authId : 'Sin credencial (Externo)'}
                   </span>

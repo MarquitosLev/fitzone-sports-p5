@@ -313,7 +313,7 @@ export function UsuarioForm({
             <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
             <span>
               Usuario asociado a la sede actual:{' '}
-              <strong className="text-[#1B2A55] font-semibold">{sedeActivaNombre}</strong>
+              <strong className="text-fitzone-navy font-semibold">{sedeActivaNombre}</strong>
             </span>
           </div>
         )}

@@ -53,7 +53,7 @@ export function UsuarioPerfilHeader({
             ) : (
               <div
                 className={`
-                  rounded-2xl bg-gradient-to-br from-[#1B2A55] to-[#263B72] text-white
+                  rounded-2xl bg-gradient-to-br from-fitzone-navy to-fitzone-navy-light text-white
                   flex items-center justify-center font-outfit font-black tracking-tight shadow-sm select-none
                   ${compact ? 'w-12 h-12 text-sm' : 'w-16 h-16 sm:w-20 sm:h-20 text-xl sm:text-2xl'}
                 `}
@@ -77,7 +77,7 @@ export function UsuarioPerfilHeader({
             <div className="flex flex-wrap items-center gap-2">
               <h2
                 className={`
-                  font-black text-[#1B2A55] font-outfit truncate tracking-tight
+                  font-black text-fitzone-navy font-outfit truncate tracking-tight
                   ${compact ? 'text-base sm:text-lg' : 'text-lg sm:text-2xl'}
                 `}
               >
@@ -91,7 +91,7 @@ export function UsuarioPerfilHeader({
 
             {/* DNI y Sede */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 font-medium">
-              <span className="inline-flex items-center gap-1 font-mono font-bold text-[#1B2A55] bg-slate-100 px-2.5 py-0.5 rounded-md">
+              <span className="inline-flex items-center gap-1 font-mono font-bold text-fitzone-navy bg-slate-100 px-2.5 py-0.5 rounded-md">
                 <Hash className="w-3 h-3 text-slate-400" />
                 DNI {usuario.dni || '—'}
               </span>
