@@ -33,6 +33,11 @@ import {
   BuscadorDni,
   UsuarioForm,
 } from '../components/usuarios';
+import { AgendaSemanal } from '../components/clases/AgendaSemanal';
+import { ClaseForm } from '../components/clases/ClaseForm';
+import { CupoIndicator } from '../components/clases/CupoIndicator';
+import type { ClaseFormPayload } from '../components/clases/ClaseForm';
+import type { ClaseGrupalDTO } from '../types';
 import type { UsuarioDTO, TipoUsuario } from '../types';
 
 export function PlaygroundPage() {
@@ -195,6 +200,7 @@ export function PlaygroundPage() {
 
   const tabs = [
     { id: 'all', label: 'Todos' },
+    { id: 'clases', label: 'Agenda Clases (RF-06)' },
     { id: 'usuarios', label: 'Gestión Usuarios (RF-01)' },
     { id: 'buttons', label: 'Botones' },
     { id: 'inputs', label: 'Campos Form' },
@@ -205,6 +211,62 @@ export function PlaygroundPage() {
     { id: 'alerts', label: 'Alertas & Toasts' },
     { id: 'spinners', label: 'Spinners & Empty' },
   ];
+
+  // ── RF-06 Clases state ──────────────────────────────────────────────────────
+  const mockSede = { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 };
+
+  const [mockClases, setMockClases] = useState<ClaseGrupalDTO[]>([
+    {
+      idClase: 1,
+      sede: mockSede,
+      nombreActividad: 'Spinning',
+      fechaHoraInicio: '2026-10-20T08:00:00',
+      duracionMinutos: 60,
+      cupoMaximo: 20,
+      cupoDisponible: 5,
+    },
+    {
+      idClase: 2,
+      sede: mockSede,
+      nombreActividad: 'Yoga',
+      fechaHoraInicio: '2026-10-21T10:00:00',
+      duracionMinutos: 75,
+      cupoMaximo: 15,
+      cupoDisponible: 0,
+    },
+    {
+      idClase: 3,
+      sede: mockSede,
+      nombreActividad: 'CrossFit',
+      fechaHoraInicio: '2026-10-22T07:00:00',
+      duracionMinutos: 50,
+      cupoMaximo: 12,
+      cupoDisponible: 3,
+    },
+    {
+      idClase: 4,
+      sede: mockSede,
+      nombreActividad: 'Pilates',
+      fechaHoraInicio: '2026-10-23T09:00:00',
+      duracionMinutos: 60,
+      cupoMaximo: 10,
+      cupoDisponible: 10,
+    },
+    {
+      idClase: 5,
+      sede: mockSede,
+      nombreActividad: 'Boxeo',
+      fechaHoraInicio: '2026-10-24T18:00:00',
+      duracionMinutos: 60,
+      cupoMaximo: 12,
+      cupoDisponible: 7,
+    },
+  ]);
+
+  const [pgFormModo, setPgFormModo] = useState<'alta' | 'edicion'>('alta');
+  const [pgFormLoading, setPgFormLoading] = useState(false);
+  const [pgFormError, setPgFormError] = useState<string | null>(null);
+  const [pgSelectedClase, setPgSelectedClase] = useState<ClaseGrupalDTO | undefined>(undefined);
 
   const shouldShow = (tabId: string) => activeTab === 'all' || activeTab === tabId;
 
@@ -1300,6 +1362,147 @@ export function PlaygroundPage() {
                   }
                 />
               </div>
+            </div>
+          </Card>
+        </section>
+      )}
+
+      {/* 10. AGENDA DE CLASES GRUPALES (RF-06) */}
+      {shouldShow('clases') && (
+        <section className="space-y-8 pt-4 border-t-2 border-slate-100">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#1B2A55] text-white">
+                  RF-06
+                </span>
+              </div>
+              <h2 className="text-2xl font-black text-[#1B2A55] font-outfit mt-1">
+                10. Módulo Agenda de Clases Grupales (RF-06)
+              </h2>
+              <p className="text-xs text-slate-500 max-w-2xl">
+                Componentes <code className="text-[#1B2A55] font-mono">AgendaSemanal</code>,{' '}
+                <code className="text-[#1B2A55] font-mono">ClaseForm</code> y{' '}
+                <code className="text-[#1B2A55] font-mono">CupoIndicator</code> con datos de prueba interactivos.
+              </p>
+            </div>
+          </div>
+
+          {/* 10.1 AgendaSemanal — Live grid */}
+          <Card title="10.1 AgendaSemanal — Grilla Semanal Interactiva" subtitle="Hacé clic sobre una clase para editarla, o usá el botón Eliminar">
+            <div className="mb-4 flex items-center gap-2">
+              <Button
+                id="pg-btn-agregar-clase-demo"
+                size="sm"
+                variant="coral"
+                onClick={() => {
+                  const nuevaClase: ClaseGrupalDTO = {
+                    idClase: Date.now(),
+                    sede: mockSede,
+                    nombreActividad: 'Funcional',
+                    fechaHoraInicio: '2026-10-25T08:00:00',
+                    duracionMinutos: 45,
+                    cupoMaximo: 15,
+                    cupoDisponible: 15,
+                  };
+                  setMockClases((prev) => [...prev, nuevaClase]);
+                  addToast('Clase Agregada (Demo)', 'Se agregó Funcional al viernes.', 'success');
+                }}
+              >
+                + Agregar clase de demo
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setMockClases(prev => prev.slice(0, 5));
+                  addToast('Reset', 'Agenda restaurada a datos iniciales.', 'info');
+                }}
+              >
+                Restaurar
+              </Button>
+            </div>
+            <AgendaSemanal
+              clases={mockClases}
+              onEdit={(c) => {
+                setPgSelectedClase(c);
+                setPgFormModo('edicion');
+                setPgFormError(null);
+                addToast('Editar Clase', `Seleccionaste: ${c.nombreActividad}`, 'info');
+              }}
+              onDelete={(c) => {
+                setMockClases((prev) => prev.filter((x) => x.idClase !== c.idClase));
+                addToast('Clase Eliminada (Demo)', `"${c.nombreActividad}" fue eliminada de la agenda.`, 'warning');
+              }}
+            />
+          </Card>
+
+          {/* 10.2 ClaseForm */}
+          <Card title="10.2 ClaseForm — Formulario de Alta y Edición" subtitle="Cambiá el modo para ver cómo se pre-populan los campos">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-xs font-black text-[#1B2A55] uppercase tracking-wider">Modo activo:</span>
+              <Button
+                size="xs"
+                variant={pgFormModo === 'alta' ? 'primary' : 'secondary'}
+                onClick={() => { setPgFormModo('alta'); setPgSelectedClase(undefined); setPgFormError(null); }}
+              >
+                Alta
+              </Button>
+              <Button
+                size="xs"
+                variant={pgFormModo === 'edicion' ? 'primary' : 'secondary'}
+                onClick={() => {
+                  setPgFormModo('edicion');
+                  setPgSelectedClase(mockClases[0]);
+                  setPgFormError(null);
+                }}
+              >
+                Edición (pre-popula con Spinning)
+              </Button>
+              <Button
+                size="xs"
+                variant="danger"
+                onClick={() => setPgFormError('El cupo máximo no puede ser menor al número de reservas ya confirmadas (5 personas inscriptas).')}
+              >
+                Simular Error de Negocio
+              </Button>
+            </div>
+
+            <div className="max-w-lg">
+              <ClaseForm
+                modo={pgFormModo}
+                valoresIniciales={pgFormModo === 'edicion' ? pgSelectedClase : undefined}
+                loading={pgFormLoading}
+                errorNegocio={pgFormError}
+                onSubmit={async (payload: ClaseFormPayload) => {
+                  setPgFormLoading(true);
+                  await new Promise((res) => setTimeout(res, 800));
+                  setPgFormLoading(false);
+                  setPgFormError(null);
+                  addToast(
+                    pgFormModo === 'alta' ? 'Clase Programada (Demo)' : 'Clase Actualizada (Demo)',
+                    `"${payload.nombreActividad}" · ${payload.duracionMinutos} min · Cupo: ${payload.cupoMaximo}`,
+                    'success'
+                  );
+                }}
+              />
+            </div>
+          </Card>
+
+          {/* 10.3 CupoIndicator */}
+          <Card title="10.3 CupoIndicator — Barra de Ocupación" subtitle="Varía el color según el porcentaje: verde (< 50%), rojo (≥ 50%)">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+              {[
+                { label: 'Sin inscriptos', disponible: 20, maximo: 20 },
+                { label: 'Baja ocupación (25%)', disponible: 15, maximo: 20 },
+                { label: 'Alta ocupación (75%)', disponible: 5, maximo: 20 },
+                { label: 'Cupo lleno (100%)', disponible: 0, maximo: 20 },
+              ].map(({ label, disponible, maximo }) => (
+                <div key={label} className="bg-slate-50 rounded-2xl p-4">
+                  <span className="text-[11px] font-black uppercase text-slate-500 tracking-wider block mb-3">{label}</span>
+                  <CupoIndicator cupoDisponible={disponible} cupoMaximo={maximo} />
+                </div>
+              ))}
             </div>
           </Card>
         </section>
