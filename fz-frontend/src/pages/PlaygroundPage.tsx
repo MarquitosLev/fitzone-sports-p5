@@ -27,6 +27,13 @@ import {
   Filter,
   Settings,
 } from 'lucide-react';
+import {
+  TipoUsuarioBadge,
+  UsuarioPerfilHeader,
+  BuscadorDni,
+  UsuarioForm,
+} from '../components/usuarios';
+import type { UsuarioDTO, TipoUsuario } from '../types';
 
 export function PlaygroundPage() {
   const { addToast } = useApp();
@@ -51,6 +58,16 @@ export function PlaygroundPage() {
   const [testDate, setTestDate] = useState('2026-10-15');
   const [testTime, setTestTime] = useState('18:00');
   const [formHasErrors, setFormHasErrors] = useState(false);
+
+  // RF-01 (SCRUM-60) Playground Interactive State
+  const [demoBadgeSize, setDemoBadgeSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('sm');
+  const [demoBadgeDot, setDemoBadgeDot] = useState(true);
+  const [demoSelectedUserIdx, setDemoSelectedUserIdx] = useState(0);
+  const [demoCompactHeader, setDemoCompactHeader] = useState(false);
+  const [demoSearchDni, setDemoSearchDni] = useState('30123456');
+  const [demoSearchFeedback, setDemoSearchFeedback] = useState('30123456');
+  const [demoFormModo, setDemoFormModo] = useState<'alta' | 'edicion'>('alta');
+  const [demoFormLoading, setDemoFormLoading] = useState(false);
 
   // Table interactive state
   const [tableLoading, setTableLoading] = useState(false);
@@ -178,6 +195,7 @@ export function PlaygroundPage() {
 
   const tabs = [
     { id: 'all', label: 'Todos' },
+    { id: 'usuarios', label: 'Gestión Usuarios (RF-01)' },
     { id: 'buttons', label: 'Botones' },
     { id: 'inputs', label: 'Campos Form' },
     { id: 'badges', label: 'Status Badges' },
@@ -951,6 +969,342 @@ export function PlaygroundPage() {
           </div>
         </section>
       )}
+
+      {/* 9. GESTIÓN DE USUARIOS (RF-01 / SCRUM-60) */}
+      {shouldShow('usuarios') && (
+        <section className="space-y-8 pt-4 border-t-2 border-slate-100">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#1B2A55] text-white">
+                  RF-01
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                  SCRUM-60
+                </span>
+              </div>
+              <h2 className="text-2xl font-black text-[#1B2A55] font-outfit mt-1">
+                9. Módulo Gestión de Usuarios (RF-01)
+              </h2>
+              <p className="text-xs text-slate-500 max-w-2xl">
+                Componentes desarrollados para el rol de Recepcionista: mapeo de roles con <code className="text-[#1B2A55] font-mono">TipoUsuarioBadge</code>, cabecera de perfil <code className="text-[#1B2A55] font-mono">UsuarioPerfilHeader</code>, barra de búsqueda <code className="text-[#1B2A55] font-mono">BuscadorDni</code> y formulario reactivo <code className="text-[#1B2A55] font-mono">UsuarioForm</code> con asignación condicional de sede.
+              </p>
+            </div>
+          </div>
+
+          {/* 9.1 TipoUsuarioBadge */}
+          <Card title="9.1 TipoUsuarioBadge — Colores y Roles Institucionales">
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <span className="text-xs text-slate-500 font-medium">
+                  Mapeo semántico de los 4 roles del sistema (SOCIO, EXTERNO, RECEPCIONISTA, GERENTE).
+                </span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                    {(['xs', 'sm', 'md', 'lg'] as const).map((sz) => (
+                      <button
+                        key={sz}
+                        type="button"
+                        onClick={() => setDemoBadgeSize(sz)}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                          demoBadgeSize === sz ? 'bg-white text-[#1B2A55] shadow-xs' : 'text-slate-500'
+                        }`}
+                      >
+                        {sz.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+
+                  <Button
+                    size="xs"
+                    variant={demoBadgeDot ? 'primary' : 'secondary'}
+                    onClick={() => setDemoBadgeDot(!demoBadgeDot)}
+                  >
+                    {demoBadgeDot ? 'Dot: ON' : 'Dot: OFF'}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {(['SOCIO', 'EXTERNO', 'RECEPCIONISTA', 'GERENTE'] as TipoUsuario[]).map((rol) => (
+                  <div
+                    key={rol}
+                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col items-center justify-center gap-2.5 text-center"
+                  >
+                    <TipoUsuarioBadge
+                      tipoUsuario={rol}
+                      size={demoBadgeSize}
+                      showDot={demoBadgeDot}
+                    />
+                    <span className="text-[11px] font-mono text-slate-400 font-semibold">
+                      tipoUsuario="{rol}"
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* 9.2 UsuarioPerfilHeader */}
+          <Card title="9.2 UsuarioPerfilHeader — Cabecera de Perfil y Recepción">
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium">
+                    Usuario de demostración:
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {[
+                      { label: 'Socio (Con Foto)', idx: 0 },
+                      { label: 'Externo (Iniciales)', idx: 1 },
+                      { label: 'Recepcionista', idx: 2 },
+                      { label: 'Gerente', idx: 3 },
+                    ].map((item) => (
+                      <button
+                        key={item.idx}
+                        type="button"
+                        onClick={() => setDemoSelectedUserIdx(item.idx)}
+                        className={`px-3 py-1 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                          demoSelectedUserIdx === item.idx
+                            ? 'bg-[#1B2A55] text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Button
+                  size="xs"
+                  variant={demoCompactHeader ? 'coral' : 'secondary'}
+                  onClick={() => setDemoCompactHeader(!demoCompactHeader)}
+                >
+                  {demoCompactHeader ? 'Modo: Compacto' : 'Modo: Completo'}
+                </Button>
+              </div>
+
+              {/* Render del componente */}
+              {(() => {
+                const demoUsers: UsuarioDTO[] = [
+                  {
+                    idUsuario: 1,
+                    authId: 'uuid-socio-1',
+                    dni: '30123456',
+                    nombre: 'Lucas',
+                    apellido: 'Martínez',
+                    email: 'lucas.martinez@email.com',
+                    telefono: '11-4567-8901',
+                    fotoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                    tipoUsuario: 'SOCIO',
+                    idSede: 1,
+                  },
+                  {
+                    idUsuario: 3,
+                    authId: null,
+                    dni: '35789012',
+                    nombre: 'Martín',
+                    apellido: 'López',
+                    email: 'mlopez@email.com',
+                    telefono: '11-6789-0123',
+                    fotoUrl: null,
+                    tipoUsuario: 'EXTERNO',
+                    idSede: 1,
+                  },
+                  {
+                    idUsuario: 4,
+                    authId: 'uuid-recep-1',
+                    dni: '25678901',
+                    nombre: 'Sofía',
+                    apellido: 'Rodríguez',
+                    email: 'sofia.rod@fitzone.com',
+                    telefono: '11-3456-7890',
+                    fotoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+                    tipoUsuario: 'RECEPCIONISTA',
+                    idSede: 2,
+                  },
+                  {
+                    idUsuario: 5,
+                    authId: 'uuid-gerente-1',
+                    dni: '24119832',
+                    nombre: 'Alejandra',
+                    apellido: 'Vidal',
+                    email: 'alejandra.vidal@fitzone.com',
+                    telefono: '11-2345-6789',
+                    fotoUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+                    tipoUsuario: 'GERENTE',
+                    idSede: 1,
+                  },
+                ];
+
+                const currentUser = demoUsers[demoSelectedUserIdx] || demoUsers[0];
+
+                return (
+                  <UsuarioPerfilHeader
+                    usuario={currentUser}
+                    sedeNombre={currentUser.idSede === 1 ? 'FitZone Palermo' : 'FitZone Belgrano'}
+                    compact={demoCompactHeader}
+                    actions={
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="xs"
+                          variant="secondary"
+                          onClick={() =>
+                            addToast(
+                              'Acción Recepción',
+                              `Consultando ficha de ${currentUser.nombre} ${currentUser.apellido}`,
+                              'info'
+                            )
+                          }
+                        >
+                          Ver Historial
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="primary"
+                          onClick={() =>
+                            addToast(
+                              'Edición Rápida',
+                              `Abriendo formulario para ${currentUser.nombre}`,
+                              'info'
+                            )
+                          }
+                        >
+                          Editar
+                        </Button>
+                      </div>
+                    }
+                  />
+                );
+              })()}
+            </div>
+          </Card>
+
+          {/* 9.3 BuscadorDni */}
+          <Card title="9.3 BuscadorDni — Filtrado Reactivo con Debounce">
+            <div className="space-y-4">
+              <p className="text-xs text-slate-500">
+                Componente de búsqueda rápida por DNI con timer de debounce (300ms por defecto), icono de estado y botón de confirmación inmediata.
+              </p>
+
+              <div className="max-w-xl">
+                <BuscadorDni
+                  value={demoSearchDni}
+                  onChange={(val) => {
+                    setDemoSearchDni(val);
+                    setDemoSearchFeedback(val);
+                  }}
+                  onSearch={(val) => {
+                    setDemoSearchFeedback(val);
+                    addToast(
+                      'Búsqueda Ejecutada',
+                      val ? `Filtrando usuarios por DNI: "${val}"` : 'Filtro de DNI reseteado',
+                      'info'
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+                <span>
+                  Valor emitido tras debounce:{' '}
+                  <strong className="text-[#1B2A55] font-mono">
+                    {demoSearchFeedback ? `"${demoSearchFeedback}"` : '(campo vacío)'}
+                  </strong>
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  Prueba tipear o presionar Enter / botón Buscar
+                </span>
+              </div>
+            </div>
+          </Card>
+
+          {/* 9.4 UsuarioForm */}
+          <Card title="9.4 UsuarioForm — Formulario Unificado Alta & Edición">
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium">Modo activo:</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setDemoFormModo('alta')}
+                      className={`px-3 py-1 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                        demoFormModo === 'alta'
+                          ? 'bg-[#1B2A55] text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Modo Alta
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDemoFormModo('edicion')}
+                      className={`px-3 py-1 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                        demoFormModo === 'edicion'
+                          ? 'bg-[#1B2A55] text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Modo Edición (Precargado)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <span className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg font-semibold text-[11px]">
+                    Regla: Selector de Sede visible sólo para RECEPCIONISTA y GERENTE
+                  </span>
+                </div>
+              </div>
+
+              {/* Contenedor del Formulario */}
+              <div className="max-w-3xl p-6 bg-slate-50/50 rounded-2xl border border-slate-200">
+                <UsuarioForm
+                  modo={demoFormModo}
+                  valoresIniciales={
+                    demoFormModo === 'edicion'
+                      ? {
+                          idUsuario: 10,
+                          authId: 'uuid-socio-10',
+                          dni: '34567890',
+                          nombre: 'Camila',
+                          apellido: 'Navarro',
+                          email: 'camila.navarro@email.com',
+                          telefono: '11-6677-8899',
+                          tipoUsuario: 'RECEPCIONISTA',
+                          idSede: 1,
+                          fotoUrl: '',
+                        }
+                      : null
+                  }
+                  loading={demoFormLoading}
+                  sedesDisponibles={[
+                    { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                    { idSede: 2, nombre: 'FitZone Belgrano', aforoMaximo: 60 },
+                    { idSede: 3, nombre: 'FitZone Caballito', aforoMaximo: 50 },
+                  ]}
+                  onSubmit={async (datos) => {
+                    setDemoFormLoading(true);
+                    await new Promise((res) => setTimeout(res, 700));
+                    setDemoFormLoading(false);
+                    addToast(
+                      demoFormModo === 'alta' ? 'Usuario Creado (Demo)' : 'Usuario Guardado (Demo)',
+                      `${datos.nombre} ${datos.apellido} (${datos.tipoUsuario}) — Sede ID: ${datos.idSede}`,
+                      'success'
+                    );
+                  }}
+                  onCancel={() =>
+                    addToast('Cancelado', 'Operación cancelada por el usuario.', 'info')
+                  }
+                />
+              </div>
+            </div>
+          </Card>
+        </section>
+      )}
     </div>
   );
 }
+
