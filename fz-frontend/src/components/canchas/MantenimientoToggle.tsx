@@ -88,7 +88,7 @@ export function MantenimientoToggle({
         onClose={() => {
           if (!loading) setDialogOpen(false);
         }}
-        onConfirm={() => void handleConfirm()}
+        onConfirm={handleConfirm}
         isLoading={loading}
         variant={targetEstado ? 'warning' : 'primary'}
         icon={targetEstado ? Wrench : CheckCircle2}

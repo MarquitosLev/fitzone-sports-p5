@@ -95,8 +95,9 @@ describe('CanchaForm', () => {
       />
     );
 
-    expect(
-      screen.getByText('Ya existe una cancha con ese nombre en la sede seleccionada')
-    ).toBeInTheDocument();
+    const errorElements = screen.getAllByText(
+      'Ya existe una cancha con ese nombre en la sede seleccionada'
+    );
+    expect(errorElements.length).toBeGreaterThanOrEqual(1);
   });
 });

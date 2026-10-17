@@ -116,7 +116,10 @@ export function CanchaForm({
           setNombre(e.target.value);
           if (errors.nombre) setErrors((prev) => ({ ...prev, nombre: undefined }));
         }}
-        error={errors.nombre}
+        error={
+          errors.nombre ||
+          (errorNegocio && /nombre|existe/i.test(errorNegocio) ? errorNegocio : undefined)
+        }
         leftIcon={Layers}
         disabled={loading}
       />
