@@ -14,6 +14,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -41,18 +45,35 @@ public class ClaseGrupal extends BaseEntity {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) 
     private Sede sede;
 
+    @NotBlank(message = "El nombre de la actividad es obligatorio")
     @Column(name = "nombre_actividad", nullable = false, length = 100)
     private String nombreActividad;
 
+    @NotNull(message = "La fecha y hora de inicio es obligatoria")
     @Column(name = "fecha_hora_inicio", nullable = false)
     private LocalDateTime fechaHoraInicio;
 
+    @NotNull(message = "La duración en minutos es obligatoria")
+    @Positive(message = "La duración en minutos debe ser mayor a 0")
     @Column(name = "duracion_minutos", nullable = false)
     private Integer duracionMinutos;
 
+    @NotNull(message = "El cupo máximo es obligatorio")
+    @Positive(message = "El cupo máximo debe ser mayor a 0")
     @Column(name = "cupo_maximo", nullable = false)
     private Integer cupoMaximo;
 
     @Column(name = "cupo_disponible", nullable = false)
     private Integer cupoDisponible;
+
+    @JsonProperty("idSede")
+    public void setIdSede(Long idSede) {
+        if (idSede != null) {
+            if (this.sede == null) {
+                this.sede = Sede.builder().idSede(idSede).build();
+            } else {
+                this.sede.setIdSede(idSede);
+            }
+        }
+    }
 }
