@@ -13,6 +13,20 @@ export interface PlanDTO {
   idPlan: number;
   nombre: string;
   precioBase: number;
+  duracionMeses?: number;
+  duracionDias?: number;
+  descripcion?: string;
+  beneficios?: string[];
+  destacado?: boolean;
+}
+
+/**
+ * Payload para asociar o renovar una membresía de un socio.
+ */
+export interface MembresiaFormData {
+  idUsuario: number;
+  idPlan: number;
+  fechaInicio?: string;
 }
 
 /**
@@ -29,3 +43,4 @@ export interface MembresiaDTO {
   fechaCancelacion: string | null;
   estado: EstadoMembresia;
 }
+
