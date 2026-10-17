@@ -7,6 +7,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,9 +30,12 @@ public class Sede extends BaseEntity {
     @Column(name = "id_sede", updatable = false, nullable = false)
     private Long idSede;
 
+    @NotBlank(message = "El nombre de la sede es obligatorio")
     @Column(name = "nombre", nullable = false)
     private String nombre;
 
+    @NotNull(message = "El aforo máximo es obligatorio")
+    @Positive(message = "El aforo máximo debe ser mayor a 0")
     @Column(name = "aforo_maximo", nullable = false)
     private Integer aforoMaximo;
 }
