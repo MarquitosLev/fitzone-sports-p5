@@ -33,12 +33,18 @@ import {
   BuscadorDni,
   UsuarioForm,
 } from '../components/usuarios';
+import {
+  PlanCard,
+  MembresiaEstadoCard,
+  AccionesMembresia,
+} from '../components/membresias';
+import { MOCK_PLANES } from '../services/membresiasService';
 import { AgendaSemanal } from '../components/clases/AgendaSemanal';
 import { ClaseForm } from '../components/clases/ClaseForm';
 import { CupoIndicator } from '../components/clases/CupoIndicator';
 import type { ClaseFormPayload } from '../components/clases/ClaseForm';
 import type { ClaseGrupalDTO } from '../types';
-import type { UsuarioDTO, TipoUsuario } from '../types';
+import type { UsuarioDTO, TipoUsuario, MembresiaDTO, EstadoMembresia } from '../types';
 
 export function PlaygroundPage() {
   const { addToast } = useApp();
@@ -73,6 +79,13 @@ export function PlaygroundPage() {
   const [demoSearchFeedback, setDemoSearchFeedback] = useState('30123456');
   const [demoFormModo, setDemoFormModo] = useState<'alta' | 'edicion'>('alta');
   const [demoFormLoading, setDemoFormLoading] = useState(false);
+
+  // RF-02 (Membresías del Socio) Playground Interactive State
+  const [demoSelectedPlanId, setDemoSelectedPlanId] = useState<number>(2);
+  const [demoMembresiaScenario, setDemoMembresiaScenario] = useState<
+    'activo-ok' | 'activo-alerta' | 'vencido' | 'suspendido' | 'cancelado' | 'sin-membresia'
+  >('activo-alerta');
+  const [demoAccionesEstado, setDemoAccionesEstado] = useState<EstadoMembresia>('ACTIVO');
 
   // Table interactive state
   const [tableLoading, setTableLoading] = useState(false);
@@ -200,6 +213,7 @@ export function PlaygroundPage() {
 
   const tabs = [
     { id: 'all', label: 'Todos' },
+    { id: 'membresias', label: 'Membresías (RF-02)' },
     { id: 'clases', label: 'Agenda Clases (RF-06)' },
     { id: 'usuarios', label: 'Gestión Usuarios (RF-01)' },
     { id: 'buttons', label: 'Botones' },
@@ -1360,6 +1374,284 @@ export function PlaygroundPage() {
                   onCancel={() =>
                     addToast('Cancelado', 'Operación cancelada por el usuario.', 'info')
                   }
+                />
+              </div>
+            </div>
+          </Card>
+        </section>
+      )}
+
+      {/* 10. MEMBRESÍAS DEL SOCIO (RF-02) */}
+      {shouldShow('membresias') && (
+        <section className="space-y-8 pt-4 border-t-2 border-slate-100">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#1B2A55] text-white">
+                  RF-02
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#F26D6D]/15 text-[#F26D6D]">
+                  CATÁLOGO & ESTADO
+                </span>
+              </div>
+              <h2 className="text-2xl font-black text-[#1B2A55] font-outfit mt-1">
+                10. Módulo Membresías del Socio (RF-02)
+              </h2>
+              <p className="text-xs text-slate-500 max-w-2xl">
+                Componentes reutilizables para el catálogo de planes (<code className="text-[#1B2A55] font-mono">PlanCard</code>),
+                panel de estado con alerta de vencimiento (&lt; 7 días) (<code className="text-[#1B2A55] font-mono">MembresiaEstadoCard</code>)
+                y transiciones de ciclo de vida con confirmación modal (<code className="text-[#1B2A55] font-mono">AccionesMembresia</code>).
+              </p>
+            </div>
+          </div>
+
+          {/* 10.1 PlanCard — Catálogo */}
+          <Card title="10.1 PlanCard — Catálogo y Selección de Tarifas">
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <span className="text-xs text-slate-500 font-medium">
+                  Tarjeta con precio formateado, duración, cálculo mensual y distintivo de destacado.
+                </span>
+                <div className="text-xs font-mono font-bold text-fitzone-navy bg-slate-100 px-3 py-1 rounded-lg">
+                  Plan seleccionado en demo: ID #{demoSelectedPlanId}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {MOCK_PLANES.map((plan) => (
+                  <PlanCard
+                    key={plan.idPlan}
+                    plan={plan}
+                    selected={demoSelectedPlanId === plan.idPlan}
+                    onSeleccionar={(p) => {
+                      setDemoSelectedPlanId(p.idPlan);
+                      addToast(
+                        'Plan Seleccionado',
+                        `Has elegido el ${p.nombre} ($${p.precioBase.toLocaleString('es-AR')})`,
+                        'success'
+                      );
+                    }}
+                    actionLabel={demoSelectedPlanId === plan.idPlan ? 'Seleccionado' : 'Elegir Plan'}
+                  />
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* 10.2 MembresiaEstadoCard — Alerta de vencimiento y Estados */}
+          <Card title="10.2 MembresiaEstadoCard — Estados y Alerta de Vencimiento (< 7 días)">
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <span className="text-xs text-slate-500 font-medium">
+                  Alterná entre los diferentes escenarios para ver el comportamiento de las alertas automáticas.
+                </span>
+
+                <div className="flex flex-wrap gap-1.5 bg-slate-100 p-1.5 rounded-2xl">
+                  {(
+                    [
+                      { id: 'activo-alerta', label: 'Activo (< 7 días)' },
+                      { id: 'activo-ok', label: 'Activo (> 7 días)' },
+                      { id: 'vencido', label: 'Vencido' },
+                      { id: 'suspendido', label: 'Suspendido' },
+                      { id: 'cancelado', label: 'Cancelado' },
+                      { id: 'sin-membresia', label: 'Sin Membresía' },
+                    ] as const
+                  ).map((sc) => (
+                    <button
+                      key={sc.id}
+                      type="button"
+                      onClick={() => setDemoMembresiaScenario(sc.id)}
+                      className={`px-3 py-1 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                        demoMembresiaScenario === sc.id
+                          ? 'bg-white text-fitzone-navy shadow-xs'
+                          : 'text-slate-500 hover:text-fitzone-navy'
+                      }`}
+                    >
+                      {sc.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Generar datos según escenario seleccionado */}
+              {(() => {
+                const socioMock: UsuarioDTO = {
+                  idUsuario: 1,
+                  authId: 'uuid-1',
+                  dni: '30123456',
+                  nombre: 'Lucas',
+                  apellido: 'Martínez',
+                  email: 'lucas.martinez@email.com',
+                  telefono: '11-4567-8901',
+                  fotoUrl: null,
+                  tipoUsuario: 'SOCIO',
+                  idSede: 1,
+                };
+
+                const hoy = new Date();
+                const formatear = (d: Date) => d.toISOString().split('T')[0];
+
+                let membresiaDemo: MembresiaDTO | null = null;
+
+                if (demoMembresiaScenario === 'activo-alerta') {
+                  const vto = new Date(hoy);
+                  vto.setDate(hoy.getDate() + 3); // 3 días restantes (< 7d)
+                  membresiaDemo = {
+                    idMembresia: 101,
+                    usuario: socioMock,
+                    plan: MOCK_PLANES[0],
+                    fechaInicio: formatear(new Date(hoy.getTime() - 27 * 86400000)),
+                    fechaVencimiento: formatear(vto),
+                    fechaCancelacion: null,
+                    estado: 'ACTIVO',
+                  };
+                } else if (demoMembresiaScenario === 'activo-ok') {
+                  const vto = new Date(hoy);
+                  vto.setDate(hoy.getDate() + 25); // 25 días restantes (> 7d)
+                  membresiaDemo = {
+                    idMembresia: 102,
+                    usuario: socioMock,
+                    plan: MOCK_PLANES[1],
+                    fechaInicio: formatear(new Date(hoy.getTime() - 65 * 86400000)),
+                    fechaVencimiento: formatear(vto),
+                    fechaCancelacion: null,
+                    estado: 'ACTIVO',
+                  };
+                } else if (demoMembresiaScenario === 'vencido') {
+                  const vto = new Date(hoy);
+                  vto.setDate(hoy.getDate() - 5); // Vencido hace 5 días
+                  membresiaDemo = {
+                    idMembresia: 103,
+                    usuario: socioMock,
+                    plan: MOCK_PLANES[0],
+                    fechaInicio: formatear(new Date(hoy.getTime() - 35 * 86400000)),
+                    fechaVencimiento: formatear(vto),
+                    fechaCancelacion: null,
+                    estado: 'VENCIDO',
+                  };
+                } else if (demoMembresiaScenario === 'suspendido') {
+                  const vto = new Date(hoy);
+                  vto.setDate(hoy.getDate() + 15);
+                  membresiaDemo = {
+                    idMembresia: 104,
+                    usuario: socioMock,
+                    plan: MOCK_PLANES[1],
+                    fechaInicio: formatear(new Date(hoy.getTime() - 40 * 86400000)),
+                    fechaVencimiento: formatear(vto),
+                    fechaCancelacion: null,
+                    estado: 'SUSPENDIDO',
+                  };
+                } else if (demoMembresiaScenario === 'cancelado') {
+                  const cancelada = new Date(hoy);
+                  cancelada.setDate(hoy.getDate() - 10);
+                  membresiaDemo = {
+                    idMembresia: 105,
+                    usuario: socioMock,
+                    plan: MOCK_PLANES[0],
+                    fechaInicio: formatear(new Date(hoy.getTime() - 40 * 86400000)),
+                    fechaVencimiento: formatear(new Date(hoy.getTime() - 10 * 86400000)),
+                    fechaCancelacion: formatear(cancelada),
+                    estado: 'CANCELADO',
+                  };
+                } else {
+                  membresiaDemo = null;
+                }
+
+                return (
+                  <div className="max-w-3xl mx-auto">
+                    <MembresiaEstadoCard
+                      membresia={membresiaDemo}
+                      socio={socioMock}
+                      onRenovarClick={() =>
+                        addToast(
+                          'Renovación Solicitada',
+                          'Se inició el flujo de renovación desde la tarjeta de estado.',
+                          'info'
+                        )
+                      }
+                    />
+                  </div>
+                );
+              })()}
+            </div>
+          </Card>
+
+          {/* 10.3 AccionesMembresia — Transiciones y Confirmación */}
+          <Card title="10.3 AccionesMembresia — Transiciones de Estado y ConfirmDialog">
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <span className="text-xs text-slate-500 font-medium">
+                  Cambiá el estado simulado para observar cómo se habilitan únicamente las transiciones válidas.
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-500">Estado simulado:</span>
+                  <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+                    {(['ACTIVO', 'VENCIDO', 'SUSPENDIDO', 'CANCELADO'] as EstadoMembresia[]).map(
+                      (est) => (
+                        <button
+                          key={est}
+                          type="button"
+                          onClick={() => setDemoAccionesEstado(est)}
+                          className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                            demoAccionesEstado === est
+                              ? 'bg-white text-fitzone-navy shadow-xs'
+                              : 'text-slate-500 hover:text-fitzone-navy'
+                          }`}
+                        >
+                          {est}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="space-y-1 text-center sm:text-left">
+                  <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <span className="text-xs font-bold text-slate-500">Estado Actual:</span>
+                    <StatusBadge status={demoAccionesEstado} showDot size="sm" />
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Hacé clic en cualquier acción para probar el modal de confirmación correspondiente.
+                  </p>
+                </div>
+
+                <AccionesMembresia
+                  estado={demoAccionesEstado}
+                  onRenovar={() => {
+                    setDemoAccionesEstado('ACTIVO');
+                    addToast(
+                      'Membresía Renovada',
+                      'La membresía fue renovada exitosamente a estado ACTIVO.',
+                      'success'
+                    );
+                  }}
+                  onSuspender={() => {
+                    setDemoAccionesEstado('SUSPENDIDO');
+                    addToast(
+                      'Membresía Suspendida',
+                      'El acceso del socio quedó pausado.',
+                      'warning'
+                    );
+                  }}
+                  onReactivar={() => {
+                    setDemoAccionesEstado('ACTIVO');
+                    addToast(
+                      'Membresía Reactivada',
+                      'El socio recuperó el acceso completo.',
+                      'success'
+                    );
+                  }}
+                  onCancelar={() => {
+                    setDemoAccionesEstado('CANCELADO');
+                    addToast(
+                      'Membresía Cancelada',
+                      'La membresía ha sido cancelada definitivamente.',
+                      'error'
+                    );
+                  }}
                 />
               </div>
             </div>
