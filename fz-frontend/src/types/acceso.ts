@@ -17,3 +17,15 @@ export interface AccesoDTO {
   /** Fecha y hora de egreso, null si el socio aún está en el club */
   fechaHoraEgreso: string | null;
 }
+
+/**
+ * DTO para token dinámico de código QR de acceso (SCRUM-85).
+ */
+export interface QrTokenDTO {
+  /** Token firmado o generado para validar en el lector de ingreso */
+  token: string;
+  /** Duración en segundos antes de requerir rotación (habitualmente 60 segundos) */
+  expiraEnSegundos: number;
+  /** Timestamp ISO de generación del token */
+  generadoEn: string;
+}
