@@ -4,17 +4,14 @@
  * Patrón de arquitectura usado:
  *   Page → Hook → Service → httpClient (o mock)
  *
- * El flag VITE_USE_MOCK=true hace que se devuelvan datos hardcodeados
- * en vez de llamar al backend. Cambiando el flag a false en .env,
- * el mismo código llama a la API real sin modificar nada más.
+ * La constante centralizada USE_MOCK (src/config.ts) determina si se devuelven
+ * datos simulados o se invoca la API real mediante httpClient.
  */
 
 import { httpClient, AppError } from './httpClient';
 import type { BackendErrorResponse } from './httpClient';
 import type { UsuarioDTO, UsuarioFormData } from '../types';
-
-// Leemos el flag de entorno. Si no está configurado, usamos mock por defecto para facilitar el desarrollo local.
-const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
+import { USE_MOCK } from '../config';
 
 // ─── DATOS MOCK ──────────────────────────────────────────────────────────────
 // Estos datos simulan lo que devolvería el backend.

@@ -9,9 +9,9 @@ import type {
   CrearReservaPayload,
   EstadoTurno,
 } from '../types';
+import { USE_MOCK } from '../config';
 
 // ─── DATOS MOCK ───────────────────────────────────────────────────────────────
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 let MOCK_CANCHAS: CanchaDTO[] = [
   {

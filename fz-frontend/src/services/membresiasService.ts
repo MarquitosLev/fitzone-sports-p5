@@ -1,7 +1,6 @@
 import { httpClient, AppError } from './httpClient';
 import type { MembresiaDTO, PlanDTO, EstadoMembresia, MembresiaFormData, UsuarioDTO } from '../types';
-
-const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
+import { USE_MOCK } from '../config';
 
 // ─── CATÁLOGO DE PLANES MOCK ──────────────────────────────────────────────────
 export const MOCK_PLANES: PlanDTO[] = [
