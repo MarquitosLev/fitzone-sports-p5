@@ -5,10 +5,10 @@ import type { MembresiaDTO } from '../../types';
 
 describe('MembresiaEstadoCard Component', () => {
   const hoy = new Date();
+  // Helper para generar fechas relativas a hoy usando zona horaria local
   const formatearIso = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-  // Helper para generar fechas relativas a hoy
   const fechaRelativa = (dias: number) => {
     const d = new Date(hoy);
     d.setDate(hoy.getDate() + dias);

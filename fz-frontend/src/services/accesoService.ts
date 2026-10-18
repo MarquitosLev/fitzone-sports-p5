@@ -1,7 +1,7 @@
 import { httpClient } from './httpClient';
-import type { AccesoDTO } from '../types';
+import type { AccesoDTO, QrTokenDTO } from '../types';
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
+const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
 
 // ─── DATOS MOCK ───────────────────────────────────────────────────────────────
 const MOCK_ACCESOS: AccesoDTO[] = [
@@ -60,3 +60,23 @@ export async function listarAccesos(idSede: number): Promise<AccesoDTO[]> {
 
   return httpClient.get<AccesoDTO[]>(`/v1/accesos?idSede=${idSede}`);
 }
+
+/**
+ * Genera o consulta el token dinámico de acceso QR para el socio (SCRUM-85).
+ * Simula la emisión de un token con rotación automática cada 60 segundos.
+ */
+export async function obtenerQrSocio(idUsuario: number): Promise<QrTokenDTO> {
+  if (USE_MOCK) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const ahora = Date.now();
+    const hash = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return {
+      token: `FZ-QR-${idUsuario}-${ahora}-${hash}`,
+      expiraEnSegundos: 60,
+      generadoEn: new Date(ahora).toISOString(),
+    };
+  }
+
+  return httpClient.get<QrTokenDTO>(`/v1/accesos/qr/${idUsuario}`);
+}
+
