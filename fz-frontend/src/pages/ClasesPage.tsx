@@ -35,9 +35,12 @@ import type { ClaseFormPayload } from '../components/clases/ClaseForm';
 import { ClaseCard } from '../components/clases/ClaseCard';
 import { ReservaClaseItem } from '../components/clases/ReservaClaseItem';
 
-// ── Socio mock (Valentina García, ACTIVO). Se usa hasta integrar AuthContext. ─
-// idUsuario = 2 está alineado con membresiasService.ts: el único socio activo.
-const SOCIO_MOCK_ID = 2;
+// ── Modo Mock / Socio de prueba ──────────────────────────────────────────────
+// Flag de entorno: si es true, opera con datos en memoria y socio demo.
+// En producción (false), no se usa ningún mock y se requiere sesión real.
+const isMockMode = import.meta.env.VITE_USE_MOCK === 'true';
+const SOCIO_MOCK_ID = 2; // Valentina García (membresía ACTIVO) para modo mock
+const socioIdActual: number | null = isMockMode ? SOCIO_MOCK_ID : null;
 
 // Column definition kept for reference (not rendered, but exported for type safety)
 export const CLASES_COLUMNS: Column<ClaseGrupalDTO>[] = [
@@ -80,8 +83,9 @@ export function ClasesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Estado de acción sobre una clase (loading individual) ────────────────
-  const [accionLoadingId, setAccionLoadingId] = useState<number | null>(null);
+  // ── Estados de acción (loading individuales para evitar colisión de IDs) ───
+  const [claseLoadingId, setClaseLoadingId] = useState<number | null>(null);
+  const [reservaLoadingId, setReservaLoadingId] = useState<number | null>(null);
 
   // ── Form / modal state (admin) ───────────────────────────────────────────
   const [showForm, setShowForm] = useState(false);
@@ -101,11 +105,11 @@ export function ClasesPage() {
     setLoading(true);
     setError(null);
     try {
-      // Cargamos en paralelo: clases de la sede + reservas + espera del socio mock
+      // Cargamos clases de la sede, y solo consultamos reservas si hay un socio disponible
       const [resultClases, resultReservas, resultEspera] = await Promise.all([
         listarClases(sedeActiva.idSede),
-        listarReservasSocio(SOCIO_MOCK_ID),
-        listarEsperaSocio(SOCIO_MOCK_ID),
+        socioIdActual ? listarReservasSocio(socioIdActual) : Promise.resolve([]),
+        socioIdActual ? listarEsperaSocio(socioIdActual) : Promise.resolve([]),
       ]);
       if (!cancelled) {
         setClases(resultClases);
@@ -136,9 +140,17 @@ export function ClasesPage() {
   // ── Acciones SOCIO ────────────────────────────────────────────────────────
 
   const handleReservar = async (idClase: number) => {
-    setAccionLoadingId(idClase);
+    if (!socioIdActual) {
+      addToast({
+        type: 'warning',
+        title: 'Inicio de sesión requerido',
+        message: 'Debés iniciar sesión como socio para poder reservar una clase.',
+      });
+      return;
+    }
+    setClaseLoadingId(idClase);
     try {
-      const nuevaReserva = await reservarClase(idClase, SOCIO_MOCK_ID);
+      const nuevaReserva = await reservarClase(idClase, socioIdActual);
       setReservasSocio((prev) => [...prev, nuevaReserva]);
       // Actualizar cupoDisponible en la lista local
       setClases((prev) =>
@@ -153,26 +165,34 @@ export function ClasesPage() {
       const msg = err instanceof Error ? err.message : 'No se pudo reservar la clase';
       addToast({ type: 'error', title: 'Error al reservar', message: msg });
     } finally {
-      setAccionLoadingId(null);
+      setClaseLoadingId(null);
     }
   };
 
   const handleAnotarseEnEspera = async (idClase: number) => {
-    setAccionLoadingId(idClase);
+    if (!socioIdActual) {
+      addToast({
+        type: 'warning',
+        title: 'Inicio de sesión requerido',
+        message: 'Debés iniciar sesión como socio para anotarte en la lista de espera.',
+      });
+      return;
+    }
+    setClaseLoadingId(idClase);
     try {
-      const nuevaEspera = await anotarseEnEspera(idClase, SOCIO_MOCK_ID);
+      const nuevaEspera = await anotarseEnEspera(idClase, socioIdActual);
       setEsperaSocio((prev) => [...prev, nuevaEspera]);
       addToast({ type: 'info', title: 'Anotado en lista de espera', message: `Estás en la posición #${nuevaEspera.ordenPosicion}. Te avisaremos cuando se libere un cupo.` });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'No se pudo anotar en la lista de espera';
       addToast({ type: 'error', title: 'Error', message: msg });
     } finally {
-      setAccionLoadingId(null);
+      setClaseLoadingId(null);
     }
   };
 
   const handleCancelarReserva = async (idReservaClase: number) => {
-    setAccionLoadingId(idReservaClase);
+    setReservaLoadingId(idReservaClase);
     try {
       await cancelarReservaClase(idReservaClase);
       // Actualizamos el estado local: cambiamos el estado de la reserva a CANCELADA
@@ -197,7 +217,7 @@ export function ClasesPage() {
       const msg = err instanceof Error ? err.message : 'No se pudo cancelar la reserva';
       addToast({ type: 'error', title: 'Error al cancelar', message: msg });
     } finally {
-      setAccionLoadingId(null);
+      setReservaLoadingId(null);
     }
   };
 
@@ -281,6 +301,26 @@ export function ClasesPage() {
         )}
       </div>
 
+      {/* ── Banner de Modo Mock (visible cuando VITE_USE_MOCK=true) ─────── */}
+      {isMockMode && (
+        <div
+          data-testid="banner-mock-mode"
+          className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-xs"
+        >
+          <div className="flex items-center gap-2">
+            <span className="font-bold uppercase tracking-wider text-[10px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full shrink-0">
+              Modo Mock
+            </span>
+            <span>
+              Operando con datos simulados (Socio demo: <strong>Valentina García</strong> · ID #{SOCIO_MOCK_ID}).
+            </span>
+          </div>
+          <span className="text-[11px] text-amber-700 font-mono shrink-0">
+            VITE_USE_MOCK=true
+          </span>
+        </div>
+      )}
+
       {/* ── Tab selector ───────────────────────────────────────────────────── */}
       <div className="flex bg-slate-100 p-1 rounded-2xl w-fit gap-1">
         <button
@@ -357,7 +397,7 @@ export function ClasesPage() {
                     estaReservada={Boolean(reserva)}
                     estaEnEspera={Boolean(espera)}
                     ordenEnEspera={espera?.ordenPosicion}
-                    isLoading={accionLoadingId === clase.idClase}
+                    isLoading={claseLoadingId === clase.idClase}
                     onReservar={() => void handleReservar(clase.idClase)}
                     onAnotarEnEspera={() => void handleAnotarseEnEspera(clase.idClase)}
                   />
@@ -384,7 +424,13 @@ export function ClasesPage() {
       ──────────────────────────────────────────────────────────────────── */}
       {!loading && activeTab === 'mis-reservas' && (
         <>
-          {reservasParaMostrar.length === 0 ? (
+          {!socioIdActual ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="Iniciá sesión como socio"
+              description="Necesitás una cuenta de socio activa para ver y gestionar tus reservas de clases."
+            />
+          ) : reservasParaMostrar.length === 0 ? (
             <EmptyState
               icon={ClipboardList}
               title="Sin reservas aún"
@@ -403,7 +449,7 @@ export function ClasesPage() {
                     key={reserva.idReservaClase}
                     reserva={reserva}
                     listaEspera={espera}
-                    isLoading={accionLoadingId === reserva.idReservaClase}
+                    isLoading={reservaLoadingId === reserva.idReservaClase}
                     onCancelar={(id) => void handleCancelarReserva(id)}
                   />
                 );

@@ -17,7 +17,7 @@ import { Calendar, Clock, MapPin } from 'lucide-react';
 import { StatusBadge, ConfirmDialog } from '../ui';
 import { PosicionEsperaBadge } from './PosicionEsperaBadge';
 import type { ReservaClaseDTO, ListaEsperaDTO } from '../../types';
-import { formatearFechaHora, formatearHora } from '../../utils/formatters';
+import { formatearFechaHora, formatearHora, parseLocalDateTime } from '../../utils/formatters';
 
 // ── Constante de corte de cancelación (2 hs en milisegundos) ────────────────
 const CORTE_CANCELACION_MS = 2 * 60 * 60 * 1000;
@@ -35,12 +35,14 @@ interface ReservaClaseItemProps {
 /**
  * Calcula si quedan ≤ 2 hs para el inicio de la clase.
  * Retorna true si el botón de cancelar debe estar deshabilitado por tiempo.
+ *
+ * Usa parseLocalDateTime para asegurar que la comparación se haga sobre la hora local.
  */
 function estaDentroDelCorteDeCancelacion(fechaHoraInicio: string): boolean {
   const ahora = Date.now();
-  const inicio = new Date(fechaHoraInicio).getTime();
+  const inicio = parseLocalDateTime(fechaHoraInicio).getTime();
   const diferencia = inicio - ahora;
-  // Si la diferencia es positiva (clase futura) y menor a 2 hs, no se puede cancelar
+  // Si la diferencia es positiva (clase futura) y menor o igual a 2 hs, no se puede cancelar
   return diferencia > 0 && diferencia <= CORTE_CANCELACION_MS;
 }
 
@@ -100,6 +102,7 @@ export function ReservaClaseItem({ reserva, listaEspera, onCancelar, isLoading =
             <div className="flex flex-col items-end gap-1">
               <button
                 id={`btn-cancelar-reserva-${reserva.idReservaClase}`}
+                aria-label={`Cancelar reserva de ${clase.nombreActividad}`}
                 onClick={() => setShowConfirm(true)}
                 disabled={!puedeCancel || isLoading}
                 className={`

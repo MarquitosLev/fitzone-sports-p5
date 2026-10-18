@@ -18,7 +18,7 @@ import { Button } from '../ui';
 import { CupoIndicator } from './CupoIndicator';
 import { PosicionEsperaBadge } from './PosicionEsperaBadge';
 import type { ClaseGrupalDTO } from '../../types';
-import { formatearFechaHora, formatearHora } from '../../utils/formatters';
+import { formatearFechaHora, formatearHora, parseLocalDateTime } from '../../utils/formatters';
 
 // ── Constante de ventana de reserva (48 hs en milisegundos) ─────────────────
 const VENTANA_RESERVA_MS = 48 * 60 * 60 * 1000;
@@ -44,10 +44,12 @@ interface ClaseCardProps {
  * Devuelve true solo si la clase:
  * 1. No ha comenzado aún (fechaHoraInicio > ahora)
  * 2. Comienza dentro de las próximas 48 horas
+ *
+ * Usa parseLocalDateTime para asegurar interpretación en hora local y evitar desfasajes.
  */
 function estaEnVentana(fechaHoraInicio: string): boolean {
   const ahora = Date.now();
-  const inicio = new Date(fechaHoraInicio).getTime();
+  const inicio = parseLocalDateTime(fechaHoraInicio).getTime();
   const diferencia = inicio - ahora;
   // La clase debe ser futura Y estar a menos de 48 hs
   return diferencia > 0 && diferencia <= VENTANA_RESERVA_MS;
@@ -112,7 +114,7 @@ export function ClaseCard({
             {estaEnEspera && !estaReservada && <Badge variant="gold-soft" size="xs">EN ESPERA</Badge>}
             {!enVentana && !estaReservada && !estaEnEspera && (
               <Badge variant="default" size="xs">
-                {new Date(clase.fechaHoraInicio) <= new Date() ? 'FINALIZADA' : '+48 HS'}
+                {parseLocalDateTime(clase.fechaHoraInicio).getTime() <= Date.now() ? 'FINALIZADA' : '+48 HS'}
               </Badge>
             )}
           </div>
@@ -160,6 +162,7 @@ export function ClaseCard({
         <div className="mt-auto pt-2">
           <Button
             id={`btn-clase-${clase.idClase}-${accion}`}
+            aria-label={`${btn.label} para ${clase.nombreActividad}`}
             variant={btn.variant}
             size="sm"
             className="w-full"
@@ -171,7 +174,7 @@ export function ClaseCard({
           </Button>
 
           {/* Aviso contextual para "fuera de ventana" */}
-          {accion === 'fuera-de-ventana' && new Date(clase.fechaHoraInicio) > new Date() && (
+          {accion === 'fuera-de-ventana' && parseLocalDateTime(clase.fechaHoraInicio).getTime() > Date.now() && (
             <p className="text-[10px] text-slate-400 text-center mt-1.5">
               Reserva habilitada hasta 48 hs antes del inicio
             </p>

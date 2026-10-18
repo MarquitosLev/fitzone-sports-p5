@@ -6,23 +6,55 @@
  */
 
 /**
+ * Parsea un string ISO de LocalDateTime (sin zona horaria, ej. "2026-10-17T18:00:00")
+ * a un objeto Date interpretándolo en la zona horaria local del navegador.
+ *
+ * Por qué: El backend devuelve LocalDateTime de Java sin 'Z'. Si pasamos ese string
+ * a new Date(), algunos navegadores lo toman como UTC y otros como local, desfasando
+ * la hora y rompiendo reglas de negocio (ej. ventanas de 48 hs o cortes de 2 hs).
+ */
+export function parseLocalDateTime(isoString: string): Date {
+  if (!isoString) return new Date(NaN);
+
+  // Si incluye zona explícita ('Z' o offset +/-HH:mm), dejamos que el Date nativo lo resuelva
+  if (/[Z+-]\d{2}(:?\d{2})?$/.test(isoString) || isoString.endsWith('Z')) {
+    return new Date(isoString);
+  }
+
+  // Desglosamos formato ISO local: "YYYY-MM-DDTHH:mm[:ss[.SSS]]"
+  const [datePart, timePart] = isoString.split('T');
+  if (!datePart) return new Date(isoString);
+
+  const [year, month, day] = datePart.split('-').map(Number);
+  if (!timePart) {
+    return new Date(year, (month || 1) - 1, day || 1);
+  }
+
+  const [timeWithoutMs, msPart] = timePart.split('.');
+  const [hours = 0, minutes = 0, seconds = 0] = timeWithoutMs.split(':').map(Number);
+  const milliseconds = msPart ? Number(msPart.slice(0, 3).padEnd(3, '0')) : 0;
+
+  // new Date(año, mesIndex, día, hora, min, seg, ms) siempre crea en la zona local
+  return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds);
+}
+
+/**
  * Formatea una fecha ISO (string) a formato legible en español (Argentina).
  * Ejemplo: "2026-10-15T14:30:00" → "15/10/2026, 14:30"
- * @param isoString - Fecha como string ISO (viene del backend como LocalDateTime de Java)
+ * @param isoString - Fecha como string ISO (LocalDateTime de Java)
  */
 export function formatearFechaHora(isoString: string): string {
   if (!isoString) return '—';
   try {
-    // Como el backend devuelve LocalDateTime sin zona horaria,
-    // tratamos el string como hora local agregando la 'Z' al final
-    // para evitar que el navegador lo interprete de forma incorrecta.
-    const date = new Date(isoString.includes('Z') ? isoString : isoString + 'Z');
+    const date = parseLocalDateTime(isoString);
+    if (isNaN(date.getTime())) return isoString;
     return new Intl.DateTimeFormat('es-AR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
     }).format(date);
   } catch {
     return isoString;
