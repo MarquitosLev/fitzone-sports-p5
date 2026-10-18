@@ -6,7 +6,7 @@ export type { SedeDTO } from './sede';
 export type { TipoUsuario, UsuarioDTO, UsuarioFormData } from './usuario';
 export type { EstadoMembresia, PlanDTO, MembresiaDTO, MembresiaFormData } from './membresia';
 export type { AccesoDTO, QrTokenDTO } from './acceso';
-export type { EstadoReservaClase, ClaseGrupalDTO, ReservaClaseDTO } from './clase';
+export type { EstadoReservaClase, ClaseGrupalDTO, ReservaClaseDTO, ListaEsperaDTO } from './clase';
 export type {
   CanchaDTO,
   ReservaCanchaDTO,

@@ -1,6 +1,7 @@
 import { Clock, Trash2, CalendarDays } from 'lucide-react';
 import type { ClaseGrupalDTO } from '../../types';
 import { CupoIndicator } from './CupoIndicator';
+import { parseLocalDateTime } from '../../utils/formatters';
 
 interface AgendaSemanalProps {
   clases: ClaseGrupalDTO[];
@@ -8,10 +9,10 @@ interface AgendaSemanalProps {
   onDelete?: (clase: ClaseGrupalDTO) => void;
 }
 
-// Helper to get day name (Monday...Sunday) from ISO date string
+// Helper to get day name (Monday...Sunday) from ISO date string in local timezone
 const getDayName = (iso: string) => {
-  const date = new Date(iso);
-  return date.toLocaleDateString('es-ES', { weekday: 'long' });
+  const date = parseLocalDateTime(iso);
+  return date.toLocaleDateString('es-AR', { weekday: 'long' });
 };
 
 export function AgendaSemanal({ clases, onEdit, onDelete }: AgendaSemanalProps) {
@@ -26,7 +27,7 @@ export function AgendaSemanal({ clases, onEdit, onDelete }: AgendaSemanalProps) 
   const dayOrder = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
   // Detect current day in lowercase to give it a subtle highlight
-  const todayName = new Date().toLocaleDateString('es-ES', { weekday: 'long' });
+  const todayName = new Date().toLocaleDateString('es-AR', { weekday: 'long' });
 
   return (
     <div
