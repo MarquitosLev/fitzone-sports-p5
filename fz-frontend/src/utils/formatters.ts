@@ -59,3 +59,21 @@ export function formatearMonto(monto: number): string {
     maximumFractionDigits: 0,
   }).format(monto);
 }
+
+/**
+ * Extrae solo la hora de un string ISO (LocalDateTime del backend).
+ * Ejemplo: "2026-10-17T18:00:00" → "18:00"
+ */
+export function formatearHora(isoString: string): string {
+  if (!isoString) return '—';
+  try {
+    // Extraemos hora y minutos del string directamente para evitar
+    // conversiones de zona horaria (el backend devuelve hora local sin 'Z')
+    const timePart = isoString.split('T')[1];
+    if (!timePart) return '—';
+    const [hh, mm] = timePart.split(':');
+    return `${hh}:${mm}`;
+  } catch {
+    return isoString;
+  }
+}

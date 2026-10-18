@@ -19,6 +19,8 @@ const STATUS_CONFIG_MAP: Record<string, { variant: StatusVariant; label: string 
   APROBADO: { variant: 'green', label: 'Aprobado' },
   APROBADA: { variant: 'green', label: 'Aprobada' },
   REGULAR: { variant: 'green', label: 'Al Día' },
+  /** EstadoReservaClase: el socio asistió físicamente a la clase */
+  ASISTIO: { variant: 'green', label: 'Asistió' },
 
   // Danger / Expired / Cancelled states (FitZone Red)
   VENCIDO: { variant: 'red', label: 'Vencido' },
@@ -33,6 +35,8 @@ const STATUS_CONFIG_MAP: Record<string, { variant: StatusVariant; label: string 
   INACTIVA: { variant: 'red', label: 'Inactiva' },
   INACTIVO: { variant: 'red', label: 'Inactivo' },
   AUSENTE: { variant: 'red', label: 'Ausente' },
+  /** EstadoReservaClase: el socio no se presentó a la clase reservada */
+  NO_ASISTIO: { variant: 'red', label: 'No Asistió' },
   FALLIDO: { variant: 'red', label: 'Fallido' },
   ERROR: { variant: 'red', label: 'Error' },
 
