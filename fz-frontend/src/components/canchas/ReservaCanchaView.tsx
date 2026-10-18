@@ -359,6 +359,14 @@ export function ReservaCanchaView({
           </button>
         </div>
       </div>
+      {/* 
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      IMPORTANTE
+      
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      */}
+      <span>El selector de tipo de cliente se quitará una vez se implementen los tipos de usuarios.</span>
     </div>
 
       {/* Alerta de Conflicto 409 si ocurrió */}
