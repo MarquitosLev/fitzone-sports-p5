@@ -206,6 +206,36 @@ describe('CanchasPage (Integración)', () => {
     });
   });
 
+  it('permite cancelar una reserva con estado CONFIRMADA y liberar el turno', async () => {
+    const reservaConfirmada: ReservaCanchaDTO = {
+      ...mockReservas[0],
+      idReservaCancha: 2040,
+      estado: 'CONFIRMADA',
+    };
+    vi.spyOn(canchasService, 'listarMisReservas').mockResolvedValueOnce([reservaConfirmada]);
+    const spyCancelar = vi.spyOn(canchasService, 'cancelarReserva').mockResolvedValueOnce({
+      ...reservaConfirmada,
+      estado: 'CANCELADA',
+    });
+
+    renderWithProviders(<CanchasPage initialTab="mis-reservas" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/2040/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /ver comprobante/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /cancelar/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /cancelar/i }));
+    expect(screen.getByText(/¿cancelar esta reserva\?/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /sí, cancelar reserva/i }));
+
+    await waitFor(() => {
+      expect(spyCancelar).toHaveBeenCalledWith(2040);
+    });
+  });
+
   // ── RF-09 / RF-12: Gestión de Canchas (Admin) ──────────────────────────────
   it('carga y muestra las canchas de la sede activa y sus métricas', async () => {
     renderWithProviders(<CanchasPage initialTab="admin" />);

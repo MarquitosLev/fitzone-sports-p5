@@ -136,7 +136,12 @@ export function AccesoPage() {
       setErrorQr(null);
       try {
         const tokenResp = await obtenerQrSocio(idUsuario);
-        setQrTokenData(tokenResp);
+        setSocioSeleccionado((current) => {
+          if (current.idUsuario === idUsuario) {
+            setQrTokenData(tokenResp);
+          }
+          return current;
+        });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'No se pudo generar el token de acceso.';
         setErrorQr(msg);
@@ -152,21 +157,25 @@ export function AccesoPage() {
     [addToast]
   );
 
-  // Cargar estado de membresía del socio seleccionado
-  const cargarEstadoMembresia = useCallback(
-    async (usuario: UsuarioDTO) => {
+  // Efecto cuando cambia el socio seleccionado con control de cancelación
+  useEffect(() => {
+    let cancelado = false;
+
+    const cargar = async () => {
       setCargandoMembresia(true);
       setQrTokenData(null);
       setErrorQr(null);
       try {
-        const m = await obtenerMembresiaPorUsuario(usuario.idUsuario);
+        const m = await obtenerMembresiaPorUsuario(socioSeleccionado.idUsuario);
+        if (cancelado) return;
         setMembresia(m);
 
         // REGLA DE NEGOCIO: Solo si la membresía está ACTIVA solicitamos el token QR
         if (m && m.estado === 'ACTIVO') {
-          void solicitarNuevoToken(usuario.idUsuario);
+          void solicitarNuevoToken(socioSeleccionado.idUsuario);
         }
       } catch (err: unknown) {
+        if (cancelado) return;
         const msg = err instanceof Error ? err.message : 'Error al consultar membresía del socio.';
         setMembresia(null);
         addToast({
@@ -175,16 +184,17 @@ export function AccesoPage() {
           message: msg,
         });
       } finally {
-        setCargandoMembresia(false);
+        if (!cancelado) {
+          setCargandoMembresia(false);
+        }
       }
-    },
-    [solicitarNuevoToken, addToast]
-  );
+    };
 
-  // Efecto cuando cambia el socio seleccionado
-  useEffect(() => {
-    void cargarEstadoMembresia(socioSeleccionado);
-  }, [socioSeleccionado, cargarEstadoMembresia]);
+    void cargar();
+    return () => {
+      cancelado = true;
+    };
+  }, [socioSeleccionado, solicitarNuevoToken, addToast]);
 
   // Cargar historial de accesos si se abre la pestaña de recepción
   useEffect(() => {

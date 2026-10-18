@@ -405,15 +405,25 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
                       )}
 
                       {isConfirmed && (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          leftIcon={FileText}
-                          onClick={() => navigate('/pagos')}
-                        >
-                          Ver comprobante
-                        </Button>
+                        <>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            leftIcon={FileText}
+                            onClick={() => navigate('/pagos')}
+                          >
+                            Ver comprobante
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="sm"
+                            onClick={() => setReservaACancelar(b)}
+                          >
+                            Cancelar
+                          </Button>
+                        </>
                       )}
 
                       {(isCancelled || isFinished) && (

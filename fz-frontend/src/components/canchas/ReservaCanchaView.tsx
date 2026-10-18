@@ -33,6 +33,7 @@ import {
 } from '../../services/canchasService';
 import { useSede } from '../../context/SedeContext';
 import { useToast } from '../../context/ToastContext';
+import { AppError } from '../../services/httpClient';
 import type {
   CanchaDTO,
   FranjaHorariaDTO,
@@ -283,24 +284,39 @@ export function ReservaCanchaView({
         onVerMisReservas();
       }
     } catch (err: unknown) {
-      // Capturar conflicto 409 o horario ya tomado
       const mensaje =
         err instanceof Error
           ? err.message
           : 'El horario seleccionado ya fue tomado por otro usuario.';
 
-      setErrorConflicto(mensaje);
-      setModalConfirmacionOpen(false);
+      const isConflict =
+        (err instanceof AppError && err.status === 409) ||
+        (err instanceof Error &&
+          (err.message.includes('409') ||
+            err.message.toLowerCase().includes('ya fue tomado') ||
+            err.message.toLowerCase().includes('conflicto') ||
+            err.message.toLowerCase().includes('ocupado')));
 
-      addToast({
-        type: 'error',
-        title: 'Horario no disponible (409)',
-        message: mensaje,
-      });
+      if (isConflict) {
+        setErrorConflicto(mensaje);
+        setModalConfirmacionOpen(false);
 
-      // Requisito: "Si el horario ya fue tomado (409), se muestra el mensaje y se refresca la grilla."
-      await cargarDisponibilidad();
-      setTurnoSeleccionado(null);
+        addToast({
+          type: 'error',
+          title: 'Horario no disponible (409)',
+          message: mensaje,
+        });
+
+        // Requisito: "Si el horario ya fue tomado (409), se muestra el mensaje y se refresca la grilla."
+        await cargarDisponibilidad();
+        setTurnoSeleccionado(null);
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Error al reservar',
+          message: mensaje,
+        });
+      }
     } finally {
       setConfirmando(false);
     }
@@ -359,14 +375,6 @@ export function ReservaCanchaView({
           </button>
         </div>
       </div>
-      {/* 
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-      IMPORTANTE
-      
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      */}
-      <span>El selector de tipo de cliente se quitará una vez se implementen los tipos de usuarios.</span>
     </div>
 
       {/* Alerta de Conflicto 409 si ocurrió */}

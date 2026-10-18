@@ -11,6 +11,8 @@ import type {
 } from '../types';
 
 // ─── DATOS MOCK ───────────────────────────────────────────────────────────────
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
+
 let MOCK_CANCHAS: CanchaDTO[] = [
   {
     idCancha: 1,
@@ -71,7 +73,7 @@ export function inferirTipoCancha(nombre: string): TipoCancha {
  * Lista las canchas de una sede (incluyendo las que están en mantenimiento).
  */
 export async function listarCanchas(idSede: number): Promise<CanchaDTO[]> {
-  if (import.meta.env.VITE_USE_MOCK === 'true') {
+  if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return MOCK_CANCHAS.filter((c) => c.sede.idSede === idSede).map((c) => ({
       ...c,
@@ -94,7 +96,7 @@ export async function crearCancha(
   datos: CanchaFormData,
   nombreSede = 'Sede Activa'
 ): Promise<CanchaDTO> {
-  if (import.meta.env.VITE_USE_MOCK === 'true') {
+  if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Validación mock de conflicto de nombre en la misma sede
@@ -141,7 +143,7 @@ export async function actualizarCancha(
   idCancha: number,
   datos: CanchaFormData
 ): Promise<CanchaDTO> {
-  if (import.meta.env.VITE_USE_MOCK === 'true') {
+  if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     const index = MOCK_CANCHAS.findIndex((c) => c.idCancha === idCancha);
@@ -199,7 +201,7 @@ export async function cambiarMantenimiento(
   idCancha: number,
   enMantenimiento: boolean
 ): Promise<CanchaDTO> {
-  if (import.meta.env.VITE_USE_MOCK === 'true') {
+  if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 250));
 
     const index = MOCK_CANCHAS.findIndex((c) => c.idCancha === idCancha);
@@ -254,7 +256,7 @@ export function calcularCotizacion(
   };
 }
 
-let MOCK_RESERVAS: ReservaCanchaDTO[] = [
+const INITIAL_MOCK_RESERVAS: ReservaCanchaDTO[] = [
   {
     idReservaCancha: 1029,
     cancha: MOCK_CANCHAS[0],
@@ -350,6 +352,15 @@ let MOCK_RESERVAS: ReservaCanchaDTO[] = [
   },
 ];
 
+let MOCK_RESERVAS: ReservaCanchaDTO[] = JSON.parse(JSON.stringify(INITIAL_MOCK_RESERVAS));
+
+/**
+ * Reinicia la lista de reservas mock a su estado original (útil para pruebas).
+ */
+export function _resetMockReservas(): void {
+  MOCK_RESERVAS = JSON.parse(JSON.stringify(INITIAL_MOCK_RESERVAS));
+}
+
 /**
  * Cotiza el turno de una cancha (SCRUM-73).
  * Calcula tarifa base, recargo pico (19-21 hs) y descuento socio (15%).
@@ -359,7 +370,7 @@ export async function cotizarTurno(
   horaInicio: string,
   esSocio: boolean
 ): Promise<CotizacionReservaDTO> {
-  if (import.meta.env.VITE_USE_MOCK === 'true') {
+  if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 150));
     const cancha = MOCK_CANCHAS.find((c) => c.idCancha === idCancha);
     const precioBase = cancha ? cancha.precioBaseHora : 10000;
@@ -379,7 +390,7 @@ export async function obtenerDisponibilidad(
   idCancha: number,
   fechaIso: string // YYYY-MM-DD
 ): Promise<FranjaHorariaDTO[]> {
-  if (import.meta.env.VITE_USE_MOCK === 'true') {
+  if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 250));
 
     const cancha = MOCK_CANCHAS.find((c) => c.idCancha === idCancha);
@@ -458,7 +469,7 @@ export async function crearReserva(
   payload: CrearReservaPayload,
   simularConflicto = false
 ): Promise<ReservaCanchaDTO> {
-  if (import.meta.env.VITE_USE_MOCK === 'true') {
+  if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 350));
 
     // Si se fuerza conflicto o si el turno ya fue ocupado
@@ -493,6 +504,40 @@ export async function crearReserva(
             timestamp: new Date().toISOString(),
           }
         );
+      }
+    }
+
+    if (simularConflicto) {
+      // Si se simula conflicto, sembrar la reserva del usuario concurrente para que la grilla refleje el turno como OCUPADO
+      const yaExiste = MOCK_RESERVAS.some(
+        (r) =>
+          r.cancha.idCancha === payload.idCancha &&
+          r.estado !== 'CANCELADA' &&
+          r.fechaHoraInicio === fechaHoraInicio
+      );
+      if (!yaExiste) {
+        const cancha = MOCK_CANCHAS.find((c) => c.idCancha === payload.idCancha) || MOCK_CANCHAS[0];
+        MOCK_RESERVAS.unshift({
+          idReservaCancha: Date.now(),
+          cancha,
+          usuario: {
+            idUsuario: 99,
+            authId: 'uuid-concurrente',
+            dni: '33.999.888',
+            nombre: 'Otro',
+            apellido: 'Deportista',
+            email: 'concurrente@fitzone.com',
+            telefono: '+54 9 11 9999-8888',
+            fotoUrl: null,
+            tipoUsuario: 'SOCIO',
+            idSede: cancha.sede.idSede,
+          },
+          fechaHoraInicio,
+          fechaHoraFin,
+          precioFinal: cancha.precioBaseHora,
+          estado: 'CONFIRMADA',
+          fechaCreacion: new Date().toISOString(),
+        });
       }
     }
 
@@ -563,7 +608,7 @@ export async function crearReserva(
 export async function listarMisReservas(
   idUsuario = 1
 ): Promise<ReservaCanchaDTO[]> {
-  if (import.meta.env.VITE_USE_MOCK === 'true') {
+  if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 200));
     return [...MOCK_RESERVAS];
   }
@@ -577,7 +622,7 @@ export async function listarMisReservas(
 export async function cancelarReserva(
   idReservaCancha: number
 ): Promise<ReservaCanchaDTO> {
-  if (import.meta.env.VITE_USE_MOCK === 'true') {
+  if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     const index = MOCK_RESERVAS.findIndex((r) => r.idReservaCancha === idReservaCancha);

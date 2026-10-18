@@ -1,7 +1,7 @@
 import { httpClient } from './httpClient';
 import type { AccesoDTO, QrTokenDTO } from '../types';
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 // ─── DATOS MOCK ───────────────────────────────────────────────────────────────
 const MOCK_ACCESOS: AccesoDTO[] = [
