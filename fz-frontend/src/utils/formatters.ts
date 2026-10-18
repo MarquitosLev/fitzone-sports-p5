@@ -6,23 +6,77 @@
  */
 
 /**
+ * Parsea un string ISO de LocalDateTime (sin zona horaria, ej. "2026-10-17T18:00:00")
+ * a un objeto Date interpretándolo en la zona horaria local del navegador.
+ *
+ * Por qué: El backend devuelve LocalDateTime de Java sin 'Z'. Si pasamos ese string
+ * a new Date(), algunos navegadores lo toman como UTC y otros como local, desfasando
+ * la hora y rompiendo reglas de negocio (ej. ventanas de 48 hs o cortes de 2 hs).
+ */
+export function parseLocalDateTime(isoString: string): Date {
+  if (!isoString) return new Date(NaN);
+
+  // Si incluye zona explícita ('Z' o offset +/-HH:mm), dejamos que el Date nativo lo resuelva
+  if (/[Z+-]\d{2}(:?\d{2})?$/.test(isoString) || isoString.endsWith('Z')) {
+    return new Date(isoString);
+  }
+
+  // Desglosamos formato ISO local: "YYYY-MM-DDTHH:mm[:ss[.SSS]]"
+  const [datePart, timePart] = isoString.split('T');
+  if (!datePart) return new Date(isoString);
+
+  const [year, month, day] = datePart.split('-').map(Number);
+  if (!timePart) {
+    return new Date(year, (month || 1) - 1, day || 1);
+  }
+
+  const [timeWithoutMs, msPart] = timePart.split('.');
+  const [hours = 0, minutes = 0, seconds = 0] = timeWithoutMs.split(':').map(Number);
+  const milliseconds = msPart ? Number(msPart.slice(0, 3).padEnd(3, '0')) : 0;
+
+  // new Date(año, mesIndex, día, hora, min, seg, ms) siempre crea en la zona local
+  return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds);
+}
+
+/**
+ * Convierte un objeto Date a un string ISO en formato local "YYYY-MM-DDTHH:mm:ss"
+ * (sin sufijo 'Z', compatible con LocalDateTime de Java y parseLocalDateTime).
+ *
+ * Por qué: date.toISOString() convierte a UTC. Si en Argentina (UTC-3) son las 18:00 local,
+ * toISOString().slice(0, 19) produce "21:00:00" (hora UTC). Al quitarle la 'Z', cualquier
+ * parser local la lee como 21:00, generando un desfase artificial de +3 horas.
+ * toLocalISOString utiliza los getters locales (getFullYear, getMonth, getDate, etc.),
+ * garantizando que "18:00 local" se serialice fielmente como "YYYY-MM-DDTHH:mm:ss".
+ */
+export function toLocalISOString(date: Date): string {
+  if (isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const min = pad(date.getMinutes());
+  const ss = pad(date.getSeconds());
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`;
+}
+
+/**
  * Formatea una fecha ISO (string) a formato legible en español (Argentina).
  * Ejemplo: "2026-10-15T14:30:00" → "15/10/2026, 14:30"
- * @param isoString - Fecha como string ISO (viene del backend como LocalDateTime de Java)
+ * @param isoString - Fecha como string ISO (LocalDateTime de Java)
  */
 export function formatearFechaHora(isoString: string): string {
   if (!isoString) return '—';
   try {
-    // Como el backend devuelve LocalDateTime sin zona horaria,
-    // tratamos el string como hora local agregando la 'Z' al final
-    // para evitar que el navegador lo interprete de forma incorrecta.
-    const date = new Date(isoString.includes('Z') ? isoString : isoString + 'Z');
+    const date = parseLocalDateTime(isoString);
+    if (isNaN(date.getTime())) return isoString;
     return new Intl.DateTimeFormat('es-AR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
     }).format(date);
   } catch {
     return isoString;
@@ -58,4 +112,22 @@ export function formatearMonto(monto: number): string {
     currency: 'ARS',
     maximumFractionDigits: 0,
   }).format(monto);
+}
+
+/**
+ * Extrae solo la hora de un string ISO (LocalDateTime del backend).
+ * Ejemplo: "2026-10-17T18:00:00" → "18:00"
+ */
+export function formatearHora(isoString: string): string {
+  if (!isoString) return '—';
+  try {
+    // Extraemos hora y minutos del string directamente para evitar
+    // conversiones de zona horaria (el backend devuelve hora local sin 'Z')
+    const timePart = isoString.split('T')[1];
+    if (!timePart) return '—';
+    const [hh, mm] = timePart.split(':');
+    return `${hh}:${mm}`;
+  } catch {
+    return isoString;
+  }
 }

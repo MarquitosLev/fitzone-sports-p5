@@ -31,3 +31,15 @@ export interface ReservaClaseDTO {
   usuario: UsuarioDTO;
   estado: EstadoReservaClase;
 }
+
+/**
+ * DTO de Lista de Espera (posición de un socio en la cola de espera de una clase).
+ * Corresponde a la entidad `ListaEspera` del backend (`fz_cls_lista_espera`).
+ */
+export interface ListaEsperaDTO {
+  idEspera: number;
+  clase: ClaseGrupalDTO;
+  usuario: UsuarioDTO;
+  /** Posición en la cola (1 = primero en ser notificado cuando se libere un cupo). */
+  ordenPosicion: number;
+}

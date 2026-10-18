@@ -42,6 +42,10 @@ import { MOCK_PLANES } from '../services/membresiasService';
 import { AgendaSemanal } from '../components/clases/AgendaSemanal';
 import { ClaseForm } from '../components/clases/ClaseForm';
 import { CupoIndicator } from '../components/clases/CupoIndicator';
+import { ClaseCard } from '../components/clases/ClaseCard';
+import { ReservaClaseItem } from '../components/clases/ReservaClaseItem';
+import { PosicionEsperaBadge } from '../components/clases/PosicionEsperaBadge';
+import { toLocalISOString } from '../utils/formatters';
 import type { ClaseFormPayload } from '../components/clases/ClaseForm';
 import type { ClaseGrupalDTO } from '../types';
 import type { UsuarioDTO, TipoUsuario, MembresiaDTO, EstadoMembresia } from '../types';
@@ -215,6 +219,7 @@ export function PlaygroundPage() {
     { id: 'all', label: 'Todos' },
     { id: 'membresias', label: 'Membresías (RF-02)' },
     { id: 'clases', label: 'Agenda Clases (RF-06)' },
+    { id: 'clases-socio', label: 'Clases Socio (SCRUM-83)' },
     { id: 'usuarios', label: 'Gestión Usuarios (RF-01)' },
     { id: 'buttons', label: 'Botones' },
     { id: 'inputs', label: 'Campos Form' },
@@ -1795,6 +1800,207 @@ export function PlaygroundPage() {
                   <CupoIndicator cupoDisponible={disponible} cupoMaximo={maximo} />
                 </div>
               ))}
+            </div>
+          </Card>
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          11. CLASES SOCIO — SCRUM-83: ClaseCard, ReservaClaseItem, PosicionEsperaBadge
+          Demos de los 3 componentes nuevos del módulo de clases para la vista socio.
+      ══════════════════════════════════════════════════════════════════════ */}
+      {shouldShow('clases-socio') && (
+        <section className="space-y-6">
+          <div>
+            <h2 className="text-xl font-black text-[#1B2A55] font-outfit">11. Clases Grupales — Vista Socio (SCRUM-83)</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Componentes presentacionales: <code className="text-[#1B2A55] font-mono">ClaseCard</code>,{' '}
+              <code className="text-[#1B2A55] font-mono">ReservaClaseItem</code> y{' '}
+              <code className="text-[#1B2A55] font-mono">PosicionEsperaBadge</code>. Ninguno hace fetch.
+            </p>
+          </div>
+
+          {/* 11.1 PosicionEsperaBadge */}
+          <Card title="11.1 PosicionEsperaBadge — Posición en cola de espera" subtitle="Muestra la posición del socio usando Badge 'gold-soft'. Acepta size='xs'|'sm'.">
+            <div className="flex flex-wrap items-center gap-3">
+              <PosicionEsperaBadge ordenPosicion={1} size="xs" />
+              <PosicionEsperaBadge ordenPosicion={3} size="sm" />
+              <PosicionEsperaBadge ordenPosicion={7} size="sm" />
+              <PosicionEsperaBadge ordenPosicion={12} size="sm" />
+            </div>
+          </Card>
+
+          {/* 11.2 ClaseCard — 4 estados del botón */}
+          <Card
+            title="11.2 ClaseCard — Los 4 estados del botón de acción"
+            subtitle="Ventana 48 hs: dentro = Reservar / En espera. Fuera = deshabilitado. Ya reservada = deshabilitado."
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+              {/* Estado A: RESERVAR (cupo disponible + dentro de 48 hs) */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                  A — Botón "Reservar"
+                </span>
+                <ClaseCard
+                  clase={{
+                    idClase: 901,
+                    sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                    nombreActividad: 'Spinning',
+                    fechaHoraInicio: toLocalISOString(new Date(Date.now() + 20 * 3600_000)),
+                    duracionMinutos: 60,
+                    cupoMaximo: 20,
+                    cupoDisponible: 5,
+                  }}
+                  estaReservada={false}
+                  estaEnEspera={false}
+                  onReservar={() => addToast('Demo', 'reservarClase(901, socioId) llamado.', 'success')}
+                  onAnotarEnEspera={() => {}}
+                />
+              </div>
+
+              {/* Estado B: ANOTARME EN ESPERA (sin cupo + dentro de 48 hs) */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                  B — "Anotarme en espera"
+                </span>
+                <ClaseCard
+                  clase={{
+                    idClase: 902,
+                    sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                    nombreActividad: 'Yoga',
+                    fechaHoraInicio: toLocalISOString(new Date(Date.now() + 36 * 3600_000)),
+                    duracionMinutos: 75,
+                    cupoMaximo: 15,
+                    cupoDisponible: 0,
+                  }}
+                  estaReservada={false}
+                  estaEnEspera={false}
+                  onReservar={() => {}}
+                  onAnotarEnEspera={() => addToast('Demo', 'anotarseEnEspera(902, socioId) llamado.', 'info')}
+                />
+              </div>
+
+              {/* Estado C: YA RESERVADA (con PosicionEsperaBadge si también en espera) */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                  C — "Ya reservada" + en espera
+                </span>
+                <ClaseCard
+                  clase={{
+                    idClase: 903,
+                    sede: { idSede: 1, nombre: 'FitZone Belgrano', aforoMaximo: 60 },
+                    nombreActividad: 'CrossFit',
+                    fechaHoraInicio: toLocalISOString(new Date(Date.now() + 10 * 3600_000)),
+                    duracionMinutos: 50,
+                    cupoMaximo: 12,
+                    cupoDisponible: 3,
+                  }}
+                  estaReservada={true}
+                  estaEnEspera={true}
+                  ordenEnEspera={2}
+                  onReservar={() => {}}
+                  onAnotarEnEspera={() => {}}
+                />
+              </div>
+
+              {/* Estado D: FUERA DE VENTANA (> 48 hs) */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                  D — "Fuera de ventana"
+                </span>
+                <ClaseCard
+                  clase={{
+                    idClase: 904,
+                    sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                    nombreActividad: 'Pilates',
+                    fechaHoraInicio: toLocalISOString(new Date(Date.now() + 72 * 3600_000)),
+                    duracionMinutos: 60,
+                    cupoMaximo: 10,
+                    cupoDisponible: 8,
+                  }}
+                  estaReservada={false}
+                  estaEnEspera={false}
+                  onReservar={() => {}}
+                  onAnotarEnEspera={() => {}}
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* 11.3 ReservaClaseItem — 3 variantes */}
+          <Card
+            title="11.3 ReservaClaseItem — Estados de la reserva"
+            subtitle="BUG-02: solo se cancela si estado=CONFIRMADA y faltan >2 hs. Los demás estados no tienen acción."
+          >
+            <div className="space-y-3">
+
+              {/* Reserva cancelable (CONFIRMADA, > 2 hs) */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Cancelable — CONFIRMADA, faltan +2 hs</span>
+                <ReservaClaseItem
+                  reserva={{
+                    idReservaClase: 801,
+                    clase: {
+                      idClase: 1,
+                      sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                      nombreActividad: 'Spinning',
+                      fechaHoraInicio: toLocalISOString(new Date(Date.now() + 20 * 3600_000)),
+                      duracionMinutos: 60,
+                      cupoMaximo: 20,
+                      cupoDisponible: 5,
+                    },
+                    usuario: { idUsuario: 2, authId: 'u2', dni: '123', nombre: 'Valentina', apellido: 'García', email: 'v@e.com', telefono: '', fotoUrl: null, tipoUsuario: 'SOCIO', idSede: 1 },
+                    estado: 'CONFIRMADA',
+                  }}
+                  onCancelar={(id) => addToast('Demo', `cancelarReservaClase(${id}) invocado.`, 'info')}
+                />
+              </div>
+
+              {/* Reserva NO cancelable por tiempo (CONFIRMADA, < 2 hs) */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">No cancelable — CONFIRMADA, faltan ≤ 2 hs (corte)</span>
+                <ReservaClaseItem
+                  reserva={{
+                    idReservaClase: 802,
+                    clase: {
+                      idClase: 2,
+                      sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                      nombreActividad: 'Yoga',
+                      fechaHoraInicio: toLocalISOString(new Date(Date.now() + 1.5 * 3600_000)),
+                      duracionMinutos: 75,
+                      cupoMaximo: 15,
+                      cupoDisponible: 0,
+                    },
+                    usuario: { idUsuario: 2, authId: 'u2', dni: '123', nombre: 'Valentina', apellido: 'García', email: 'v@e.com', telefono: '', fotoUrl: null, tipoUsuario: 'SOCIO', idSede: 1 },
+                    estado: 'CONFIRMADA',
+                  }}
+                  onCancelar={() => {}}
+                />
+              </div>
+
+              {/* Reserva CANCELADA — sin acción */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Historial — CANCELADA (sin acción)</span>
+                <ReservaClaseItem
+                  reserva={{
+                    idReservaClase: 803,
+                    clase: {
+                      idClase: 3,
+                      sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                      nombreActividad: 'CrossFit',
+                      fechaHoraInicio: toLocalISOString(new Date(Date.now() - 2 * 3600_000)),
+                      duracionMinutos: 50,
+                      cupoMaximo: 12,
+                      cupoDisponible: 3,
+                    },
+                    usuario: { idUsuario: 2, authId: 'u2', dni: '123', nombre: 'Valentina', apellido: 'García', email: 'v@e.com', telefono: '', fotoUrl: null, tipoUsuario: 'SOCIO', idSede: 1 },
+                    estado: 'CANCELADA',
+                  }}
+                  onCancelar={() => {}}
+                />
+              </div>
+
             </div>
           </Card>
         </section>
