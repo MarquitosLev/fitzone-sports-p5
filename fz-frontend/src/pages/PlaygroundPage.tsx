@@ -9,6 +9,8 @@ import {
   DataTable,
   Card,
   StatusBadge,
+  Badge,
+  StatCard,
   Alert,
   Spinner,
   EmptyState,
@@ -52,6 +54,8 @@ import {
   GrillaDisponibilidad,
   DesglosePrecio,
   SelectorFecha,
+  CanchaCard,
+  MantenimientoToggle,
 } from '../components/canchas';
 import { calcularCotizacion } from '../services/canchasService';
 import type { ClaseGrupalDTO, CanchaDTO, FranjaHorariaDTO } from '../types';
@@ -234,15 +238,6 @@ export function PlaygroundPage() {
 
   const tabs = [
     { id: 'all', label: 'Todos' },
-    { id: 'acceso', label: 'Código QR' },
-    { id: 'canchas', label: 'Canchas' },
-    { id: 'membresias', label: 'Membresías' },
-    { id: 'clases', label: 'Agenda Clases' },
-    { id: 'usuarios', label: 'Gestión Usuarios' },
-    { id: 'membresias', label: 'Membresías (RF-02)' },
-    { id: 'clases', label: 'Agenda Clases (RF-06)' },
-    { id: 'clases-socio', label: 'Clases Socio (SCRUM-83)' },
-    { id: 'usuarios', label: 'Gestión Usuarios (RF-01)' },
     { id: 'buttons', label: 'Botones' },
     { id: 'inputs', label: 'Campos Form' },
     { id: 'badges', label: 'Status Badges' },
@@ -251,6 +246,12 @@ export function PlaygroundPage() {
     { id: 'modals', label: 'Modales' },
     { id: 'alerts', label: 'Alertas & Toasts' },
     { id: 'spinners', label: 'Spinners & Empty' },
+    { id: 'usuarios', label: 'Gestión Usuarios (RF-01)' },
+    { id: 'membresias', label: 'Membresías (RF-02)' },
+    { id: 'clases', label: 'Agenda Clases (RF-06)' },
+    { id: 'clases-socio', label: 'Clases Socio (SCRUM-83)' },
+    { id: 'acceso', label: 'Código QR (SCRUM-85)' },
+    { id: 'canchas', label: 'Canchas (RF-10/11)' },
   ];
 
   // ── RF-06 Clases state ──────────────────────────────────────────────────────
@@ -381,6 +382,8 @@ export function PlaygroundPage() {
   ]);
 
   const [pgError409, setPgError409] = useState<string | null>(null);
+  const [pgDemoCanchaEnMantenimiento, setPgDemoCanchaEnMantenimiento] = useState(false);
+  const [pgDemoCanchaSelected, setPgDemoCanchaSelected] = useState(false);
 
   const pgDemoCancha: CanchaDTO = {
     idCancha: 1,
@@ -388,7 +391,7 @@ export function PlaygroundPage() {
     nombre: 'Cancha 1 — Pádel Pro',
     tipo: 'PADEL',
     precioBaseHora: pgCanchaBasePrice,
-    enMantenimiento: false,
+    enMantenimiento: pgDemoCanchaEnMantenimiento,
   };
 
   const shouldShow = (tabId: string) => activeTab === 'all' || activeTab === tabId;
@@ -765,6 +768,27 @@ export function PlaygroundPage() {
                   <StatusBadge status="ACTIVO" size="lg" showDot={showStatusDots} />
                 </div>
               </div>
+
+              {/* Generic Badge component */}
+              <div className="pt-4 border-t border-slate-100">
+                <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block mb-3">
+                  Componente Badge Genérico — Variantes de Color
+                </span>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <Badge variant="navy">Navy</Badge>
+                  <Badge variant="navy-soft">Navy Soft</Badge>
+                  <Badge variant="coral">Coral</Badge>
+                  <Badge variant="coral-soft">Coral Soft</Badge>
+                  <Badge variant="green">Green</Badge>
+                  <Badge variant="green-soft">Green Soft</Badge>
+                  <Badge variant="gold">Gold</Badge>
+                  <Badge variant="gold-soft">Gold Soft</Badge>
+                  <Badge variant="red">Red</Badge>
+                  <Badge variant="red-soft">Red Soft</Badge>
+                  <Badge variant="dark">Dark</Badge>
+                  <Badge variant="default">Default</Badge>
+                </div>
+              </div>
             </div>
           </Card>
         </section>
@@ -831,6 +855,43 @@ export function PlaygroundPage() {
                 Diseñada para módulos de alto impacto visual como balances, pase digital QR o promociones destacadas.
               </p>
             </Card>
+          </div>
+
+          {/* StatCard Showcase */}
+          <div className="pt-2">
+            <span className="text-xs font-black uppercase text-slate-400 tracking-wider block mb-3">
+              Componente StatCard — Métricas y Estadísticas de Dashboard
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                title="Socios Activos"
+                value="1.248"
+                change="+12% este mes"
+                changeType="positive"
+                color="navy"
+              />
+              <StatCard
+                title="Ocupación Clases"
+                value="88%"
+                change="Alta demanda"
+                changeType="neutral"
+                color="coral"
+              />
+              <StatCard
+                title="Ingresos del Mes"
+                value="$3.450.000"
+                change="+8% vs objetivo"
+                changeType="positive"
+                color="green"
+              />
+              <StatCard
+                title="Turnos Reservados"
+                value="142"
+                change="-3% vs ayer"
+                changeType="negative"
+                color="white"
+              />
+            </div>
           </div>
         </section>
       )}
@@ -1768,7 +1829,7 @@ export function PlaygroundPage() {
         </section>
       )}
 
-      {/* 10. AGENDA DE CLASES GRUPALES (RF-06) */}
+      {/* 11. AGENDA DE CLASES GRUPALES (RF-06) */}
       {shouldShow('clases') && (
         <section className="space-y-8 pt-4 border-t-2 border-slate-100">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1779,7 +1840,7 @@ export function PlaygroundPage() {
                 </span>
               </div>
               <h2 className="text-2xl font-black text-[#1B2A55] font-outfit mt-1">
-                10. Módulo Agenda de Clases Grupales (RF-06)
+                11. Módulo Agenda de Clases Grupales (RF-06)
               </h2>
               <p className="text-xs text-slate-500 max-w-2xl">
                 Componentes <code className="text-[#1B2A55] font-mono">AgendaSemanal</code>,{' '}
@@ -1789,8 +1850,8 @@ export function PlaygroundPage() {
             </div>
           </div>
 
-          {/* 10.1 AgendaSemanal — Live grid */}
-          <Card title="10.1 AgendaSemanal — Grilla Semanal Interactiva" subtitle="Hacé clic sobre una clase para editarla, o usá el botón Eliminar">
+          {/* 11.1 AgendaSemanal — Live grid */}
+          <Card title="11.1 AgendaSemanal — Grilla Semanal Interactiva" subtitle="Hacé clic sobre una clase para editarla, o usá el botón Eliminar">
             <div className="mb-4 flex items-center gap-2">
               <Button
                 id="pg-btn-agregar-clase-demo"
@@ -1838,8 +1899,8 @@ export function PlaygroundPage() {
             />
           </Card>
 
-          {/* 10.2 ClaseForm */}
-          <Card title="10.2 ClaseForm — Formulario de Alta y Edición" subtitle="Cambiá el modo para ver cómo se pre-populan los campos">
+          {/* 11.2 ClaseForm */}
+          <Card title="11.2 ClaseForm — Formulario de Alta y Edición" subtitle="Cambiá el modo para ver cómo se pre-populan los campos">
             <div className="flex items-center gap-3 mb-6">
               <span className="text-xs font-black text-[#1B2A55] uppercase tracking-wider">Modo activo:</span>
               <Button
@@ -1890,8 +1951,8 @@ export function PlaygroundPage() {
             </div>
           </Card>
 
-          {/* 10.3 CupoIndicator */}
-          <Card title="10.3 CupoIndicator — Barra de Ocupación" subtitle="Varía el color según el porcentaje: verde (< 50%), rojo (≥ 50%)">
+          {/* 11.3 CupoIndicator */}
+          <Card title="11.3 CupoIndicator — Barra de Ocupación" subtitle="Varía el color según el porcentaje: verde (< 50%), rojo (≥ 50%)">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
               {[
                 { label: 'Sin inscriptos', disponible: 20, maximo: 20 },
@@ -1909,175 +1970,14 @@ export function PlaygroundPage() {
         </section>
       )}
 
-      {/* 11. CÓDIGO QR DE ACCESO & CUENTA REGRESIVA (SCRUM-85) SECTION */}
-      {shouldShow('acceso') && (
-        <section className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-black text-[#1B2A55] font-outfit">
-                11. Código QR Dinámico & Cuenta Regresiva (SCRUM-85)
-              </h2>
-              <p className="text-xs text-slate-500">
-                Pase digital de acceso para socios con rotación de token automática cada 60s y bloqueo en membresías inactivas.
-              </p>
-            </div>
-          </div>
-
-          {/* 11.1 QrDinamico */}
-          <Card
-            title="11.1 QrDinamico — Componente de Código QR con Refresco Automático"
-            subtitle="Renderiza el QR a partir del token emitido. Al llegar a cero solicita automáticamente un nuevo token."
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              {/* Controles interactivos */}
-              <div className="lg:col-span-5 space-y-4">
-                <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block">
-                  Controles de Simulación
-                </span>
-
-                <TextField
-                  label="Token actual codificado"
-                  value={demoQrToken}
-                  onChange={(e) => setDemoQrToken(e.target.value)}
-                  placeholder="FZ-QR-..."
-                  helperText="Cambiá el texto para observar cómo se re-renderiza el QR al instante."
-                />
-
-                <div className="space-y-2">
-                  <span className="text-xs font-bold text-slate-700">Duración del ciclo:</span>
-                  <div className="flex gap-2">
-                    {[15, 30, 60, 90].map((s) => (
-                      <Button
-                        key={s}
-                        size="xs"
-                        variant={demoQrDuracion === s ? 'primary' : 'secondary'}
-                        onClick={() => setDemoQrDuracion(s)}
-                      >
-                        {s}s
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-2">
-                  <Button
-                    size="xs"
-                    variant="coral"
-                    onClick={() => {
-                      const nuevo = `FZ-QR-DEMO-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-                      setDemoQrToken(nuevo);
-                      setDemoQrError(null);
-                      addToast('Token Generado', `Nuevo token: ${nuevo}`, 'success');
-                    }}
-                  >
-                    Generar Nuevo Token Mock
-                  </Button>
-
-                  <Button
-                    size="xs"
-                    variant={demoQrCargando ? 'primary' : 'secondary'}
-                    onClick={() => setDemoQrCargando(!demoQrCargando)}
-                  >
-                    {demoQrCargando ? 'Loading: ON' : 'Simular Cargando'}
-                  </Button>
-
-                  <Button
-                    size="xs"
-                    variant={demoQrError ? 'danger' : 'secondary'}
-                    onClick={() => {
-                      if (demoQrError) {
-                        setDemoQrError(null);
-                      } else {
-                        setDemoQrError('Conexión con el servicio de acceso interrumpida.');
-                      }
-                    }}
-                  >
-                    {demoQrError ? 'Quitar Error' : 'Simular Error'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Render del componente */}
-              <div className="lg:col-span-7 flex justify-center">
-                <QrDinamico
-                  token={demoQrToken}
-                  duracionSegundos={demoQrDuracion}
-                  cargando={demoQrCargando}
-                  error={demoQrError}
-                  onSolicitarNuevoToken={async () => {
-                    const nuevo = `FZ-QR-ROTATED-${Date.now()}`;
-                    setDemoQrToken(nuevo);
-                    addToast('Refresco Automático', 'El contador llegó a cero y se solicitó un nuevo token.', 'info');
-                  }}
-                  className="max-w-xs w-full"
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* 11.2 CuentaRegresiva */}
-          <Card
-            title="11.2 CuentaRegresiva — Indicador Visual de Tiempo Restante"
-            subtitle="Barra progresiva y contador numérico. Cambia de color dinámicamente según la urgencia."
-          >
-            <div className="space-y-6 max-w-xl">
-              <div>
-                <label className="text-xs font-black uppercase text-slate-500 block mb-2">
-                  Ajustar segundos restantes: {demoCuentaSegundos}s / 60s
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="60"
-                  value={demoCuentaSegundos}
-                  onChange={(e) => setDemoCuentaSegundos(Number(e.target.value))}
-                  className="w-full accent-fitzone-navy cursor-pointer"
-                />
-                <div className="flex justify-between text-[11px] text-slate-400 mt-1">
-                  <span>0s (Expirado)</span>
-                  <span>10s (Urgente - Coral)</span>
-                  <span>20s (Alerta - Ámbar)</span>
-                  <span>60s (Normal - Verde)</span>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={demoCuentaBarra}
-                    onChange={(e) => setDemoCuentaBarra(e.target.checked)}
-                    className="rounded border-slate-300 text-fitzone-navy focus:ring-fitzone-navy"
-                  />
-                  <span>Mostrar Barra de Progreso</span>
-                </label>
-
-                <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={demoCuentaTexto}
-                    onChange={(e) => setDemoCuentaTexto(e.target.checked)}
-                    className="rounded border-slate-300 text-fitzone-navy focus:ring-fitzone-navy"
-                  />
-                  <span>Mostrar Contador Numérico</span>
-                </label>
-              </div>
-
-              {/* Vista previa en tarjeta */}
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                <CuentaRegresiva
-                  segundosRestantes={demoCuentaSegundos}
-                  totalSegundos={60}
-                  mostrarBarra={demoCuentaBarra}
-                  mostrarTexto={demoCuentaTexto}
       {/* ══════════════════════════════════════════════════════════════════════
-          11. CLASES SOCIO — SCRUM-83: ClaseCard, ReservaClaseItem, PosicionEsperaBadge
+          12. CLASES SOCIO — SCRUM-83: ClaseCard, ReservaClaseItem, PosicionEsperaBadge
           Demos de los 3 componentes nuevos del módulo de clases para la vista socio.
       ══════════════════════════════════════════════════════════════════════ */}
       {shouldShow('clases-socio') && (
         <section className="space-y-6">
           <div>
-            <h2 className="text-xl font-black text-[#1B2A55] font-outfit">11. Clases Grupales — Vista Socio (SCRUM-83)</h2>
+            <h2 className="text-xl font-black text-[#1B2A55] font-outfit">12. Clases Grupales — Vista Socio (SCRUM-83)</h2>
             <p className="text-xs text-slate-500 mt-1">
               Componentes presentacionales: <code className="text-[#1B2A55] font-mono">ClaseCard</code>,{' '}
               <code className="text-[#1B2A55] font-mono">ReservaClaseItem</code> y{' '}
@@ -2085,8 +1985,8 @@ export function PlaygroundPage() {
             </p>
           </div>
 
-          {/* 11.1 PosicionEsperaBadge */}
-          <Card title="11.1 PosicionEsperaBadge — Posición en cola de espera" subtitle="Muestra la posición del socio usando Badge 'gold-soft'. Acepta size='xs'|'sm'.">
+          {/* 12.1 PosicionEsperaBadge */}
+          <Card title="12.1 PosicionEsperaBadge — Posición en cola de espera" subtitle="Muestra la posición del socio usando Badge 'gold-soft'. Acepta size='xs'|'sm'.">
             <div className="flex flex-wrap items-center gap-3">
               <PosicionEsperaBadge ordenPosicion={1} size="xs" />
               <PosicionEsperaBadge ordenPosicion={3} size="sm" />
@@ -2095,9 +1995,9 @@ export function PlaygroundPage() {
             </div>
           </Card>
 
-          {/* 11.2 ClaseCard — 4 estados del botón */}
+          {/* 12.2 ClaseCard — 4 estados del botón */}
           <Card
-            title="11.2 ClaseCard — Los 4 estados del botón de acción"
+            title="12.2 ClaseCard — Los 4 estados del botón de acción"
             subtitle="Ventana 48 hs: dentro = Reservar / En espera. Fuera = deshabilitado. Ya reservada = deshabilitado."
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2193,9 +2093,253 @@ export function PlaygroundPage() {
             </div>
           </Card>
 
-          {/* 11.3 Regla de Negocio Crítica: Membresía Inactiva Bloquea QR */}
+          {/* 12.3 ReservaClaseItem — 3 variantes */}
           <Card
-            title="11.3 Integración con MembresiaEstadoCard & Regla de Negocio Crítica"
+            title="12.3 ReservaClaseItem — Estados de la reserva"
+            subtitle="BUG-02: solo se cancela si estado=CONFIRMADA y faltan >2 hs. Los demás estados no tienen acción."
+          >
+            <div className="space-y-3">
+
+              {/* Reserva cancelable (CONFIRMADA, > 2 hs) */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Cancelable — CONFIRMADA, faltan +2 hs</span>
+                <ReservaClaseItem
+                  reserva={{
+                    idReservaClase: 801,
+                    clase: {
+                      idClase: 1,
+                      sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                      nombreActividad: 'Spinning',
+                      fechaHoraInicio: toLocalISOString(new Date(Date.now() + 20 * 3600_000)),
+                      duracionMinutos: 60,
+                      cupoMaximo: 20,
+                      cupoDisponible: 5,
+                    },
+                    usuario: { idUsuario: 2, authId: 'u2', dni: '123', nombre: 'Valentina', apellido: 'García', email: 'v@e.com', telefono: '', fotoUrl: null, tipoUsuario: 'SOCIO', idSede: 1 },
+                    estado: 'CONFIRMADA',
+                  }}
+                  onCancelar={(id) => addToast('Demo', `cancelarReservaClase(${id}) invocado.`, 'info')}
+                />
+              </div>
+
+              {/* Reserva NO cancelable por tiempo (CONFIRMADA, < 2 hs) */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">No cancelable — CONFIRMADA, faltan ≤ 2 hs (corte)</span>
+                <ReservaClaseItem
+                  reserva={{
+                    idReservaClase: 802,
+                    clase: {
+                      idClase: 2,
+                      sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                      nombreActividad: 'Yoga',
+                      fechaHoraInicio: toLocalISOString(new Date(Date.now() + 1.5 * 3600_000)),
+                      duracionMinutos: 75,
+                      cupoMaximo: 15,
+                      cupoDisponible: 0,
+                    },
+                    usuario: { idUsuario: 2, authId: 'u2', dni: '123', nombre: 'Valentina', apellido: 'García', email: 'v@e.com', telefono: '', fotoUrl: null, tipoUsuario: 'SOCIO', idSede: 1 },
+                    estado: 'CONFIRMADA',
+                  }}
+                  onCancelar={() => {}}
+                />
+              </div>
+
+              {/* Reserva CANCELADA — sin acción */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Historial — CANCELADA (sin acción)</span>
+                <ReservaClaseItem
+                  reserva={{
+                    idReservaClase: 803,
+                    clase: {
+                      idClase: 3,
+                      sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                      nombreActividad: 'CrossFit',
+                      fechaHoraInicio: toLocalISOString(new Date(Date.now() - 2 * 3600_000)),
+                      duracionMinutos: 50,
+                      cupoMaximo: 12,
+                      cupoDisponible: 3,
+                    },
+                    usuario: { idUsuario: 2, authId: 'u2', dni: '123', nombre: 'Valentina', apellido: 'García', email: 'v@e.com', telefono: '', fotoUrl: null, tipoUsuario: 'SOCIO', idSede: 1 },
+                    estado: 'CANCELADA',
+                  }}
+                  onCancelar={() => {}}
+                />
+              </div>
+
+            </div>
+          </Card>
+        </section>
+      )}
+
+      {/* 13. CÓDIGO QR DE ACCESO & CUENTA REGRESIVA (SCRUM-85) SECTION */}
+      {shouldShow('acceso') && (
+        <section className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-[#1B2A55] font-outfit">
+                13. Código QR Dinámico & Cuenta Regresiva (SCRUM-85)
+              </h2>
+              <p className="text-xs text-slate-500">
+                Pase digital de acceso para socios con rotación de token automática cada 60s y bloqueo en membresías inactivas.
+              </p>
+            </div>
+          </div>
+
+          {/* 13.1 QrDinamico */}
+          <Card
+            title="13.1 QrDinamico — Componente de Código QR con Refresco Automático"
+            subtitle="Renderiza el QR a partir del token emitido. Al llegar a cero solicita automáticamente un nuevo token."
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* Controles interactivos */}
+              <div className="lg:col-span-5 space-y-4">
+                <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block">
+                  Controles de Simulación
+                </span>
+
+                <TextField
+                  label="Token actual codificado"
+                  value={demoQrToken}
+                  onChange={(e) => setDemoQrToken(e.target.value)}
+                  placeholder="FZ-QR-..."
+                  helperText="Cambiá el texto para observar cómo se re-renderiza el QR al instante."
+                />
+
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-slate-700">Duración del ciclo:</span>
+                  <div className="flex gap-2">
+                    {[15, 30, 60, 90].map((s) => (
+                      <Button
+                        key={s}
+                        size="xs"
+                        variant={demoQrDuracion === s ? 'primary' : 'secondary'}
+                        onClick={() => setDemoQrDuracion(s)}
+                      >
+                        {s}s
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-2">
+                  <Button
+                    size="xs"
+                    variant="coral"
+                    onClick={() => {
+                      const nuevo = `FZ-QR-DEMO-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+                      setDemoQrToken(nuevo);
+                      setDemoQrError(null);
+                      addToast('Token Generado', `Nuevo token: ${nuevo}`, 'success');
+                    }}
+                  >
+                    Generar Nuevo Token Mock
+                  </Button>
+
+                  <Button
+                    size="xs"
+                    variant={demoQrCargando ? 'primary' : 'secondary'}
+                    onClick={() => setDemoQrCargando(!demoQrCargando)}
+                  >
+                    {demoQrCargando ? 'Loading: ON' : 'Simular Cargando'}
+                  </Button>
+
+                  <Button
+                    size="xs"
+                    variant={demoQrError ? 'danger' : 'secondary'}
+                    onClick={() => {
+                      if (demoQrError) {
+                        setDemoQrError(null);
+                      } else {
+                        setDemoQrError('Conexión con el servicio de acceso interrumpida.');
+                      }
+                    }}
+                  >
+                    {demoQrError ? 'Quitar Error' : 'Simular Error'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Render del componente */}
+              <div className="lg:col-span-7 flex justify-center">
+                <QrDinamico
+                  token={demoQrToken}
+                  duracionSegundos={demoQrDuracion}
+                  cargando={demoQrCargando}
+                  error={demoQrError}
+                  onSolicitarNuevoToken={async () => {
+                    const nuevo = `FZ-QR-ROTATED-${Date.now()}`;
+                    setDemoQrToken(nuevo);
+                    addToast('Refresco Automático', 'El contador llegó a cero y se solicitó un nuevo token.', 'info');
+                  }}
+                  className="max-w-xs w-full"
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* 13.2 CuentaRegresiva */}
+          <Card
+            title="13.2 CuentaRegresiva — Indicador Visual de Tiempo Restante"
+            subtitle="Barra progresiva y contador numérico. Cambia de color dinámicamente según la urgencia."
+          >
+            <div className="space-y-6 max-w-xl">
+              <div>
+                <label className="text-xs font-black uppercase text-slate-500 block mb-2">
+                  Ajustar segundos restantes: {demoCuentaSegundos}s / 60s
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="60"
+                  value={demoCuentaSegundos}
+                  onChange={(e) => setDemoCuentaSegundos(Number(e.target.value))}
+                  className="w-full accent-fitzone-navy cursor-pointer"
+                />
+                <div className="flex justify-between text-[11px] text-slate-400 mt-1">
+                  <span>0s (Expirado)</span>
+                  <span>10s (Urgente - Coral)</span>
+                  <span>20s (Alerta - Ámbar)</span>
+                  <span>60s (Normal - Verde)</span>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={demoCuentaBarra}
+                    onChange={(e) => setDemoCuentaBarra(e.target.checked)}
+                    className="rounded border-slate-300 text-fitzone-navy focus:ring-fitzone-navy"
+                  />
+                  <span>Mostrar Barra de Progreso</span>
+                </label>
+
+                <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={demoCuentaTexto}
+                    onChange={(e) => setDemoCuentaTexto(e.target.checked)}
+                    className="rounded border-slate-300 text-fitzone-navy focus:ring-fitzone-navy"
+                  />
+                  <span>Mostrar Contador Numérico</span>
+                </label>
+              </div>
+
+              {/* Vista previa en tarjeta */}
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <CuentaRegresiva
+                  segundosRestantes={demoCuentaSegundos}
+                  totalSegundos={60}
+                  mostrarBarra={demoCuentaBarra}
+                  mostrarTexto={demoCuentaTexto}
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* 13.3 Regla de Negocio Crítica: Membresía Inactiva Bloquea QR */}
+          <Card
+            title="13.3 Integración con MembresiaEstadoCard & Regla de Negocio Crítica"
             subtitle="Si la membresía no está activa (VENCIDO, SUSPENDIDO, CANCELADO, SIN_MEMBRESIA), no debe mostrar el QR y en su lugar exhibirá un banner/mensaje informando el motivo."
           >
             <div className="space-y-6">
@@ -2291,16 +2435,18 @@ export function PlaygroundPage() {
         </section>
       )}
 
-      {/* 11. MÓDULO CANCHAS (RF-10, RF-11, SCRUM-73, SCRUM-75) */}
+      {/* 14. MÓDULO CANCHAS (RF-10, RF-11, SCRUM-73, SCRUM-75) */}
       {shouldShow('canchas') && (
         <section className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
             <div>
               <h2 className="text-xl font-black text-[#1B2A55] font-outfit">
-                11. Módulo de Canchas (RF-10, RF-11)
+                14. Módulo de Canchas (RF-10, RF-11)
               </h2>
               <p className="text-xs text-slate-500">
-                Componentes reutilizables: <code className="text-[#1B2A55] font-mono">SelectorFecha</code>,{' '}
+                Componentes reutilizables: <code className="text-[#1B2A55] font-mono">CanchaCard</code>,{' '}
+                <code className="text-[#1B2A55] font-mono">MantenimientoToggle</code>,{' '}
+                <code className="text-[#1B2A55] font-mono">SelectorFecha</code>,{' '}
                 <code className="text-[#1B2A55] font-mono">GrillaDisponibilidad</code> y{' '}
                 <code className="text-[#1B2A55] font-mono">DesglosePrecio</code> con manejo de conflicto (409).
               </p>
@@ -2334,9 +2480,88 @@ export function PlaygroundPage() {
             </div>
           </div>
 
-          {/* 11.1 SelectorFecha */}
+          {/* 14.1 CanchaCard & MantenimientoToggle */}
           <Card
-            title="11.1 SelectorFecha — Navegación de Fechas"
+            title="14.1 CanchaCard & MantenimientoToggle — Tarjeta de Cancha y Control Operativo"
+            subtitle="Tarjeta con badge de estado, tarifa por hora, switch accesible de mantenimiento (RF-12) y modo selección."
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+              <div className="space-y-2">
+                <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block">
+                  Vista Administrativa (Con MantenimientoToggle y Edición)
+                </span>
+                <CanchaCard
+                  cancha={pgDemoCancha}
+                  showAdminControls={true}
+                  onEditar={(c) => addToast('Editar Cancha', `Modificar datos de ${c.nombre}`, 'info')}
+                  onToggleMantenimiento={(_id, nuevo) => {
+                    setPgDemoCanchaEnMantenimiento(nuevo);
+                    addToast(
+                      nuevo ? 'Cancha en Mantenimiento' : 'Cancha Habilitada',
+                      nuevo ? 'Se suspendieron nuevos turnos.' : 'La cancha vuelve a estar disponible.',
+                      nuevo ? 'warning' : 'success'
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block">
+                  Vista Reserva de Turnos (Modo Selección)
+                </span>
+                <CanchaCard
+                  cancha={{
+                    idCancha: 2,
+                    sede: mockSede,
+                    nombre: 'Cancha 2 — Fútbol 5 Techado',
+                    tipo: 'FUTBOL_5',
+                    precioBaseHora: 14000,
+                    enMantenimiento: false,
+                  }}
+                  showAdminControls={false}
+                  selected={pgDemoCanchaSelected}
+                  onSelect={() => {
+                    setPgDemoCanchaSelected(!pgDemoCanchaSelected);
+                    addToast('Cancha Seleccionada', 'Cancha 2 seleccionada para reservar turno.', 'info');
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block">
+                  MantenimientoToggle Aislado (RF-12 con ConfirmDialog)
+                </span>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">{pgDemoCancha.nombre}</p>
+                    <p className="text-[11px] text-slate-500">
+                      Switch directo para alternar mantenimiento con advertencia de turnos confirmados.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                    <span className="text-xs font-medium text-slate-600">Estado operativo:</span>
+                    <MantenimientoToggle
+                      idCancha={pgDemoCancha.idCancha}
+                      nombreCancha={pgDemoCancha.nombre}
+                      enMantenimiento={pgDemoCanchaEnMantenimiento}
+                      onToggle={(nuevo) => {
+                        setPgDemoCanchaEnMantenimiento(nuevo);
+                        addToast(
+                          nuevo ? 'Cancha en Mantenimiento' : 'Cancha Habilitada',
+                          nuevo ? 'Se suspendieron nuevos turnos.' : 'La cancha vuelve a estar disponible.',
+                          nuevo ? 'warning' : 'success'
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* 14.2 SelectorFecha */}
+          <Card
+            title="14.2 SelectorFecha — Navegación de Fechas"
             subtitle="Navegación día a día, accesos rápidos (Hoy, Mañana...) y datepicker nativo con fecha mínima hoy."
           >
             <div className="space-y-4">
@@ -2354,9 +2579,9 @@ export function PlaygroundPage() {
             </div>
           </Card>
 
-          {/* 11.2 GrillaDisponibilidad */}
+          {/* 14.3 GrillaDisponibilidad */}
           <Card
-            title="11.2 GrillaDisponibilidad — Franjas Horarias y Franja Pico"
+            title="14.3 GrillaDisponibilidad — Franjas Horarias y Franja Pico"
             subtitle="Destaca franja pico (19 a 21 hs), estados LIBRE, OCUPADO, MANTENIMIENTO y RECIEN_TOMADO con precios dinámicos."
           >
             <div className="space-y-4">
@@ -2375,10 +2600,10 @@ export function PlaygroundPage() {
             </div>
           </Card>
 
-          {/* 11.3 DesglosePrecio */}
+          {/* 14.4 DesglosePrecio */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card
-              title="11.3 DesglosePrecio — Cotización de Reserva"
+              title="14.4 DesglosePrecio — Cotización de Reserva"
               subtitle="Calcula base, recargo pico (+20%) y beneficio socio (-15%). Reutilizable en checkout de pago."
             >
               {pgCanchaTurno ? (
@@ -2398,9 +2623,9 @@ export function PlaygroundPage() {
               )}
             </Card>
 
-            {/* 11.4 Simulación de Conflicto 409 */}
+            {/* 14.5 Simulación de Conflicto 409 */}
             <Card
-              title="11.4 Simulación de Horario Tomado (Error 409)"
+              title="14.5 Simulación de Horario Tomado (Error 409)"
               subtitle="Demuestra la captura del error 409, mensaje de conflicto y refresco automático de grilla."
             >
               <div className="space-y-4">
@@ -2463,81 +2688,6 @@ export function PlaygroundPage() {
               </div>
             </Card>
           </div>
-          {/* 11.3 ReservaClaseItem — 3 variantes */}
-          <Card
-            title="11.3 ReservaClaseItem — Estados de la reserva"
-            subtitle="BUG-02: solo se cancela si estado=CONFIRMADA y faltan >2 hs. Los demás estados no tienen acción."
-          >
-            <div className="space-y-3">
-
-              {/* Reserva cancelable (CONFIRMADA, > 2 hs) */}
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Cancelable — CONFIRMADA, faltan +2 hs</span>
-                <ReservaClaseItem
-                  reserva={{
-                    idReservaClase: 801,
-                    clase: {
-                      idClase: 1,
-                      sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
-                      nombreActividad: 'Spinning',
-                      fechaHoraInicio: toLocalISOString(new Date(Date.now() + 20 * 3600_000)),
-                      duracionMinutos: 60,
-                      cupoMaximo: 20,
-                      cupoDisponible: 5,
-                    },
-                    usuario: { idUsuario: 2, authId: 'u2', dni: '123', nombre: 'Valentina', apellido: 'García', email: 'v@e.com', telefono: '', fotoUrl: null, tipoUsuario: 'SOCIO', idSede: 1 },
-                    estado: 'CONFIRMADA',
-                  }}
-                  onCancelar={(id) => addToast('Demo', `cancelarReservaClase(${id}) invocado.`, 'info')}
-                />
-              </div>
-
-              {/* Reserva NO cancelable por tiempo (CONFIRMADA, < 2 hs) */}
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">No cancelable — CONFIRMADA, faltan ≤ 2 hs (corte)</span>
-                <ReservaClaseItem
-                  reserva={{
-                    idReservaClase: 802,
-                    clase: {
-                      idClase: 2,
-                      sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
-                      nombreActividad: 'Yoga',
-                      fechaHoraInicio: toLocalISOString(new Date(Date.now() + 1.5 * 3600_000)),
-                      duracionMinutos: 75,
-                      cupoMaximo: 15,
-                      cupoDisponible: 0,
-                    },
-                    usuario: { idUsuario: 2, authId: 'u2', dni: '123', nombre: 'Valentina', apellido: 'García', email: 'v@e.com', telefono: '', fotoUrl: null, tipoUsuario: 'SOCIO', idSede: 1 },
-                    estado: 'CONFIRMADA',
-                  }}
-                  onCancelar={() => {}}
-                />
-              </div>
-
-              {/* Reserva CANCELADA — sin acción */}
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Historial — CANCELADA (sin acción)</span>
-                <ReservaClaseItem
-                  reserva={{
-                    idReservaClase: 803,
-                    clase: {
-                      idClase: 3,
-                      sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
-                      nombreActividad: 'CrossFit',
-                      fechaHoraInicio: toLocalISOString(new Date(Date.now() - 2 * 3600_000)),
-                      duracionMinutos: 50,
-                      cupoMaximo: 12,
-                      cupoDisponible: 3,
-                    },
-                    usuario: { idUsuario: 2, authId: 'u2', dni: '123', nombre: 'Valentina', apellido: 'García', email: 'v@e.com', telefono: '', fotoUrl: null, tipoUsuario: 'SOCIO', idSede: 1 },
-                    estado: 'CANCELADA',
-                  }}
-                  onCancelar={() => {}}
-                />
-              </div>
-
-            </div>
-          </Card>
         </section>
       )}
     </div>
