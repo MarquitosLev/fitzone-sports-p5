@@ -7,17 +7,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ReservaClaseItem } from '../../components/clases/ReservaClaseItem';
 import type { ReservaClaseDTO } from '../../types';
+import { toLocalISOString } from '../../utils/formatters';
 
 function generarFechaHoras(horas: number): string {
-  const date = new Date(Date.now() + horas * 60 * 60 * 1000);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const yyyy = date.getFullYear();
-  const mm = pad(date.getMonth() + 1);
-  const dd = pad(date.getDate());
-  const hh = pad(date.getHours());
-  const min = pad(date.getMinutes());
-  const ss = pad(date.getSeconds());
-  return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`;
+  return toLocalISOString(new Date(Date.now() + horas * 60 * 60 * 1000));
 }
 
 const mockReservaBase: ReservaClaseDTO = {

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseLocalDateTime, formatearFechaHora, formatearHora, formatearMonto } from '../utils/formatters';
+import { parseLocalDateTime, toLocalISOString, formatearFechaHora, formatearHora, formatearMonto } from '../utils/formatters';
 
 describe('formatters util', () => {
   describe('parseLocalDateTime', () => {
@@ -50,6 +50,28 @@ describe('formatters util', () => {
 
     it('devuelve Date(NaN) para strings vacíos o nulos', () => {
       expect(isNaN(parseLocalDateTime('').getTime())).toBe(true);
+    });
+  });
+
+  describe('toLocalISOString', () => {
+    it('convierte un Date a string ISO local YYYY-MM-DDTHH:mm:ss sin convertir a UTC', () => {
+      // 17 de Octubre de 2026 a las 18:05:09 local
+      const d = new Date(2026, 9, 17, 18, 5, 9);
+      const isoLocal = toLocalISOString(d);
+
+      expect(isoLocal).toBe('2026-10-17T18:05:09');
+    });
+
+    it('devuelve string vacío si el Date es inválido', () => {
+      expect(toLocalISOString(new Date(NaN))).toBe('');
+    });
+
+    it('es idempotente (round-trip) con parseLocalDateTime', () => {
+      const original = new Date(2026, 7, 20, 14, 30, 0); // 20 de Agosto 14:30
+      const serializado = toLocalISOString(original);
+      const deserializado = parseLocalDateTime(serializado);
+
+      expect(deserializado.getTime()).toBe(original.getTime());
     });
   });
 

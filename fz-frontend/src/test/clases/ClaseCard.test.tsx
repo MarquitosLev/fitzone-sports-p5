@@ -7,18 +7,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ClaseCard } from '../../components/clases/ClaseCard';
 import type { ClaseGrupalDTO } from '../../types';
+import { toLocalISOString } from '../../utils/formatters';
 
-// Helper para generar fechas ISO relativas al momento actual
+// Helper para generar fechas ISO locales relativas al momento actual
 function generarFechaHoras(horas: number): string {
-  const date = new Date(Date.now() + horas * 60 * 60 * 1000);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const yyyy = date.getFullYear();
-  const mm = pad(date.getMonth() + 1);
-  const dd = pad(date.getDate());
-  const hh = pad(date.getHours());
-  const min = pad(date.getMinutes());
-  const ss = pad(date.getSeconds());
-  return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`;
+  return toLocalISOString(new Date(Date.now() + horas * 60 * 60 * 1000));
 }
 
 const mockClaseBase: ClaseGrupalDTO = {

@@ -39,6 +39,28 @@ export function parseLocalDateTime(isoString: string): Date {
 }
 
 /**
+ * Convierte un objeto Date a un string ISO en formato local "YYYY-MM-DDTHH:mm:ss"
+ * (sin sufijo 'Z', compatible con LocalDateTime de Java y parseLocalDateTime).
+ *
+ * Por qué: date.toISOString() convierte a UTC. Si en Argentina (UTC-3) son las 18:00 local,
+ * toISOString().slice(0, 19) produce "21:00:00" (hora UTC). Al quitarle la 'Z', cualquier
+ * parser local la lee como 21:00, generando un desfase artificial de +3 horas.
+ * toLocalISOString utiliza los getters locales (getFullYear, getMonth, getDate, etc.),
+ * garantizando que "18:00 local" se serialice fielmente como "YYYY-MM-DDTHH:mm:ss".
+ */
+export function toLocalISOString(date: Date): string {
+  if (isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const min = pad(date.getMinutes());
+  const ss = pad(date.getSeconds());
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`;
+}
+
+/**
  * Formatea una fecha ISO (string) a formato legible en español (Argentina).
  * Ejemplo: "2026-10-15T14:30:00" → "15/10/2026, 14:30"
  * @param isoString - Fecha como string ISO (LocalDateTime de Java)

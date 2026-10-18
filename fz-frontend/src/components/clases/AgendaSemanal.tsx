@@ -12,7 +12,7 @@ interface AgendaSemanalProps {
 // Helper to get day name (Monday...Sunday) from ISO date string in local timezone
 const getDayName = (iso: string) => {
   const date = parseLocalDateTime(iso);
-  return date.toLocaleDateString('es-ES', { weekday: 'long' });
+  return date.toLocaleDateString('es-AR', { weekday: 'long' });
 };
 
 export function AgendaSemanal({ clases, onEdit, onDelete }: AgendaSemanalProps) {
@@ -27,7 +27,7 @@ export function AgendaSemanal({ clases, onEdit, onDelete }: AgendaSemanalProps) 
   const dayOrder = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
   // Detect current day in lowercase to give it a subtle highlight
-  const todayName = new Date().toLocaleDateString('es-ES', { weekday: 'long' });
+  const todayName = new Date().toLocaleDateString('es-AR', { weekday: 'long' });
 
   return (
     <div

@@ -39,6 +39,7 @@ import { CupoIndicator } from '../components/clases/CupoIndicator';
 import { ClaseCard } from '../components/clases/ClaseCard';
 import { ReservaClaseItem } from '../components/clases/ReservaClaseItem';
 import { PosicionEsperaBadge } from '../components/clases/PosicionEsperaBadge';
+import { toLocalISOString } from '../utils/formatters';
 import type { ClaseFormPayload } from '../components/clases/ClaseForm';
 import type { ClaseGrupalDTO } from '../types';
 import type { UsuarioDTO, TipoUsuario } from '../types';
@@ -1554,7 +1555,7 @@ export function PlaygroundPage() {
                     idClase: 901,
                     sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
                     nombreActividad: 'Spinning',
-                    fechaHoraInicio: new Date(Date.now() + 20 * 3600_000).toISOString().slice(0, 19),
+                    fechaHoraInicio: toLocalISOString(new Date(Date.now() + 20 * 3600_000)),
                     duracionMinutos: 60,
                     cupoMaximo: 20,
                     cupoDisponible: 5,
@@ -1576,7 +1577,7 @@ export function PlaygroundPage() {
                     idClase: 902,
                     sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
                     nombreActividad: 'Yoga',
-                    fechaHoraInicio: new Date(Date.now() + 36 * 3600_000).toISOString().slice(0, 19),
+                    fechaHoraInicio: toLocalISOString(new Date(Date.now() + 36 * 3600_000)),
                     duracionMinutos: 75,
                     cupoMaximo: 15,
                     cupoDisponible: 0,
@@ -1598,7 +1599,7 @@ export function PlaygroundPage() {
                     idClase: 903,
                     sede: { idSede: 1, nombre: 'FitZone Belgrano', aforoMaximo: 60 },
                     nombreActividad: 'CrossFit',
-                    fechaHoraInicio: new Date(Date.now() + 10 * 3600_000).toISOString().slice(0, 19),
+                    fechaHoraInicio: toLocalISOString(new Date(Date.now() + 10 * 3600_000)),
                     duracionMinutos: 50,
                     cupoMaximo: 12,
                     cupoDisponible: 3,
@@ -1621,7 +1622,7 @@ export function PlaygroundPage() {
                     idClase: 904,
                     sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
                     nombreActividad: 'Pilates',
-                    fechaHoraInicio: new Date(Date.now() + 72 * 3600_000).toISOString().slice(0, 19),
+                    fechaHoraInicio: toLocalISOString(new Date(Date.now() + 72 * 3600_000)),
                     duracionMinutos: 60,
                     cupoMaximo: 10,
                     cupoDisponible: 8,
@@ -1652,7 +1653,7 @@ export function PlaygroundPage() {
                       idClase: 1,
                       sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
                       nombreActividad: 'Spinning',
-                      fechaHoraInicio: new Date(Date.now() + 20 * 3600_000).toISOString().slice(0, 19),
+                      fechaHoraInicio: toLocalISOString(new Date(Date.now() + 20 * 3600_000)),
                       duracionMinutos: 60,
                       cupoMaximo: 20,
                       cupoDisponible: 5,
@@ -1674,7 +1675,7 @@ export function PlaygroundPage() {
                       idClase: 2,
                       sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
                       nombreActividad: 'Yoga',
-                      fechaHoraInicio: new Date(Date.now() + 1.5 * 3600_000).toISOString().slice(0, 19),
+                      fechaHoraInicio: toLocalISOString(new Date(Date.now() + 1.5 * 3600_000)),
                       duracionMinutos: 75,
                       cupoMaximo: 15,
                       cupoDisponible: 0,
@@ -1696,7 +1697,7 @@ export function PlaygroundPage() {
                       idClase: 3,
                       sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
                       nombreActividad: 'CrossFit',
-                      fechaHoraInicio: new Date(Date.now() - 2 * 3600_000).toISOString().slice(0, 19),
+                      fechaHoraInicio: toLocalISOString(new Date(Date.now() - 2 * 3600_000)),
                       duracionMinutos: 50,
                       cupoMaximo: 12,
                       cupoDisponible: 3,

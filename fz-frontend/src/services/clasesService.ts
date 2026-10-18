@@ -11,6 +11,7 @@
 
 import { httpClient } from './httpClient';
 import type { ClaseGrupalDTO, ReservaClaseDTO, ListaEsperaDTO } from '../types';
+import { toLocalISOString } from '../utils/formatters';
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
@@ -52,10 +53,12 @@ const MOCK_SOCIO = {
 /**
  * Genera fechas dinámicas relativas a la hora actual para que los mocks
  * siempre tengan clases en los distintos escenarios de prueba.
- * Esto evita el bug DATA-03 del prototipo (fechas hardcodeadas desfasadas).
+ * Usa toLocalISOString para que el string generado represente la hora local real
+ * y no se desfase por conversiones UTC.
  */
 function addHours(date: Date, hours: number): string {
-  return new Date(date.getTime() + hours * 60 * 60 * 1000).toISOString().slice(0, 19);
+  const d = new Date(date.getTime() + hours * 60 * 60 * 1000);
+  return toLocalISOString(d);
 }
 
 const ahora = new Date();
