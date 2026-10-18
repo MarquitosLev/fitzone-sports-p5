@@ -7,5 +7,15 @@ export type { TipoUsuario, UsuarioDTO, UsuarioFormData } from './usuario';
 export type { EstadoMembresia, PlanDTO, MembresiaDTO, MembresiaFormData } from './membresia';
 export type { AccesoDTO } from './acceso';
 export type { EstadoReservaClase, ClaseGrupalDTO, ReservaClaseDTO } from './clase';
-export type { CanchaDTO, ReservaCanchaDTO, TipoCancha, CanchaFormData } from './cancha';
+export type {
+  CanchaDTO,
+  ReservaCanchaDTO,
+  TipoCancha,
+  CanchaFormData,
+  EstadoTurno,
+  FranjaHorariaDTO,
+  CotizacionReservaDTO,
+  EstadoReservaCancha,
+  CrearReservaPayload,
+} from './cancha';
 export type { EstadoPago, TipoOrigenTransaccion, TransaccionDTO, ComprobanteDTO } from './pago';

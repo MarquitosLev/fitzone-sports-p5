@@ -43,7 +43,13 @@ import { AgendaSemanal } from '../components/clases/AgendaSemanal';
 import { ClaseForm } from '../components/clases/ClaseForm';
 import { CupoIndicator } from '../components/clases/CupoIndicator';
 import type { ClaseFormPayload } from '../components/clases/ClaseForm';
-import type { ClaseGrupalDTO } from '../types';
+import {
+  GrillaDisponibilidad,
+  DesglosePrecio,
+  SelectorFecha,
+} from '../components/canchas';
+import { calcularCotizacion } from '../services/canchasService';
+import type { ClaseGrupalDTO, CanchaDTO, FranjaHorariaDTO } from '../types';
 import type { UsuarioDTO, TipoUsuario, MembresiaDTO, EstadoMembresia } from '../types';
 
 export function PlaygroundPage() {
@@ -213,6 +219,7 @@ export function PlaygroundPage() {
 
   const tabs = [
     { id: 'all', label: 'Todos' },
+    { id: 'canchas', label: 'Canchas (RF-10, RF-11)' },
     { id: 'membresias', label: 'Membresías (RF-02)' },
     { id: 'clases', label: 'Agenda Clases (RF-06)' },
     { id: 'usuarios', label: 'Gestión Usuarios (RF-01)' },
@@ -281,6 +288,88 @@ export function PlaygroundPage() {
   const [pgFormLoading, setPgFormLoading] = useState(false);
   const [pgFormError, setPgFormError] = useState<string | null>(null);
   const [pgSelectedClase, setPgSelectedClase] = useState<ClaseGrupalDTO | undefined>(undefined);
+
+  // ── RF-10 / RF-11 Canchas Playground Interactive State ──────────────────────
+  const [pgCanchaFecha, setPgCanchaFecha] = useState('2026-10-20');
+  const [pgCanchaEsSocio, setPgCanchaEsSocio] = useState(true);
+  const [pgCanchaBasePrice, setPgCanchaBasePrice] = useState(10000);
+  const [pgCanchaTurno, setPgCanchaTurno] = useState<FranjaHorariaDTO | null>({
+    id: '19:00-20:00',
+    horaInicio: '19:00',
+    horaFin: '20:00',
+    textoTurno: '19:00 – 20:00',
+    esPico: true,
+    estado: 'LIBRE',
+    precioEstimado: 10000,
+  });
+
+  const [pgFranjasDemo, setPgFranjasDemo] = useState<FranjaHorariaDTO[]>([
+    {
+      id: '16:00-17:00',
+      horaInicio: '16:00',
+      horaFin: '17:00',
+      textoTurno: '16:00 – 17:00',
+      esPico: false,
+      estado: 'LIBRE',
+      precioEstimado: 10000,
+    },
+    {
+      id: '17:00-18:00',
+      horaInicio: '17:00',
+      horaFin: '18:00',
+      textoTurno: '17:00 – 18:00',
+      esPico: false,
+      estado: 'OCUPADO',
+      precioEstimado: 10000,
+    },
+    {
+      id: '18:00-19:00',
+      horaInicio: '18:00',
+      horaFin: '19:00',
+      textoTurno: '18:00 – 19:00',
+      esPico: false,
+      estado: 'MANTENIMIENTO',
+      precioEstimado: 10000,
+    },
+    {
+      id: '19:00-20:00',
+      horaInicio: '19:00',
+      horaFin: '20:00',
+      textoTurno: '19:00 – 20:00',
+      esPico: true,
+      estado: 'LIBRE',
+      precioEstimado: 10000,
+    },
+    {
+      id: '20:00-21:00',
+      horaInicio: '20:00',
+      horaFin: '21:00',
+      textoTurno: '20:00 – 21:00',
+      esPico: true,
+      estado: 'RECIEN_TOMADO',
+      precioEstimado: 10000,
+    },
+    {
+      id: '21:00-22:00',
+      horaInicio: '21:00',
+      horaFin: '22:00',
+      textoTurno: '21:00 – 22:00',
+      esPico: false,
+      estado: 'LIBRE',
+      precioEstimado: 10000,
+    },
+  ]);
+
+  const [pgError409, setPgError409] = useState<string | null>(null);
+
+  const pgDemoCancha: CanchaDTO = {
+    idCancha: 1,
+    sede: mockSede,
+    nombre: 'Cancha 1 — Pádel Pro',
+    tipo: 'PADEL',
+    precioBaseHora: pgCanchaBasePrice,
+    enMantenimiento: false,
+  };
 
   const shouldShow = (tabId: string) => activeTab === 'all' || activeTab === tabId;
 
@@ -1797,6 +1886,181 @@ export function PlaygroundPage() {
               ))}
             </div>
           </Card>
+        </section>
+      )}
+
+      {/* 11. MÓDULO CANCHAS (RF-10, RF-11, SCRUM-73, SCRUM-75) */}
+      {shouldShow('canchas') && (
+        <section className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+            <div>
+              <h2 className="text-xl font-black text-[#1B2A55] font-outfit">
+                11. Módulo de Canchas (RF-10, RF-11)
+              </h2>
+              <p className="text-xs text-slate-500">
+                Componentes reutilizables: <code className="text-[#1B2A55] font-mono">SelectorFecha</code>,{' '}
+                <code className="text-[#1B2A55] font-mono">GrillaDisponibilidad</code> y{' '}
+                <code className="text-[#1B2A55] font-mono">DesglosePrecio</code> con manejo de conflicto (409).
+              </p>
+            </div>
+
+            {/* Controles interactivos de playground */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setPgCanchaEsSocio((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  pgCanchaEsSocio
+                    ? 'bg-[#2E9E5B] text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {pgCanchaEsSocio ? 'Beneficio Socio Activo: ACTIVADO (-15%)' : 'Modo: Cliente Externo (Tarifa Plena)'}
+              </button>
+
+              <select
+                aria-label="Tarifa base de la cancha"
+                value={pgCanchaBasePrice}
+                onChange={(e) => setPgCanchaBasePrice(Number(e.target.value))}
+                className="text-xs font-bold bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1.5 text-fitzone-navy"
+              >
+                <option value={8000}>Tarifa base: $8.000 / hora</option>
+                <option value={10000}>Tarifa base: $10.000 / hora</option>
+                <option value={12000}>Tarifa base: $12.000 / hora</option>
+                <option value={16000}>Tarifa base: $16.000 / hora</option>
+              </select>
+            </div>
+          </div>
+
+          {/* 11.1 SelectorFecha */}
+          <Card
+            title="11.1 SelectorFecha — Navegación de Fechas"
+            subtitle="Navegación día a día, accesos rápidos (Hoy, Mañana...) y datepicker nativo con fecha mínima hoy."
+          >
+            <div className="space-y-4">
+              <SelectorFecha
+                fechaSeleccionada={pgCanchaFecha}
+                onFechaChange={(f) => {
+                  setPgCanchaFecha(f);
+                  addToast('Fecha seleccionada', `Nueva fecha: ${f}`, 'info');
+                }}
+              />
+              <div className="text-xs text-slate-500 font-medium">
+                Fecha actualmente en estado:{' '}
+                <strong className="text-fitzone-navy font-mono">{pgCanchaFecha}</strong>
+              </div>
+            </div>
+          </Card>
+
+          {/* 11.2 GrillaDisponibilidad */}
+          <Card
+            title="11.2 GrillaDisponibilidad — Franjas Horarias y Franja Pico"
+            subtitle="Destaca franja pico (19 a 21 hs), estados LIBRE, OCUPADO, MANTENIMIENTO y RECIEN_TOMADO con precios dinámicos."
+          >
+            <div className="space-y-4">
+              <GrillaDisponibilidad
+                franjas={pgFranjasDemo}
+                cancha={pgDemoCancha}
+                fecha={pgCanchaFecha}
+                turnoSeleccionado={pgCanchaTurno}
+                onSeleccionarTurno={(turno) => {
+                  setPgCanchaTurno(turno);
+                  setPgError409(null);
+                  addToast('Turno seleccionado', `${turno.textoTurno} · Pico: ${turno.esPico ? 'Sí (+20%)' : 'No'}`, 'success');
+                }}
+                esSocio={pgCanchaEsSocio}
+              />
+            </div>
+          </Card>
+
+          {/* 11.3 DesglosePrecio */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card
+              title="11.3 DesglosePrecio — Cotización de Reserva"
+              subtitle="Calcula base, recargo pico (+20%) y beneficio socio (-15%). Reutilizable en checkout de pago."
+            >
+              {pgCanchaTurno ? (
+                <DesglosePrecio
+                  cotizacion={calcularCotizacion(
+                    pgCanchaBasePrice,
+                    pgCanchaTurno.horaInicio,
+                    pgCanchaEsSocio
+                  )}
+                  variant="card"
+                  mostrarExplicacion={true}
+                />
+              ) : (
+                <div className="p-6 text-center text-xs text-slate-400">
+                  Seleccioná un turno en la grilla para ver la cotización.
+                </div>
+              )}
+            </Card>
+
+            {/* 11.4 Simulación de Conflicto 409 */}
+            <Card
+              title="11.4 Simulación de Horario Tomado (Error 409)"
+              subtitle="Demuestra la captura del error 409, mensaje de conflicto y refresco automático de grilla."
+            >
+              <div className="space-y-4">
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Al intentar confirmar un turno que ya fue ocupado en simultáneo por otro deportista, el backend responde con código <strong className="text-fitzone-red">409 Conflict</strong>.
+                </p>
+
+                {pgError409 && (
+                  <Alert
+                    type="error"
+                    title="Conflicto de Horario (409)"
+                    message={pgError409}
+                  />
+                )}
+
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="coral"
+                    size="sm"
+                    onClick={() => {
+                      if (!pgCanchaTurno) {
+                        addToast('Atención', 'Seleccioná un turno primero en la grilla', 'warning');
+                        return;
+                      }
+                      // Simular conflicto 409
+                      setPgError409('El horario ya fue tomado por otro usuario (409). La disponibilidad fue actualizada.');
+                      // Marcar el turno actual como RECIEN_TOMADO / OCUPADO en la grilla demo
+                      setPgFranjasDemo((prev) =>
+                        prev.map((f) =>
+                          f.id === pgCanchaTurno.id ? { ...f, estado: 'RECIEN_TOMADO' } : f
+                        )
+                      );
+                      setPgCanchaTurno(null);
+                      addToast('Error 409 Simulado', 'El turno fue tomado por otro usuario. Se refrescó la grilla.', 'error');
+                    }}
+                  >
+                    Simular Conflicto 409 al Reservar
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Restaurar grilla demo
+                      setPgFranjasDemo([
+                        { id: '16:00-17:00', horaInicio: '16:00', horaFin: '17:00', textoTurno: '16:00 – 17:00', esPico: false, estado: 'LIBRE', precioEstimado: 10000 },
+                        { id: '17:00-18:00', horaInicio: '17:00', horaFin: '18:00', textoTurno: '17:00 – 18:00', esPico: false, estado: 'OCUPADO', precioEstimado: 10000 },
+                        { id: '18:00-19:00', horaInicio: '18:00', horaFin: '19:00', textoTurno: '18:00 – 19:00', esPico: false, estado: 'MANTENIMIENTO', precioEstimado: 10000 },
+                        { id: '19:00-20:00', horaInicio: '19:00', horaFin: '20:00', textoTurno: '19:00 – 20:00', esPico: true, estado: 'LIBRE', precioEstimado: 10000 },
+                        { id: '20:00-21:00', horaInicio: '20:00', horaFin: '21:00', textoTurno: '20:00 – 21:00', esPico: true, estado: 'RECIEN_TOMADO', precioEstimado: 10000 },
+                        { id: '21:00-22:00', horaInicio: '21:00', horaFin: '22:00', textoTurno: '21:00 – 22:00', esPico: false, estado: 'LIBRE', precioEstimado: 10000 },
+                      ]);
+                      setPgError409(null);
+                      addToast('Grilla restablecida', 'Se restauró el estado inicial de turnos.', 'info');
+                    }}
+                  >
+                    Restablecer Grilla
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
         </section>
       )}
     </div>
