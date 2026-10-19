@@ -1,0 +1,28 @@
+meta {
+  name: 03 - Crear Recepcionista
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/usuarios?idOperador={{idOperador}}
+  body: json
+  auth: none
+}
+
+params:query {
+  idOperador: {{idOperador}}
+}
+
+body:json {
+  {
+    "dni": "35123456",
+    "nombre": "Ana",
+    "apellido": "Gomez",
+    "email": "ana.recepcion@fitzone.com",
+    "telefono": "+5491155556666",
+    "tipoUsuario": "RECEPCIONISTA",
+    "idSede": 1,
+    "password": "Password123!"
+  }
+}

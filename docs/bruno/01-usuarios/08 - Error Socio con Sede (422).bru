@@ -1,0 +1,27 @@
+meta {
+  name: 08 - Error Socio con Sede (422)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/v1/usuarios?idOperador={{idOperador}}
+  body: json
+  auth: none
+}
+
+params:query {
+  idOperador: {{idOperador}}
+}
+
+body:json {
+  {
+    "dni": "45666777",
+    "nombre": "Test",
+    "apellido": "Invalido",
+    "email": "invalido@fitzone.com",
+    "tipoUsuario": "SOCIO",
+    "idSede": 1,
+    "password": "Password123!"
+  }
+}

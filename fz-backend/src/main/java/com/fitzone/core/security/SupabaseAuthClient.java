@@ -61,6 +61,10 @@ public class SupabaseAuthClient {
 
     /** Alta por mail: Supabase crea la cuenta y envía la invitación para que el usuario defina su contraseña. */
     public UUID invitarUsuario(String email, Map<String, Object> datosUsuario) {
+        if (serviceRoleKey == null || serviceRoleKey.isBlank()) {
+            log.warn("[DEV MODE] SUPABASE_SERVICE_ROLE_KEY no configurada. Simulando respuesta de Supabase Auth con authId mock para {}", email);
+            return UUID.randomUUID();
+        }
         Map<String, Object> body = Map.of("email", email, "data", datosUsuario);
         JsonNode respuesta = ejecutar(() -> restClient.post()
                 .uri(uri -> uri.path("/invite").queryParam("redirect_to", inviteRedirectUrl).build())
@@ -76,6 +80,10 @@ public class SupabaseAuthClient {
 
     /** Alta en el sistema (sin mails): la cuenta queda confirmada y lista para loguearse con la contraseña inicial. */
     public UUID crearUsuarioConfirmado(String email, String password, Map<String, Object> datosUsuario) {
+        if (serviceRoleKey == null || serviceRoleKey.isBlank()) {
+            log.warn("[DEV MODE] SUPABASE_SERVICE_ROLE_KEY no configurada. Simulando creación confirmada con authId mock para {}", email);
+            return UUID.randomUUID();
+        }
         Map<String, Object> body = Map.of(
                 "email", email,
                 "password", password,
@@ -95,6 +103,10 @@ public class SupabaseAuthClient {
 
     /** Cambia el email de la cuenta y lo deja confirmado (lo edita personal autorizado, no el propio usuario). */
     public void actualizarEmail(UUID authId, String email) {
+        if (serviceRoleKey == null || serviceRoleKey.isBlank()) {
+            log.warn("[DEV MODE] SUPABASE_SERVICE_ROLE_KEY no configurada. Simulando actualización de email para authId {}", authId);
+            return;
+        }
         Map<String, Object> body = new HashMap<>();
         body.put("email", email);
         body.put("email_confirm", true);
@@ -111,6 +123,10 @@ public class SupabaseAuthClient {
 
     /** Elimina la cuenta. Se usa como compensación cuando el alta en la BD falla después de crearla en Supabase. */
     public void eliminarUsuario(UUID authId) {
+        if (serviceRoleKey == null || serviceRoleKey.isBlank()) {
+            log.warn("[DEV MODE] SUPABASE_SERVICE_ROLE_KEY no configurada. Simulando compensación para authId {}", authId);
+            return;
+        }
         ejecutar(() -> restClient.delete()
                 .uri("/admin/users/{id}", authId)
                 .retrieve()

@@ -1,0 +1,16 @@
+meta {
+  name: 05 - Buscar Usuarios con Filtros
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/v1/usuarios?tipo=SOCIO
+  body: none
+  auth: none
+}
+
+params:query {
+  tipo: SOCIO
+  ~dni: 40111222
+}

@@ -19,3 +19,7 @@ Esta carpeta contiene la documentación viva, las especificaciones de arquitectu
 4. **[GUIA_SUPABASE_USUARIOS.md](./GUIA_SUPABASE_USUARIOS.md)**  
    Tutorial práctico para la gestión de usuarios con Supabase Auth: obtención de service-role key, variables de entorno, flag `alta-por-email`, URLs de redirección, plantillas de correo, semilla del primer gerente y solución de problemas comunes.
 
+5. **[Colección de Bruno para Pruebas de API](./bruno/README.md)**  
+   Colección organizada por módulos (`01-usuarios/`, `02-canchas/`, etc.) y entornos (`local`, `dev`) para probar todos los endpoints REST directamente desde la aplicación Bruno.
+
+
