@@ -67,6 +67,16 @@ import {
   ResultadoValidacion,
   PersonasAdentroList,
 } from '../components/acceso';
+import {
+  ResumenPago,
+  ResultadoPago,
+  PagoItem,
+  BotonDescargaPdf,
+} from '../components/pagos';
+import type {
+  TransaccionDTO,
+  ComprobanteDTO,
+} from '../types';
 
 export function PlaygroundPage() {
   const { addToast } = useApp();
@@ -259,6 +269,7 @@ export function PlaygroundPage() {
     { id: 'clases-socio', label: 'Clases Socio (SCRUM-83)' },
     { id: 'acceso', label: 'Acceso y Aforo (SCRUM-82/85)' },
     { id: 'canchas', label: 'Canchas (RF-10/11)' },
+    { id: 'pagos', label: 'Pagos y Comprobantes (RF-13/14)' },
   ];
 
   // ── RF-06 Clases state ──────────────────────────────────────────────────────
@@ -400,6 +411,63 @@ export function PlaygroundPage() {
     precioBaseHora: pgCanchaBasePrice,
     enMantenimiento: pgDemoCanchaEnMantenimiento,
   };
+
+  // ── RF-13 / RF-14 Pagos Playground Interactive State ────────────────────────
+  const [pgPagoSubTab, setPgPagoSubTab] = useState<'resumen' | 'resultado' | 'item' | 'descarga'>('resumen');
+  const [pgPagoModoItem, setPgPagoModoItem] = useState<'cancha' | 'membresia'>('cancha');
+  const [pgPagoIsProcessing, setPgPagoIsProcessing] = useState(false);
+  const [pgPagoResultadoEstado, setPgPagoResultadoEstado] = useState<'CONFIRMADO' | 'RECHAZADO'>('CONFIRMADO');
+
+  const pgDemoUsuarioPago = {
+    idUsuario: 1,
+    authId: 'uuid-socio-1',
+    dni: '30123456',
+    nombre: 'Lucas',
+    apellido: 'Martínez',
+    email: 'lucas.martinez@email.com',
+    telefono: '11-4567-8901',
+    fotoUrl: null,
+    tipoUsuario: 'SOCIO' as const,
+    idSede: 1,
+  };
+
+  const [pgDemoTransaccion, setPgDemoTransaccion] = useState<TransaccionDTO>({
+    idTransaccion: 101,
+    usuario: pgDemoUsuarioPago,
+    sede: mockSede,
+    membresiaId: null,
+    reservaCanchaId: 10,
+    concepto: 'RESERVA_SOCIO',
+    monto: 6800,
+    estadoPago: 'CONFIRMADO',
+    tokenTransaccionPasarela: 'tok_mock_aprobado',
+    fechaHoraCreacion: '2026-10-20T19:00:00',
+    fechaHoraConfirmacion: '2026-10-20T19:01:15',
+    descripcion: 'Pádel · Cancha 1 — Horario Pico (19:00 a 20:00 hs)',
+  });
+
+  const [pgDemoComprobante] = useState<ComprobanteDTO>({
+    idComprobante: 101,
+    transaccion: {
+      idTransaccion: 101,
+      usuario: pgDemoUsuarioPago,
+      sede: mockSede,
+      membresiaId: null,
+      reservaCanchaId: 10,
+      concepto: 'RESERVA_SOCIO',
+      monto: 6800,
+      estadoPago: 'CONFIRMADO',
+      tokenTransaccionPasarela: 'tok_mock_aprobado',
+      fechaHoraCreacion: '2026-10-20T19:00:00',
+      fechaHoraConfirmacion: '2026-10-20T19:01:15',
+      descripcion: 'Pádel · Cancha 1 — Horario Pico (19:00 a 20:00 hs)',
+    },
+    numeroFactura: 'FAC-0001-00000842',
+    tipoComprobante: 'FACTURA_B',
+    cae: '71239845612304',
+    fechaVencimientoCae: '30/10/2026',
+    urlDescargaPdf: '',
+  });
 
   const shouldShow = (tabId: string) => activeTab === 'all' || activeTab === tabId;
 
@@ -3029,6 +3097,254 @@ export function PlaygroundPage() {
               </div>
             </Card>
           </div>
+        </section>
+      )}
+
+      {/* 13. PAGOS Y COMPROBANTES SECTION (RF-13, RF-14, SCRUM-86) */}
+      {shouldShow('pagos') && (
+        <section className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-[#1B2A55] font-outfit">
+                13. Pagos, Checkout y Comprobantes (RF-13, RF-14, SCRUM-86)
+              </h2>
+              <p className="text-xs text-slate-500">
+                Demostración interactiva de los componentes reutilizables de pagos: <code className="text-[#1B2A55] font-mono">ResumenPago</code>, <code className="text-[#1B2A55] font-mono">ResultadoPago</code>, <code className="text-[#1B2A55] font-mono">PagoItem</code> y <code className="text-[#1B2A55] font-mono">BotonDescargaPdf</code>.
+              </p>
+            </div>
+
+            {/* Subpestañas del playground de pagos */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+              {(['resumen', 'resultado', 'item', 'descarga'] as const).map((sub) => (
+                <button
+                  key={sub}
+                  type="button"
+                  onClick={() => setPgPagoSubTab(sub)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    pgPagoSubTab === sub
+                      ? 'bg-white text-fitzone-navy shadow-xs'
+                      : 'text-slate-600 hover:text-fitzone-navy'
+                  }`}
+                >
+                  {sub === 'resumen'
+                    ? 'ResumenPago'
+                    : sub === 'resultado'
+                    ? 'ResultadoPago'
+                    : sub === 'item'
+                    ? 'PagoItem'
+                    : 'BotonDescargaPdf'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Subtab 1: ResumenPago */}
+          {pgPagoSubTab === 'resumen' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-slate-600">Variante a evaluar:</span>
+                <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPgPagoModoItem('cancha')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      pgPagoModoItem === 'cancha' ? 'bg-white text-fitzone-navy shadow-xs' : 'text-slate-600'
+                    }`}
+                  >
+                    Reserva Cancha (con DesglosePrecio)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPgPagoModoItem('membresia')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      pgPagoModoItem === 'membresia' ? 'bg-white text-fitzone-navy shadow-xs' : 'text-slate-600'
+                    }`}
+                  >
+                    Membresía (Plan)
+                  </button>
+                </div>
+              </div>
+
+              <ResumenPago
+                detalle={
+                  pgPagoModoItem === 'cancha'
+                    ? {
+                        tipo: 'CANCHA',
+                        titulo: 'Pádel · Cancha 1 — Horario Pico (19:00 hs)',
+                        subtitulo: 'Sede FitZone Palermo',
+                        canchaNombre: 'Pádel Cristal',
+                        fecha: '20/10/2026',
+                        horario: '19:00 a 20:00 hs',
+                        cotizacion: {
+                          precioBase: 6667,
+                          esPico: true,
+                          recargoPico: 1333,
+                          porcentajeRecargoPico: 20,
+                          descuentoSocio: 1200,
+                          porcentajeDescuentoSocio: 15,
+                          esSocio: true,
+                          total: 6800,
+                        },
+                      }
+                    : {
+                        tipo: 'MEMBRESIA',
+                        titulo: 'Contratación Plan Premium Mensual',
+                        subtitulo: 'FitZone Sports',
+                        planNombre: 'Plan Premium',
+                        duracionMeses: 1,
+                        fechaVencimiento: '20/11/2026',
+                      }
+                }
+                montoTotal={pgPagoModoItem === 'cancha' ? 6800 : 15000}
+                isProcessing={pgPagoIsProcessing}
+                onConfirmarPago={(token) => {
+                  setPgPagoIsProcessing(true);
+                  setTimeout(() => {
+                    setPgPagoIsProcessing(false);
+                    const aprobado = token === 'tok_mock_aprobado';
+                    setPgPagoResultadoEstado(aprobado ? 'CONFIRMADO' : 'RECHAZADO');
+                    setPgDemoTransaccion((prev) => ({
+                      ...prev,
+                      estadoPago: aprobado ? 'CONFIRMADO' : 'RECHAZADO',
+                      monto: pgPagoModoItem === 'cancha' ? 6800 : 15000,
+                      motivoRechazo: aprobado ? null : 'Límite diario excedido. Rechazo simulado en Playground.',
+                    }));
+                    addToast(
+                      aprobado ? 'Pago Simulado Aprobado' : 'Pago Simulado Rechazado',
+                      `Token recibido: ${token}`,
+                      aprobado ? 'success' : 'error'
+                    );
+                    setPgPagoSubTab('resultado');
+                  }, 800);
+                }}
+              />
+            </div>
+          )}
+
+          {/* Subtab 2: ResultadoPago */}
+          {pgPagoSubTab === 'resultado' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-slate-600">Estado del resultado:</span>
+                <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPgPagoResultadoEstado('CONFIRMADO');
+                      setPgDemoTransaccion((prev) => ({
+                        ...prev,
+                        estadoPago: 'CONFIRMADO',
+                        motivoRechazo: null,
+                      }));
+                    }}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      pgPagoResultadoEstado === 'CONFIRMADO' ? 'bg-white text-green-700 shadow-xs' : 'text-slate-600'
+                    }`}
+                  >
+                    Simular CONFIRMADO (Aprobado)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPgPagoResultadoEstado('RECHAZADO');
+                      setPgDemoTransaccion((prev) => ({
+                        ...prev,
+                        estadoPago: 'RECHAZADO',
+                        motivoRechazo: 'Límite de tarjeta alcanzado. La entidad emisora declinó el cobro.',
+                      }));
+                    }}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      pgPagoResultadoEstado === 'RECHAZADO' ? 'bg-white text-red-700 shadow-xs' : 'text-slate-600'
+                    }`}
+                  >
+                    Simular RECHAZADO (con Reintento)
+                  </button>
+                </div>
+              </div>
+
+              <ResultadoPago
+                transaccion={pgDemoTransaccion}
+                comprobante={pgDemoTransaccion.estadoPago === 'CONFIRMADO' ? pgDemoComprobante : null}
+                onReintentar={() => {
+                  setPgPagoResultadoEstado('CONFIRMADO');
+                  setPgDemoTransaccion((prev) => ({
+                    ...prev,
+                    estadoPago: 'CONFIRMADO',
+                    motivoRechazo: null,
+                  }));
+                  addToast(
+                    'Reintento Exitoso (BUG-03 Prevenido)',
+                    `Se mantuvo el arancel original de $${pgDemoTransaccion.monto} y se aprobó el pago.`,
+                    'success'
+                  );
+                }}
+                onVolver={() => setPgPagoSubTab('resumen')}
+              />
+            </div>
+          )}
+
+          {/* Subtab 3: PagoItem */}
+          {pgPagoSubTab === 'item' && (
+            <div className="space-y-3">
+              <p className="text-xs text-slate-500">
+                Visualización de filas de transacciones para el historial con estados Confirmado, Rechazado y Pendiente:
+              </p>
+              <PagoItem
+                transaccion={{
+                  ...pgDemoTransaccion,
+                  idTransaccion: 1,
+                  estadoPago: 'CONFIRMADO',
+                  monto: 6800,
+                  descripcion: 'Pádel · Cancha 1 — Turno 19:00 a 20:00 hs',
+                }}
+                comprobante={pgDemoComprobante}
+              />
+              <PagoItem
+                transaccion={{
+                  ...pgDemoTransaccion,
+                  idTransaccion: 2,
+                  estadoPago: 'RECHAZADO',
+                  monto: 8000,
+                  descripcion: 'Fútbol 5 · Cancha Central — Turno 20:00 a 21:00 hs',
+                  motivoRechazo: 'Límite diario de compras excedido en la tarjeta.',
+                }}
+                onReintentar={(t) => {
+                  addToast(
+                    'Reintento sobre Transacción',
+                    `Reintentando pago de ${t.descripcion} ($${t.monto}). BUG-03 prevenido.`,
+                    'info'
+                  );
+                }}
+              />
+              <PagoItem
+                transaccion={{
+                  ...pgDemoTransaccion,
+                  idTransaccion: 3,
+                  estadoPago: 'PENDIENTE',
+                  monto: 15000,
+                  descripcion: 'Renovación Plan Premium Mensual',
+                }}
+              />
+            </div>
+          )}
+
+          {/* Subtab 4: BotonDescargaPdf */}
+          {pgPagoSubTab === 'descarga' && (
+            <Card className="p-6 space-y-4">
+              <h3 className="text-sm font-extrabold text-fitzone-navy">
+                Variantes y tamaños de BotonDescargaPdf:
+              </h3>
+              <p className="text-xs text-slate-500">
+                Al hacer clic, genera un Blob PDF descargable válido de demostración sin dar error 404.
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <BotonDescargaPdf size="xs" variant="primary" texto="Descargar (xs)" />
+                <BotonDescargaPdf size="sm" variant="secondary" texto="Comprobante (sm)" />
+                <BotonDescargaPdf size="md" variant="outline" texto="Descargar PDF (md)" />
+                <BotonDescargaPdf size="lg" variant="coral" texto="Descargar Factura (lg)" />
+              </div>
+            </Card>
+          )}
         </section>
       )}
     </div>

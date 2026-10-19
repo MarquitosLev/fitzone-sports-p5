@@ -39,6 +39,9 @@ const STATUS_CONFIG_MAP: Record<string, { variant: StatusVariant; label: string 
   NO_ASISTIO: { variant: 'red', label: 'No Asistió' },
   FALLIDO: { variant: 'red', label: 'Fallido' },
   ERROR: { variant: 'red', label: 'Error' },
+  /** EstadoPago: pago reintegrado al usuario */
+  REEMBOLSADO: { variant: 'coral', label: 'Reembolsado' },
+  REEMBOLSADA: { variant: 'coral', label: 'Reembolsada' },
 
   // Warning / Pending states (FitZone Gold)
   PENDIENTE: { variant: 'gold', label: 'Pendiente' },
