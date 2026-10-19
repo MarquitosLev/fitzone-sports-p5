@@ -1,30 +1,59 @@
 /**
- * AccesoPage.tsx — Pantalla de Código QR de Ingreso para el Socio (SCRUM-85).
+ * AccesoPage.tsx — Control de Acceso, Aforo en Tiempo Real y Pase Digital (SCRUM-82, SCRUM-85, RF-04, RF-05).
  *
- * Requerimientos y Reglas de Negocio:
- *   1. Diseño Responsive: Vista centrada optimizada para dispositivos móviles (pase digital).
- *   2. Membresía en cabecera: Renderiza <MembresiaEstadoCard /> en la parte superior.
- *   3. Regla Crítica: Si la membresía NO está activa (VENCIDO, SUSPENDIDO, CANCELADO, sin membresía),
- *      NO debe mostrar el código QR y en su lugar exhibirá un banner/alerta informando el motivo
- *      por el cual no puede ingresar.
- *   4. Generación Dinámica: Para socios activos, renderiza <QrDinamico /> con cuenta regresiva de 60s
- *      y solicitud automática de nuevo token al expirar.
- *   5. Selector / Demostración: Permite seleccionar o alternar entre distintos socios para comprobar
- *      todos los estados del negocio (Activo, Vencido, Suspendido, Sin membresía).
+ * Integra en una sola pantalla:
+ *   1. Vista Socio ('mi-qr'): Pase digital móvil con <QrDinamico /> (rotación de token de 60s),
+ *      cabecera de membresía (<MembresiaEstadoCard />) y bloqueo crítico si la membresía está inactiva (SCRUM-85).
+ *   2. Vista Recepción ('control-aforo'): Control operativo de aforo en tiempo real con polling,
+ *      validador de QR con los 4 motivos de rechazo, detalle de resolución y listado de personas
+ *      en sede con egreso inmediato (SCRUM-82, RF-04, RF-05, BUG-09).
+ *   3. Vista Historial ('historial'): Registro y auditoría de accesos físicos pasados en la sede.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { QrCode, ShieldAlert, DoorOpen, RefreshCw, UserCheck, Smartphone, ExternalLink, ListFilter } from 'lucide-react';
+import {
+  QrCode,
+  ShieldAlert,
+  DoorOpen,
+  RefreshCw,
+  UserCheck,
+  Smartphone,
+  ExternalLink,
+  ListFilter,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
 import { Card, Spinner, Alert, Button, DataTable } from '../components/ui';
 import type { Column } from '../components/ui';
 import { MembresiaEstadoCard } from '../components/membresias';
-import { QrDinamico } from '../components/acceso';
-import { obtenerQrSocio, listarAccesos } from '../services/accesoService';
+import {
+  QrDinamico,
+  AforoIndicador,
+  ValidadorIngreso,
+  ResultadoValidacion,
+  PersonasAdentroList,
+} from '../components/acceso';
+import {
+  obtenerQrSocio,
+  listarAccesos,
+  obtenerAforo,
+  listarAccesosActivos,
+  validarIngreso,
+  registrarEgreso,
+} from '../services/accesoService';
 import { obtenerMembresiaPorUsuario } from '../services/membresiasService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
-import type { MembresiaDTO, UsuarioDTO, AccesoDTO, QrTokenDTO } from '../types';
+import { USE_MOCK } from '../config';
+import type {
+  MembresiaDTO,
+  UsuarioDTO,
+  AccesoDTO,
+  QrTokenDTO,
+  AforoSedeDTO,
+  ResultadoValidacionDTO,
+} from '../types';
 import { formatearFechaHora } from '../utils/formatters';
 
 // Lista de socios para selección rápida en modo socio/demostración
@@ -107,29 +136,40 @@ const COLUMNAS_ACCESOS: Column<AccesoDTO>[] = [
   },
 ];
 
+type VistaAcceso = 'mi-qr' | 'control-aforo' | 'historial';
+
 export function AccesoPage() {
   const navigate = useNavigate();
   const { sedeActiva } = useSede();
   const { addToast } = useToast();
 
-  // Pestaña activa: 'mi-qr' (Socio) o 'historial' (Recepción)
-  const [vistaActiva, setVistaActiva] = useState<'mi-qr' | 'historial'>('mi-qr');
+  // Pestaña activa: 'mi-qr' (Socio), 'control-aforo' (Recepción SCRUM-82), o 'historial'
+  const [vistaActiva, setVistaActiva] = useState<VistaAcceso>('mi-qr');
 
-  // Socio seleccionado actualmente para el código QR
+  // ── Estado Vista 1: Pase QR Socio (SCRUM-85) ────────────────────────────────
   const [socioSeleccionado, setSocioSeleccionado] = useState<UsuarioDTO>(SOCIOS_EJEMPLO[0]);
   const [membresia, setMembresia] = useState<MembresiaDTO | null>(null);
   const [cargandoMembresia, setCargandoMembresia] = useState<boolean>(true);
 
-  // Estado del token QR
   const [qrTokenData, setQrTokenData] = useState<QrTokenDTO | null>(null);
   const [cargandoQr, setCargandoQr] = useState<boolean>(false);
   const [errorQr, setErrorQr] = useState<string | null>(null);
 
-  // Estado de registros de acceso físico para vista de recepción
+  // ── Estado Vista 2: Control Operativo y Aforo (SCRUM-82) ────────────────────
+  const [aforo, setAforo] = useState<AforoSedeDTO | null>(null);
+  const [accesosActivos, setAccesosActivos] = useState<AccesoDTO[]>([]);
+  const [loadingAforo, setLoadingAforo] = useState(false);
+  const [loadingAccesos, setLoadingAccesos] = useState(false);
+  const [validando, setValidando] = useState(false);
+  const [egresoLoadingId, setEgresoLoadingId] = useState<number | null>(null);
+  const [errorOperativo, setErrorOperativo] = useState<string | null>(null);
+  const [resultadoValidacion, setResultadoValidacion] = useState<ResultadoValidacionDTO | null>(null);
+
+  // ── Estado Vista 3: Historial de Accesos ─────────────────────────────────────
   const [accesosSede, setAccesosSede] = useState<AccesoDTO[]>([]);
   const [cargandoAccesos, setCargandoAccesos] = useState<boolean>(false);
 
-  // Solicitar nuevo token QR para el socio activo
+  // ── Lógica Socio: Solicitar Token QR Dinámico ────────────────────────────────
   const solicitarNuevoToken = useCallback(
     async (idUsuario: number) => {
       setCargandoQr(true);
@@ -157,7 +197,7 @@ export function AccesoPage() {
     [addToast]
   );
 
-  // Efecto cuando cambia el socio seleccionado con control de cancelación
+  // Efecto cuando cambia el socio seleccionado
   useEffect(() => {
     let cancelado = false;
 
@@ -196,7 +236,45 @@ export function AccesoPage() {
     };
   }, [socioSeleccionado, solicitarNuevoToken, addToast]);
 
-  // Cargar historial de accesos si se abre la pestaña de recepción
+  // ── Lógica Recepción: Cargar Aforo en tiempo real ─────────────────────────────
+  const cargarAforo = useCallback(async () => {
+    if (!sedeActiva) return;
+    try {
+      const datosAforo = await obtenerAforo(sedeActiva.idSede);
+      setAforo(datosAforo);
+    } catch (err: unknown) {
+      console.error('Error al actualizar aforo:', err);
+    }
+  }, [sedeActiva]);
+
+  // ── Lógica Recepción: Cargar Accesos Activos de la sede ────────────────────────
+  const cargarAccesosActivos = useCallback(async () => {
+    if (!sedeActiva) return;
+    setLoadingAccesos(true);
+    try {
+      const activos = await listarAccesosActivos(sedeActiva.idSede);
+      setAccesosActivos(activos);
+    } catch (err: unknown) {
+      setErrorOperativo(err instanceof Error ? err.message : 'Error al cargar personas en sede');
+    } finally {
+      setLoadingAccesos(false);
+    }
+  }, [sedeActiva]);
+
+  // Al montar o cambiar de sede, se actualizan los datos de recepción
+  useEffect(() => {
+    setResultadoValidacion(null);
+    setErrorOperativo(null);
+
+    if (sedeActiva) {
+      setLoadingAforo(true);
+      void Promise.all([cargarAforo(), cargarAccesosActivos()]).finally(() => {
+        setLoadingAforo(false);
+      });
+    }
+  }, [sedeActiva, cargarAforo, cargarAccesosActivos]);
+
+  // ── Lógica Recepción: Historial de accesos ────────────────────────────────────
   useEffect(() => {
     if (vistaActiva !== 'historial' || !sedeActiva) return;
 
@@ -207,7 +285,7 @@ export function AccesoPage() {
         const registros = await listarAccesos(sedeActiva.idSede);
         if (!cancelado) setAccesosSede(registros);
       } catch {
-        // Silencioso o con estado vacío
+        // Silencioso
       } finally {
         if (!cancelado) setCargandoAccesos(false);
       }
@@ -219,15 +297,84 @@ export function AccesoPage() {
     };
   }, [vistaActiva, sedeActiva]);
 
-  // Manejador de renovación o actualización
+  // ── Lógica Recepción: Validación de Ingreso ──────────────────────────────────
+  const handleValidarIngreso = async (token: string) => {
+    if (!sedeActiva) {
+      addToast({
+        type: 'warning',
+        title: 'Sede requerida',
+        message: 'Seleccioná una sede activa antes de validar un acceso.',
+      });
+      return;
+    }
+
+    setValidando(true);
+    try {
+      const res = await validarIngreso({
+        token,
+        idSede: sedeActiva.idSede,
+      });
+
+      setResultadoValidacion(res);
+
+      if (res.aprobado) {
+        addToast({
+          type: 'success',
+          title: 'Acceso Permitido',
+          message: res.mensaje || 'Molinete habilitado.',
+        });
+        // Refrescar lista de adentro y aforo
+        void Promise.all([cargarAforo(), cargarAccesosActivos()]);
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Acceso Denegado',
+          message: res.mensaje || `Motivo: ${res.motivoRechazo}`,
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Fallo en la comunicación con el molinete';
+      setErrorOperativo(msg);
+      addToast({
+        type: 'error',
+        title: 'Error de validación',
+        message: msg,
+      });
+    } finally {
+      setValidando(false);
+    }
+  };
+
+  // ── Lógica Recepción: Registro de Egreso ─────────────────────────────────────
+  const handleRegistrarEgreso = async (idAcceso: number) => {
+    setEgresoLoadingId(idAcceso);
+    try {
+      const egresado = await registrarEgreso(idAcceso);
+      addToast({
+        type: 'info',
+        title: 'Egreso registrado',
+        message: `Salida registrada para ${egresado.usuario.nombre} ${egresado.usuario.apellido}. Aforo liberado.`,
+      });
+
+      // Refrescar indicadores
+      await Promise.all([cargarAforo(), cargarAccesosActivos()]);
+    } catch (err: unknown) {
+      addToast({
+        type: 'error',
+        title: 'Error al registrar egreso',
+        message: err instanceof Error ? err.message : 'No se pudo procesar la salida.',
+      });
+    } finally {
+      setEgresoLoadingId(null);
+    }
+  };
+
   const handleRenovar = () => {
     navigate('/membresias');
   };
 
-  // Determinar si la membresía permite ingreso
   const tieneAccesoHabilitado = membresia !== null && membresia.estado === 'ACTIVO';
 
-  // Mensaje descriptivo según el motivo del bloqueo de acceso
   const obtenerMotivoBloqueo = () => {
     if (!membresia) {
       return {
@@ -272,8 +419,8 @@ export function AccesoPage() {
   const motivoBloqueo = obtenerMotivoBloqueo();
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Selector de modo de vista (Socio / Recepción) */}
+    <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-fade-in">
+      {/* ── Cabecera Superior y Switcher de Vistas ─────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-fitzone-navy text-fitzone-coral flex items-center justify-center shrink-0 shadow-xs">
@@ -284,18 +431,18 @@ export function AccesoPage() {
               Pase Digital de Acceso
             </h1>
             <p className="text-xs text-slate-500 font-medium">
-              Código QR dinámico para ingreso físico a molinetes y control de aforo (SCRUM-85)
+              Control de acceso físico, aforo en tiempo real y pase QR para socios (SCRUM-82, SCRUM-85)
             </p>
           </div>
         </div>
 
         {/* Switcher de vistas */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl self-start sm:self-auto">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl self-start sm:self-auto flex-wrap">
           <button
             type="button"
             onClick={() => setVistaActiva('mi-qr')}
             data-testid="tab-mi-qr"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               vistaActiva === 'mi-qr'
                 ? 'bg-white text-fitzone-navy shadow-xs'
                 : 'text-slate-500 hover:text-fitzone-navy'
@@ -306,9 +453,22 @@ export function AccesoPage() {
           </button>
           <button
             type="button"
+            onClick={() => setVistaActiva('control-aforo')}
+            data-testid="tab-control-aforo"
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              vistaActiva === 'control-aforo'
+                ? 'bg-white text-fitzone-navy shadow-xs'
+                : 'text-slate-500 hover:text-fitzone-navy'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-fitzone-coral" />
+            <span>Control y Aforo (Recepción)</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setVistaActiva('historial')}
             data-testid="tab-historial"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               vistaActiva === 'historial'
                 ? 'bg-white text-fitzone-navy shadow-xs'
                 : 'text-slate-500 hover:text-fitzone-navy'
@@ -320,7 +480,7 @@ export function AccesoPage() {
         </div>
       </div>
 
-      {/* ─── VISTA 1: MI CÓDIGO QR (SOCIO) ─────────────────────────────────── */}
+      {/* ─── VISTA 1: MI CÓDIGO QR (SOCIO - SCRUM-85) ─────────────────────────── */}
       {vistaActiva === 'mi-qr' && (
         <div className="space-y-6">
           {/* Selector de Socio de Prueba / Simulación de Estado */}
@@ -382,7 +542,7 @@ export function AccesoPage() {
             {/* 2. REGLA DE NEGOCIO CRÍTICA:
                 Si la membresía está ACTIVA: se muestra el código QR dinámico.
                 Si NO está activa (VENCIDO, SUSPENDIDO, CANCELADO, etc.):
-                NO se muestra el QR y en su lugar se exhibe un banner/mensaje informando el motivo. */}
+                NO se muestra el QR y en su lugar se exhibe un banner informando el motivo. */}
             {!cargandoMembresia && (
               <>
                 {tieneAccesoHabilitado ? (
@@ -466,7 +626,111 @@ export function AccesoPage() {
         </div>
       )}
 
-      {/* ─── VISTA 2: HISTORIAL DE ENTRADAS / MOLINETE RECEPCIÓN ────────────── */}
+      {/* ─── VISTA 2: CONTROL DE ACCESO Y AFORO EN VIVO (RECEPCIÓN - SCRUM-82) ── */}
+      {vistaActiva === 'control-aforo' && (
+        <div className="space-y-6">
+          {/* Header Operativo */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                  RECEPCIÓN Y MOSTRADOR
+                </span>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100/70 text-emerald-800 text-[10px] font-extrabold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Molinetes Sincronizados</span>
+                </div>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-fitzone-navy font-outfit mt-1 flex items-center gap-2.5">
+                <DoorOpen className="w-6 h-6 text-fitzone-coral" />
+                <span>Control de Acceso y Aforo en Tiempo Real</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {sedeActiva ? (
+                  <>Operando en <strong>{sedeActiva.nombre}</strong> · Capacidad máxima autorizada: <strong>{sedeActiva.aforoMaximo}</strong></>
+                ) : (
+                  'Ninguna sede seleccionada'
+                )}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-600 font-bold shadow-xs">
+                <ShieldCheck className="w-4 h-4 text-fitzone-green" />
+                <span>Reglas RN-01 & RF-05 activas</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Banner de Modo Mock */}
+          {USE_MOCK && (
+            <div
+              data-testid="banner-mock-mode"
+              className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-xs"
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-bold uppercase tracking-wider text-[10px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full shrink-0">
+                  Modo Mock
+                </span>
+                <span>
+                  Simulación de accesos físicos en memoria para <strong>{sedeActiva?.nombre || 'la sede'}</strong> (BUG-09 resuelto). Podés usar los botones rápidos de prueba para validar cada caso.
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-[11px] text-amber-700 font-mono shrink-0">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>VITE_USE_MOCK=true</span>
+              </div>
+            </div>
+          )}
+
+          {/* Alerta de error operativo si existe */}
+          {errorOperativo && (
+            <Alert
+              type="error"
+              title="Fallo en la operación"
+              message={errorOperativo}
+              onClose={() => setErrorOperativo(null)}
+            />
+          )}
+
+          {/* Layout en Dos Columnas Operativas */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Columna Izquierda: Aforo en Tiempo Real + Validador de Pase (5 columnas en LG) */}
+            <div className="lg:col-span-5 space-y-6">
+              <AforoIndicador
+                aforo={aforo}
+                loading={loadingAforo}
+                onRefresh={cargarAforo}
+                pollingIntervalMs={10000}
+                nombreSede={sedeActiva?.nombre}
+              />
+
+              <ValidadorIngreso
+                onValidar={handleValidarIngreso}
+                loading={validando}
+                disabled={!sedeActiva}
+              />
+            </div>
+
+            {/* Columna Derecha: Resultado de Validación + Personas Adentro (7 columnas en LG) */}
+            <div className="lg:col-span-7 space-y-6">
+              <ResultadoValidacion
+                resultado={resultadoValidacion}
+                onLimpiar={() => setResultadoValidacion(null)}
+              />
+
+              <PersonasAdentroList
+                accesos={accesosActivos}
+                loading={loadingAccesos}
+                onRegistrarEgreso={handleRegistrarEgreso}
+                egresoLoadingId={egresoLoadingId}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── VISTA 3: HISTORIAL DE ENTRADAS / MOLINETE RECEPCIÓN ──────────────── */}
       {vistaActiva === 'historial' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">

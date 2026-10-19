@@ -40,7 +40,6 @@ import {
   MembresiaEstadoCard,
   AccionesMembresia,
 } from '../components/membresias';
-import { QrDinamico, CuentaRegresiva } from '../components/acceso';
 import { MOCK_PLANES } from '../services/membresiasService';
 import { AgendaSemanal } from '../components/clases/AgendaSemanal';
 import { ClaseForm } from '../components/clases/ClaseForm';
@@ -60,6 +59,14 @@ import {
 import { calcularCotizacion } from '../services/canchasService';
 import type { ClaseGrupalDTO, CanchaDTO, FranjaHorariaDTO } from '../types';
 import type { UsuarioDTO, TipoUsuario, MembresiaDTO, EstadoMembresia } from '../types';
+import {
+  QrDinamico,
+  CuentaRegresiva,
+  AforoIndicador,
+  ValidadorIngreso,
+  ResultadoValidacion,
+  PersonasAdentroList,
+} from '../components/acceso';
 
 export function PlaygroundPage() {
   const { addToast } = useApp();
@@ -250,7 +257,7 @@ export function PlaygroundPage() {
     { id: 'membresias', label: 'Membresías (RF-02)' },
     { id: 'clases', label: 'Agenda Clases (RF-06)' },
     { id: 'clases-socio', label: 'Clases Socio (SCRUM-83)' },
-    { id: 'acceso', label: 'Código QR (SCRUM-85)' },
+    { id: 'acceso', label: 'Acceso y Aforo (SCRUM-82/85)' },
     { id: 'canchas', label: 'Canchas (RF-10/11)' },
   ];
 
@@ -2167,6 +2174,340 @@ export function PlaygroundPage() {
               </div>
 
             </div>
+          </Card>
+        </section>
+      )}
+
+      {/* 12. CONTROL DE ACCESO Y AFORO (SCRUM-82 / RF-04, RF-05) */}
+      {shouldShow('acceso') && (
+        <section className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-200">
+            <div>
+              <h2 className="text-xl font-black text-[#1B2A55] font-outfit">
+                12. Control de Acceso y Aforo en Tiempo Real (SCRUM-82)
+              </h2>
+              <p className="text-xs text-slate-500">
+                Componentes de recepción: monitor de aforo con polling (RF-05), validador de token QR, detalle de resolución con los 4 motivos de rechazo y listado de personas adentro con egreso (BUG-09).
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Módulo Recepción
+              </span>
+            </div>
+          </div>
+
+          {/* 12.1 AforoIndicador */}
+          <Card
+            title="12.1 AforoIndicador — Monitor de Ocupación con Umbrales Dinámicos"
+            subtitle="Barra de progreso visual con color según umbral: verde (<70%), ámbar (70%-84%), rojo/coral (≥85%) y soporte de polling."
+          >
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Ocupación normal (< 70%) */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                    Normal (&lt; 70%)
+                  </span>
+                  <AforoIndicador
+                    aforo={{ aforoActual: 38, aforoMaximo: 80, porcentaje: 47.5 }}
+                    nombreSede="FitZone Palermo"
+                    onRefresh={() => addToast('Demo', 'Actualización de aforo solicitada', 'info')}
+                  />
+                </div>
+
+                {/* Ocupación elevada (70% - 84%) */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                    Elevada (70% - 84%)
+                  </span>
+                  <AforoIndicador
+                    aforo={{ aforoActual: 62, aforoMaximo: 80, porcentaje: 77.5 }}
+                    nombreSede="FitZone Belgrano"
+                    onRefresh={() => addToast('Demo', 'Actualización de aforo solicitada', 'info')}
+                  />
+                </div>
+
+                {/* Alerta de capacidad (>= 85%) */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                    Crítica / Alerta (≥ 85%)
+                  </span>
+                  <AforoIndicador
+                    aforo={{ aforoActual: 76, aforoMaximo: 80, porcentaje: 95.0 }}
+                    nombreSede="FitZone Caballito"
+                    onRefresh={() => addToast('Demo', 'Actualización de aforo solicitada', 'info')}
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* 12.2 ValidadorIngreso */}
+          <Card
+            title="12.2 ValidadorIngreso — Escáner y Botonera Rápida de Pruebas"
+            subtitle="Permite tipear o pegar un código QR, e incluye accesos directos para probar con 1 clic cada motivo de aprobación y rechazo."
+          >
+            <ValidadorIngreso
+              onValidar={(token) => {
+                addToast('Token Validado', `Simulando validación con token: "${token}"`, 'info');
+              }}
+            />
+          </Card>
+
+          {/* 12.3 ResultadoValidacion — Casos de Aprobación y los 4 Motivos de Rechazo */}
+          <Card
+            title="12.3 ResultadoValidacion — Estados de Aprobación y Rechazo"
+            subtitle="RF-04 + RN-01 + RF-05: Explicación pedagógica para recepción de cada uno de los 4 motivos posibles de denegación."
+          >
+            <div className="space-y-5">
+              {/* Caso A: Aprobado */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-emerald-700 tracking-wider">
+                  Caso 1: Pase Aprobado (Molinete Habilitado)
+                </span>
+                <ResultadoValidacion
+                  resultado={{
+                    aprobado: true,
+                    mensaje: 'Acceso autorizado · Molinete 1 habilitado',
+                    usuario: {
+                      idUsuario: 1,
+                      authId: 'u1',
+                      dni: '30123456',
+                      nombre: 'Lucas',
+                      apellido: 'Martínez',
+                      email: 'lucas@fitzone.com',
+                      telefono: '11-4567-8901',
+                      fotoUrl: null,
+                      tipoUsuario: 'SOCIO',
+                      idSede: 1,
+                    },
+                    acceso: {
+                      idAcceso: 901,
+                      usuario: {
+                        idUsuario: 1,
+                        authId: 'u1',
+                        dni: '30123456',
+                        nombre: 'Lucas',
+                        apellido: 'Martínez',
+                        email: 'lucas@fitzone.com',
+                        telefono: '11-4567-8901',
+                        fotoUrl: null,
+                        tipoUsuario: 'SOCIO',
+                        idSede: 1,
+                      },
+                      sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                      reservaClase: null,
+                      reservaCancha: null,
+                      fechaHoraIngreso: toLocalISOString(new Date()),
+                      fechaHoraEgreso: null,
+                    },
+                  }}
+                />
+              </div>
+
+              {/* Caso B: QR Vencido */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-fitzone-red tracking-wider">
+                  Caso 2: Rechazo — QR_VENCIDO
+                </span>
+                <ResultadoValidacion
+                  resultado={{
+                    aprobado: false,
+                    motivoRechazo: 'QR_VENCIDO',
+                    mensaje: 'El código QR ha expirado. Por favor, generá un nuevo código desde la app.',
+                  }}
+                />
+              </div>
+
+              {/* Caso C: Membresía Inactiva */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-fitzone-red tracking-wider">
+                  Caso 3: Rechazo — MEMBRESIA_INACTIVA
+                </span>
+                <ResultadoValidacion
+                  resultado={{
+                    aprobado: false,
+                    motivoRechazo: 'MEMBRESIA_INACTIVA',
+                    mensaje: 'Membresía inactiva, vencida o suspendida. Debe regularizar su estado en recepción.',
+                    usuario: {
+                      idUsuario: 4,
+                      authId: 'u4',
+                      dni: '35123987',
+                      nombre: 'Camila',
+                      apellido: 'Torres',
+                      email: 'camila@fitzone.com',
+                      telefono: '11-9988-7766',
+                      fotoUrl: null,
+                      tipoUsuario: 'SOCIO',
+                      idSede: 1,
+                    },
+                  }}
+                />
+              </div>
+
+              {/* Caso D: Ya Ingresado (RN-01) */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-fitzone-red tracking-wider">
+                  Caso 4: Rechazo — YA_INGRESADO (RN-01: Acceso Físico Único)
+                </span>
+                <ResultadoValidacion
+                  resultado={{
+                    aprobado: false,
+                    motivoRechazo: 'YA_INGRESADO',
+                    mensaje: 'El socio ya posee un ingreso activo registrado en el club (RN-01).',
+                    usuario: {
+                      idUsuario: 2,
+                      authId: 'u2',
+                      dni: '28456789',
+                      nombre: 'Valentina',
+                      apellido: 'García',
+                      email: 'vgarcia@fitzone.com',
+                      telefono: '11-5432-1098',
+                      fotoUrl: null,
+                      tipoUsuario: 'SOCIO',
+                      idSede: 1,
+                    },
+                  }}
+                />
+              </div>
+
+              {/* Caso E: Aforo Completo (RF-05) */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-fitzone-red tracking-wider">
+                  Caso 5: Rechazo — AFORO_COMPLETO (RF-05: Límite Municipal)
+                </span>
+                <ResultadoValidacion
+                  resultado={{
+                    aprobado: false,
+                    motivoRechazo: 'AFORO_COMPLETO',
+                    mensaje: 'La sede ha alcanzado el aforo máximo permitido por normativa (RF-05).',
+                  }}
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* 12.4 PersonasAdentroList */}
+          <Card
+            title="12.4 PersonasAdentroList — Gestión de Personas en Sede y Egresos"
+            subtitle="Grilla interactiva con tipos de acceso (Libre, Clase, Cancha), hora de ingreso y confirmación de egreso con ConfirmDialog (solución BUG-09)."
+          >
+            <PersonasAdentroList
+              accesos={[
+                {
+                  idAcceso: 101,
+                  usuario: {
+                    idUsuario: 1,
+                    authId: 'u1',
+                    dni: '30123456',
+                    nombre: 'Lucas',
+                    apellido: 'Martínez',
+                    email: 'lucas@fitzone.com',
+                    telefono: '',
+                    fotoUrl: null,
+                    tipoUsuario: 'SOCIO',
+                    idSede: 1,
+                  },
+                  sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                  reservaClase: null,
+                  reservaCancha: null,
+                  fechaHoraIngreso: '2026-10-18T09:15:00',
+                  fechaHoraEgreso: null,
+                },
+                {
+                  idAcceso: 102,
+                  usuario: {
+                    idUsuario: 2,
+                    authId: 'u2',
+                    dni: '28456789',
+                    nombre: 'Valentina',
+                    apellido: 'García',
+                    email: 'vgarcia@fitzone.com',
+                    telefono: '',
+                    fotoUrl: null,
+                    tipoUsuario: 'SOCIO',
+                    idSede: 1,
+                  },
+                  sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                  reservaClase: {
+                    idReservaClase: 55,
+                    clase: {
+                      idClase: 1,
+                      sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                      nombreActividad: 'Spinning',
+                      fechaHoraInicio: '2026-10-18T09:30:00',
+                      duracionMinutos: 60,
+                      cupoMaximo: 20,
+                      cupoDisponible: 4,
+                    },
+                    usuario: {
+                      idUsuario: 2,
+                      authId: 'u2',
+                      dni: '28456789',
+                      nombre: 'Valentina',
+                      apellido: 'García',
+                      email: 'vgarcia@fitzone.com',
+                      telefono: '',
+                      fotoUrl: null,
+                      tipoUsuario: 'SOCIO',
+                      idSede: 1,
+                    },
+                    estado: 'CONFIRMADA',
+                  },
+                  reservaCancha: null,
+                  fechaHoraIngreso: '2026-10-18T09:25:00',
+                  fechaHoraEgreso: null,
+                },
+                {
+                  idAcceso: 103,
+                  usuario: {
+                    idUsuario: 3,
+                    authId: 'u3',
+                    dni: '32987654',
+                    nombre: 'Martín',
+                    apellido: 'Gómez',
+                    email: 'mgomez@fitzone.com',
+                    telefono: '',
+                    fotoUrl: null,
+                    tipoUsuario: 'SOCIO',
+                    idSede: 1,
+                  },
+                  sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                  reservaClase: null,
+                  reservaCancha: {
+                    idReservaCancha: 22,
+                    cancha: {
+                      idCancha: 3,
+                      sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+                      nombre: 'Cancha Pádel 1',
+                      precioBaseHora: 10000,
+                      enMantenimiento: false,
+                    },
+                    usuario: {
+                      idUsuario: 3,
+                      authId: 'u3',
+                      dni: '32987654',
+                      nombre: 'Martín',
+                      apellido: 'Gómez',
+                      email: 'mgomez@fitzone.com',
+                      telefono: '',
+                      fotoUrl: null,
+                      tipoUsuario: 'SOCIO',
+                      idSede: 1,
+                    },
+                    fechaHoraInicio: '2026-10-18T09:00:00',
+                    fechaHoraFin: '2026-10-18T10:30:00',
+                    precioFinal: 8500,
+                  },
+                  fechaHoraIngreso: '2026-10-18T08:50:00',
+                  fechaHoraEgreso: null,
+                },
+              ]}
+              onRegistrarEgreso={(id) => {
+                addToast('Egreso registrado', `Salida simulada para el acceso #${id}`, 'info');
+              }}
+            />
           </Card>
         </section>
       )}
