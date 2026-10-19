@@ -18,5 +18,7 @@ public enum CodigoError {
     /** 422: los datos son válidos pero una regla de negocio impide la operación. */
     REGLA_NEGOCIO,
     /** 500: error no controlado. */
-    ERROR_INTERNO
+    ERROR_INTERNO,
+    /** 502: un servicio externo (ej: Supabase Auth) falló o no respondió. */
+    SERVICIO_EXTERNO
 }

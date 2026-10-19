@@ -15,3 +15,7 @@ Esta carpeta contiene la documentación viva, las especificaciones de arquitectu
 
 3. **[Guía de Supabase Auth y Roles](../../Documentaciones/guia_supabase_auth_roles.md)**  
    Manual paso a paso para la configuración del JWKS, API de login y consumo de endpoints con JWT.
+
+4. **[GUIA_SUPABASE_USUARIOS.md](./GUIA_SUPABASE_USUARIOS.md)**  
+   Tutorial práctico para la gestión de usuarios con Supabase Auth: obtención de service-role key, variables de entorno, flag `alta-por-email`, URLs de redirección, plantillas de correo, semilla del primer gerente y solución de problemas comunes.
+
