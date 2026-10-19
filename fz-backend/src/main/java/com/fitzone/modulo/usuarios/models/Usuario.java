@@ -22,10 +22,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import org.hibernate.annotations.SQLRestriction;
+
 import java.util.UUID;
 
 @Entity
 @Table(name = "fz_usr_usuarios")
+@SQLRestriction("is_deleted = false")
 @Getter
 @Setter
 @NoArgsConstructor

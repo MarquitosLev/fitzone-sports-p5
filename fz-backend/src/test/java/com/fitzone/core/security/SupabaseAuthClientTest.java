@@ -39,7 +39,8 @@ class SupabaseAuthClientTest {
                 "https://test.supabase.co",
                 "test-service-key",
                 "http://localhost:5173",
-                true
+                true,
+                false
         );
     }
 

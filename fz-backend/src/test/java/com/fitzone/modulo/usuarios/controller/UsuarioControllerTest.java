@@ -78,6 +78,36 @@ class UsuarioControllerTest {
     }
 
     @Test
+    @DisplayName("POST /v1/usuarios sin idOperador (opcional) responde 201 Created")
+    void crear_sinIdOperador_retorna201() throws Exception {
+        Usuario nuevo = Usuario.builder()
+                .dni("87654321")
+                .nombre("Laura")
+                .apellido("Gomez")
+                .email("laura@fitzone.com")
+                .tipoUsuario(TipoUsuario.SOCIO)
+                .build();
+
+        Usuario persistido = Usuario.builder()
+                .idUsuario(2L)
+                .dni("87654321")
+                .nombre("Laura")
+                .apellido("Gomez")
+                .email("laura@fitzone.com")
+                .tipoUsuario(TipoUsuario.SOCIO)
+                .build();
+
+        when(usuarioService.crear(any(Usuario.class), eq(null))).thenReturn(persistido);
+
+        mockMvc.perform(post("/v1/usuarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(nuevo)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.idUsuario", is(2)))
+                .andExpect(jsonPath("$.dni", is("87654321")));
+    }
+
+    @Test
     @DisplayName("POST /v1/usuarios sin DNI responde 400 con formato de validación")
     void crear_sinDni_retorna400() throws Exception {
         Usuario invalido = Usuario.builder()
@@ -151,15 +181,16 @@ class UsuarioControllerTest {
     }
 
     @Test
-    @DisplayName("GET /v1/usuarios?dni=&tipo= retorna lista filtrada")
+    @DisplayName("GET /v1/usuarios?dni=&tipo=&idSede= retorna lista filtrada")
     void buscar_retornaLista() throws Exception {
         Usuario u1 = Usuario.builder().idUsuario(1L).dni("1111").tipoUsuario(TipoUsuario.SOCIO).build();
 
-        when(usuarioService.buscar("1111", TipoUsuario.SOCIO)).thenReturn(List.of(u1));
+        when(usuarioService.buscar("1111", TipoUsuario.SOCIO, 1L)).thenReturn(List.of(u1));
 
         mockMvc.perform(get("/v1/usuarios")
                         .param("dni", "1111")
-                        .param("tipo", "SOCIO"))
+                        .param("tipo", "SOCIO")
+                        .param("idSede", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].dni", is("1111")));

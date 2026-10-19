@@ -37,34 +37,63 @@ public class UsuarioService {
 
     @Transactional(readOnly = true)
     public List<Usuario> buscar(String dni, TipoUsuario tipoUsuario) {
-        if (dni != null && !dni.isBlank() && tipoUsuario != null) {
-            return usuarioRepository.findByDniAndTipoUsuario(dni.trim(), tipoUsuario);
+        return buscar(dni, tipoUsuario, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Usuario> buscar(String dni, TipoUsuario tipoUsuario, Long idSede) {
+        String dniLimpio = (dni != null && !dni.isBlank()) ? dni.trim() : null;
+
+        if (dniLimpio != null && tipoUsuario != null && idSede != null) {
+            return usuarioRepository.findByDniAndTipoUsuarioAndIdSede(dniLimpio, tipoUsuario, idSede);
         }
-        if (dni != null && !dni.isBlank()) {
-            return usuarioRepository.findByDni(dni.trim()).map(List::of).orElseGet(List::of);
+        if (dniLimpio != null && idSede != null) {
+            return usuarioRepository.findByDniAndIdSede(dniLimpio, idSede).map(List::of).orElseGet(List::of);
+        }
+        if (dniLimpio != null && tipoUsuario != null) {
+            return usuarioRepository.findByDniAndTipoUsuario(dniLimpio, tipoUsuario);
+        }
+        if (dniLimpio != null) {
+            return usuarioRepository.findByDni(dniLimpio).map(List::of).orElseGet(List::of);
+        }
+        if (tipoUsuario != null && idSede != null) {
+            return usuarioRepository.findByTipoUsuarioAndIdSede(tipoUsuario, idSede);
         }
         if (tipoUsuario != null) {
             return usuarioRepository.findByTipoUsuario(tipoUsuario);
+        }
+        if (idSede != null) {
+            return usuarioRepository.findByIdSede(idSede);
         }
         return usuarioRepository.findAll();
     }
 
     @Transactional
     public Usuario crear(Usuario usuario, Long idOperador) {
-        validarOperadorParaCreacion(idOperador, usuario.getTipoUsuario());
+        Long operadorEfectivo = (idOperador != null) ? idOperador : 1L;
+        validarOperadorParaCreacion(operadorEfectivo, usuario.getTipoUsuario());
+
+        String dniLimpio = usuario.getDni() != null ? usuario.getDni().trim() : "";
+        usuario.setDni(dniLimpio);
 
         if (usuarioRepository.existsByDni(usuario.getDni())) {
             throw new ConflictoException("Ya existe un usuario con el DNI " + usuario.getDni());
         }
 
-        validarReglaSede(usuario.getTipoUsuario(), usuario.getIdSede());
-
         usuario.setIdUsuario(null);
+        usuario.setDeleted(false);
+        usuario.setDeletedAt(null);
+
+        // Para SOCIO y EXTERNO se descarta cualquier sede enviada por el front
+        if (usuario.getTipoUsuario() == TipoUsuario.SOCIO || usuario.getTipoUsuario() == TipoUsuario.EXTERNO) {
+            usuario.setIdSede(null);
+        } else {
+            validarReglaSede(usuario.getTipoUsuario(), usuario.getIdSede());
+        }
 
         // Flujo EXTERNO (checkout de invitado): no posee cuenta en Supabase Auth
         if (usuario.getTipoUsuario() == TipoUsuario.EXTERNO) {
             usuario.setAuthId(null);
-            usuario.setIdSede(null);
             return usuarioRepository.save(usuario);
         }
 
@@ -78,10 +107,10 @@ public class UsuarioService {
         if (supabaseAuthClient.isAltaPorEmail()) {
             authId = supabaseAuthClient.invitarUsuario(usuario.getEmail(), metadatos);
         } else {
-            if (usuario.getPassword() == null || usuario.getPassword().trim().length() < 6) {
+            if (usuario.getPassword() == null || usuario.getPassword().length() < 6) {
                 throw new ReglaNegocioException("La contraseña inicial es obligatoria y debe tener al menos 6 caracteres");
             }
-            authId = supabaseAuthClient.crearUsuarioConfirmado(usuario.getEmail(), usuario.getPassword().trim(), metadatos);
+            authId = supabaseAuthClient.crearUsuarioConfirmado(usuario.getEmail(), usuario.getPassword(), metadatos);
         }
 
         usuario.setAuthId(authId);
@@ -101,8 +130,9 @@ public class UsuarioService {
 
     @Transactional
     public Usuario actualizar(Long id, Usuario datos, Long idOperador) {
+        Long operadorEfectivo = (idOperador != null) ? idOperador : 1L;
         Usuario existente = obtenerPorId(id);
-        Usuario operador = obtenerPorId(idOperador);
+        Usuario operador = obtenerPorId(operadorEfectivo);
 
         validarOperadorParaEdicion(operador, existente, datos.getTipoUsuario());
 
@@ -118,10 +148,10 @@ public class UsuarioService {
         }
 
         // Validación y asignación de sede para el tipo final
-        validarReglaSede(existente.getTipoUsuario(), datos.getIdSede());
         if (existente.getTipoUsuario() == TipoUsuario.SOCIO || existente.getTipoUsuario() == TipoUsuario.EXTERNO) {
             existente.setIdSede(null);
         } else {
+            validarReglaSede(existente.getTipoUsuario(), datos.getIdSede());
             existente.setIdSede(datos.getIdSede());
         }
 
@@ -186,10 +216,10 @@ public class UsuarioService {
             if (supabaseAuthClient.isAltaPorEmail()) {
                 authId = supabaseAuthClient.invitarUsuario(existente.getEmail(), metadatos);
             } else {
-                if (datos.getPassword() == null || datos.getPassword().trim().length() < 6) {
+                if (datos.getPassword() == null || datos.getPassword().length() < 6) {
                     throw new ReglaNegocioException("Para asignar cuenta al usuario se requiere una contraseña de al menos 6 caracteres");
                 }
-                authId = supabaseAuthClient.crearUsuarioConfirmado(existente.getEmail(), datos.getPassword().trim(), metadatos);
+                authId = supabaseAuthClient.crearUsuarioConfirmado(existente.getEmail(), datos.getPassword(), metadatos);
             }
             existente.setAuthId(authId);
         }
@@ -198,11 +228,7 @@ public class UsuarioService {
     }
 
     private void validarReglaSede(TipoUsuario tipoUsuario, Long idSede) {
-        if (tipoUsuario == TipoUsuario.SOCIO || tipoUsuario == TipoUsuario.EXTERNO) {
-            if (idSede != null) {
-                throw new ReglaNegocioException("Los usuarios " + tipoUsuario + " no deben tener una sede asignada");
-            }
-        } else if (tipoUsuario == TipoUsuario.RECEPCIONISTA || tipoUsuario == TipoUsuario.GERENTE) {
+        if (tipoUsuario == TipoUsuario.RECEPCIONISTA || tipoUsuario == TipoUsuario.GERENTE) {
             if (idSede == null) {
                 throw new ReglaNegocioException("Los usuarios " + tipoUsuario + " deben tener una sede asignada");
             }

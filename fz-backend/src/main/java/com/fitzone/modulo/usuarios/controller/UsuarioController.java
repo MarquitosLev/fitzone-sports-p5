@@ -35,8 +35,8 @@ public class UsuarioController {
     @Operation(summary = "Alta de un nuevo usuario (socio, externo, recepcionista o gerente)")
     public Usuario crear(
             @Valid @RequestBody Usuario usuario,
-            @Parameter(description = "ID del usuario que realiza el alta (recepcionista o gerente)")
-            @RequestParam @Positive Long idOperador) {
+            @Parameter(description = "ID del usuario que realiza el alta (opcional en fase inicial, por defecto operador sistema)")
+            @RequestParam(required = false) @Positive Long idOperador) {
         return usuarioService.crear(usuario, idOperador);
     }
 
@@ -47,13 +47,15 @@ public class UsuarioController {
     }
 
     @GetMapping
-    @Operation(summary = "Búsqueda y listado de usuarios con filtros opcionales por DNI y/o tipo de usuario")
+    @Operation(summary = "Búsqueda y listado de usuarios con filtros opcionales por DNI, tipo y/o sede")
     public List<Usuario> buscar(
             @Parameter(description = "DNI para filtrar usuarios de forma exacta")
             @RequestParam(required = false) String dni,
             @Parameter(description = "Tipo de usuario (SOCIO, EXTERNO, RECEPCIONISTA, GERENTE)")
-            @RequestParam(required = false) TipoUsuario tipo) {
-        return usuarioService.buscar(dni, tipo);
+            @RequestParam(required = false) TipoUsuario tipo,
+            @Parameter(description = "ID de sede para filtrar usuarios")
+            @RequestParam(required = false) @Positive Long idSede) {
+        return usuarioService.buscar(dni, tipo, idSede);
     }
 
     @PutMapping("/{id}")
@@ -61,8 +63,8 @@ public class UsuarioController {
     public Usuario actualizar(
             @PathVariable @Positive Long id,
             @Valid @RequestBody Usuario usuario,
-            @Parameter(description = "ID del usuario que realiza la modificación (recepcionista o gerente)")
-            @RequestParam @Positive Long idOperador) {
+            @Parameter(description = "ID del usuario que realiza la modificación (opcional en fase inicial, por defecto operador sistema)")
+            @RequestParam(required = false) @Positive Long idOperador) {
         return usuarioService.actualizar(id, usuario, idOperador);
     }
 }

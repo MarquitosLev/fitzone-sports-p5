@@ -21,4 +21,12 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     List<Usuario> findByTipoUsuario(TipoUsuario tipoUsuario);
 
     List<Usuario> findByDniAndTipoUsuario(String dni, TipoUsuario tipoUsuario);
+
+    List<Usuario> findByIdSede(Long idSede);
+
+    List<Usuario> findByTipoUsuarioAndIdSede(TipoUsuario tipoUsuario, Long idSede);
+
+    Optional<Usuario> findByDniAndIdSede(String dni, Long idSede);
+
+    List<Usuario> findByDniAndTipoUsuarioAndIdSede(String dni, TipoUsuario tipoUsuario, Long idSede);
 }

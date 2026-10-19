@@ -8,17 +8,20 @@ import com.fitzone.core.exception.ReglaNegocioException;
 import com.fitzone.core.exception.ServicioExternoException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -42,16 +45,35 @@ public class SupabaseAuthClient {
     @Getter
     private final boolean altaPorEmail;
 
+    @Autowired
     public SupabaseAuthClient(RestClient.Builder restClientBuilder,
                               ObjectMapper objectMapper,
                               @Value("${fitzone.supabase.url}") String supabaseUrl,
                               @Value("${fitzone.supabase.service-role-key:}") String serviceRoleKey,
                               @Value("${fitzone.supabase.invite-redirect-url}") String inviteRedirectUrl,
                               @Value("${fitzone.supabase.alta-por-email:true}") boolean altaPorEmail) {
+        this(restClientBuilder, objectMapper, supabaseUrl, serviceRoleKey, inviteRedirectUrl, altaPorEmail, true);
+    }
+
+    public SupabaseAuthClient(RestClient.Builder restClientBuilder,
+                              ObjectMapper objectMapper,
+                              String supabaseUrl,
+                              String serviceRoleKey,
+                              String inviteRedirectUrl,
+                              boolean altaPorEmail,
+                              boolean configurarTimeouts) {
         this.objectMapper = objectMapper;
         this.serviceRoleKey = serviceRoleKey;
         this.inviteRedirectUrl = inviteRedirectUrl;
         this.altaPorEmail = altaPorEmail;
+
+        if (configurarTimeouts) {
+            SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+            requestFactory.setConnectTimeout(Duration.ofSeconds(5));
+            requestFactory.setReadTimeout(Duration.ofSeconds(10));
+            restClientBuilder.requestFactory(requestFactory);
+        }
+
         this.restClient = restClientBuilder
                 .baseUrl(supabaseUrl + "/auth/v1")
                 .defaultHeader("apikey", serviceRoleKey)

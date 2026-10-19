@@ -158,10 +158,12 @@ class UsuarioServiceTest {
     }
 
     @Test
-    @DisplayName("SOCIO con sede asignada lanza ReglaNegocioException (422)")
-    void crear_socioConSede_lanzaReglaNegocio() {
+    @DisplayName("SOCIO con sede enviada por el front: se sanitiza a null y se da de alta correctamente")
+    void crear_socioConSede_seSanitizaANull() {
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(operadorRecepcionista));
         when(usuarioRepository.existsByDni("66666666")).thenReturn(false);
+        when(supabaseAuthClient.isAltaPorEmail()).thenReturn(true);
+        when(supabaseAuthClient.invitarUsuario(eq("test@fitzone.com"), anyMap())).thenReturn(UUID.randomUUID());
 
         Usuario socioConSede = Usuario.builder()
                 .dni("66666666")
@@ -172,9 +174,37 @@ class UsuarioServiceTest {
                 .idSede(1L)
                 .build();
 
-        assertThatThrownBy(() -> usuarioService.crear(socioConSede, 1L))
-                .isInstanceOf(ReglaNegocioException.class)
-                .hasMessageContaining("no deben tener una sede asignada");
+        when(usuarioRepository.saveAndFlush(any(Usuario.class))).thenAnswer(i -> i.getArgument(0));
+
+        Usuario creado = usuarioService.crear(socioConSede, 1L);
+
+        assertThat(creado.getIdSede()).isNull();
+        assertThat(creado.isDeleted()).isFalse();
+        assertThat(creado.getDeletedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("Alta con idOperador nulo: realiza fallback al operador del sistema (1L)")
+    void crear_idOperadorNulo_usaOperadorPorDefecto() {
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(operadorRecepcionista));
+        when(usuarioRepository.existsByDni("66666667")).thenReturn(false);
+        when(supabaseAuthClient.isAltaPorEmail()).thenReturn(true);
+        when(supabaseAuthClient.invitarUsuario(eq("test2@fitzone.com"), anyMap())).thenReturn(UUID.randomUUID());
+
+        Usuario socio = Usuario.builder()
+                .dni("66666667")
+                .nombre("Test2")
+                .apellido("Test2")
+                .email("test2@fitzone.com")
+                .tipoUsuario(TipoUsuario.SOCIO)
+                .build();
+
+        when(usuarioRepository.saveAndFlush(any(Usuario.class))).thenAnswer(i -> i.getArgument(0));
+
+        Usuario creado = usuarioService.crear(socio, null);
+
+        assertThat(creado).isNotNull();
+        verify(usuarioRepository).findById(1L);
     }
 
     @Test
