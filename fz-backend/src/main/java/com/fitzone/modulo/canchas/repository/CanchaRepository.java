@@ -13,8 +13,13 @@ public interface CanchaRepository extends JpaRepository<Cancha, Long> {
     // Una sede tiene varias canchas
     List<Cancha> findBySede_IdSede(Long idSede);
 
+    List<Cancha> findBySede_IdSedeAndTipoIgnoreCase(Long idSede, String tipo);
+
+    boolean existsBySede_IdSedeAndNombreIgnoreCase(Long idSede, String nombre);
+
+    boolean existsBySede_IdSedeAndNombreIgnoreCaseAndIdCanchaNot(Long idSede, String nombre, Long idCancha);
+
     Optional<Cancha> findByNombre(String nombre);
 
     List<Cancha> findByEnMantenimiento(Boolean enMantenimiento);
-
 }
