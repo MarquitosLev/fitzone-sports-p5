@@ -12,8 +12,7 @@
 import { httpClient } from './httpClient';
 import type { ClaseGrupalDTO, ReservaClaseDTO, ListaEsperaDTO } from '../types';
 import { toLocalISOString } from '../utils/formatters';
-
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
+import { USE_MOCK } from '../config';
 
 // ─── 1. CONSTANTE DE ENDPOINTS (ajustar aquí cuando el backend haga merge) ──
 export const CLASES_ENDPOINTS = {

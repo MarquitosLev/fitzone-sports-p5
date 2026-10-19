@@ -34,13 +34,13 @@ import { ClaseForm } from '../components/clases/ClaseForm';
 import type { ClaseFormPayload } from '../components/clases/ClaseForm';
 import { ClaseCard } from '../components/clases/ClaseCard';
 import { ReservaClaseItem } from '../components/clases/ReservaClaseItem';
+import { USE_MOCK } from '../config';
 
 // ── Modo Mock / Socio de prueba ──────────────────────────────────────────────
-// Flag de entorno: si es true, opera con datos en memoria y socio demo.
+// Flag centralizado: si es true, opera con datos en memoria y socio demo.
 // En producción (false), no se usa ningún mock y se requiere sesión real.
-const isMockMode = import.meta.env.VITE_USE_MOCK === 'true';
 const SOCIO_MOCK_ID = 2; // Valentina García (membresía ACTIVO) para modo mock
-const socioIdActual: number | null = isMockMode ? SOCIO_MOCK_ID : null;
+const socioIdActual: number | null = USE_MOCK ? SOCIO_MOCK_ID : null;
 
 // Column definition kept for reference (not rendered, but exported for type safety)
 export const CLASES_COLUMNS: Column<ClaseGrupalDTO>[] = [
@@ -301,8 +301,8 @@ export function ClasesPage() {
         )}
       </div>
 
-      {/* ── Banner de Modo Mock (visible cuando VITE_USE_MOCK=true) ─────── */}
-      {isMockMode && (
+      {/* ── Banner de Modo Mock (visible cuando USE_MOCK=true) ─────── */}
+      {USE_MOCK && (
         <div
           data-testid="banner-mock-mode"
           className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-xs"
@@ -316,7 +316,7 @@ export function ClasesPage() {
             </span>
           </div>
           <span className="text-[11px] text-amber-700 font-mono shrink-0">
-            VITE_USE_MOCK=true
+            USE_MOCK=true
           </span>
         </div>
       )}

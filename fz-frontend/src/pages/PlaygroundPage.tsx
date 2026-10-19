@@ -9,6 +9,8 @@ import {
   DataTable,
   Card,
   StatusBadge,
+  Badge,
+  StatCard,
   Alert,
   Spinner,
   EmptyState,
@@ -38,6 +40,7 @@ import {
   MembresiaEstadoCard,
   AccionesMembresia,
 } from '../components/membresias';
+import { QrDinamico, CuentaRegresiva } from '../components/acceso';
 import { MOCK_PLANES } from '../services/membresiasService';
 import { AgendaSemanal } from '../components/clases/AgendaSemanal';
 import { ClaseForm } from '../components/clases/ClaseForm';
@@ -47,7 +50,15 @@ import { ReservaClaseItem } from '../components/clases/ReservaClaseItem';
 import { PosicionEsperaBadge } from '../components/clases/PosicionEsperaBadge';
 import { toLocalISOString } from '../utils/formatters';
 import type { ClaseFormPayload } from '../components/clases/ClaseForm';
-import type { ClaseGrupalDTO } from '../types';
+import {
+  GrillaDisponibilidad,
+  DesglosePrecio,
+  SelectorFecha,
+  CanchaCard,
+  MantenimientoToggle,
+} from '../components/canchas';
+import { calcularCotizacion } from '../services/canchasService';
+import type { ClaseGrupalDTO, CanchaDTO, FranjaHorariaDTO } from '../types';
 import type { UsuarioDTO, TipoUsuario, MembresiaDTO, EstadoMembresia } from '../types';
 
 export function PlaygroundPage() {
@@ -90,6 +101,16 @@ export function PlaygroundPage() {
     'activo-ok' | 'activo-alerta' | 'vencido' | 'suspendido' | 'cancelado' | 'sin-membresia'
   >('activo-alerta');
   const [demoAccionesEstado, setDemoAccionesEstado] = useState<EstadoMembresia>('ACTIVO');
+
+  // SCRUM-85 (Código QR de Ingreso) Playground Interactive State
+  const [demoQrToken, setDemoQrToken] = useState('FZ-QR-DEMO-2026-X89AF2');
+  const [demoQrDuracion, setDemoQrDuracion] = useState(60);
+  const [demoQrCargando, setDemoQrCargando] = useState(false);
+  const [demoQrError, setDemoQrError] = useState<string | null>(null);
+  const [demoCuentaSegundos, setDemoCuentaSegundos] = useState(42);
+  const [demoCuentaBarra, setDemoCuentaBarra] = useState(true);
+  const [demoCuentaTexto, setDemoCuentaTexto] = useState(true);
+  const [demoQrMembresiaEstado, setDemoQrMembresiaEstado] = useState<EstadoMembresia | 'SIN_MEMBRESIA'>('ACTIVO');
 
   // Table interactive state
   const [tableLoading, setTableLoading] = useState(false);
@@ -217,10 +238,6 @@ export function PlaygroundPage() {
 
   const tabs = [
     { id: 'all', label: 'Todos' },
-    { id: 'membresias', label: 'Membresías (RF-02)' },
-    { id: 'clases', label: 'Agenda Clases (RF-06)' },
-    { id: 'clases-socio', label: 'Clases Socio (SCRUM-83)' },
-    { id: 'usuarios', label: 'Gestión Usuarios (RF-01)' },
     { id: 'buttons', label: 'Botones' },
     { id: 'inputs', label: 'Campos Form' },
     { id: 'badges', label: 'Status Badges' },
@@ -229,6 +246,12 @@ export function PlaygroundPage() {
     { id: 'modals', label: 'Modales' },
     { id: 'alerts', label: 'Alertas & Toasts' },
     { id: 'spinners', label: 'Spinners & Empty' },
+    { id: 'usuarios', label: 'Gestión Usuarios (RF-01)' },
+    { id: 'membresias', label: 'Membresías (RF-02)' },
+    { id: 'clases', label: 'Agenda Clases (RF-06)' },
+    { id: 'clases-socio', label: 'Clases Socio (SCRUM-83)' },
+    { id: 'acceso', label: 'Código QR (SCRUM-85)' },
+    { id: 'canchas', label: 'Canchas (RF-10/11)' },
   ];
 
   // ── RF-06 Clases state ──────────────────────────────────────────────────────
@@ -286,6 +309,90 @@ export function PlaygroundPage() {
   const [pgFormLoading, setPgFormLoading] = useState(false);
   const [pgFormError, setPgFormError] = useState<string | null>(null);
   const [pgSelectedClase, setPgSelectedClase] = useState<ClaseGrupalDTO | undefined>(undefined);
+
+  // ── RF-10 / RF-11 Canchas Playground Interactive State ──────────────────────
+  const [pgCanchaFecha, setPgCanchaFecha] = useState('2026-10-20');
+  const [pgCanchaEsSocio, setPgCanchaEsSocio] = useState(true);
+  const [pgCanchaBasePrice, setPgCanchaBasePrice] = useState(10000);
+  const [pgCanchaTurno, setPgCanchaTurno] = useState<FranjaHorariaDTO | null>({
+    id: '19:00-20:00',
+    horaInicio: '19:00',
+    horaFin: '20:00',
+    textoTurno: '19:00 – 20:00',
+    esPico: true,
+    estado: 'LIBRE',
+    precioEstimado: 10000,
+  });
+
+  const [pgFranjasDemo, setPgFranjasDemo] = useState<FranjaHorariaDTO[]>([
+    {
+      id: '16:00-17:00',
+      horaInicio: '16:00',
+      horaFin: '17:00',
+      textoTurno: '16:00 – 17:00',
+      esPico: false,
+      estado: 'LIBRE',
+      precioEstimado: 10000,
+    },
+    {
+      id: '17:00-18:00',
+      horaInicio: '17:00',
+      horaFin: '18:00',
+      textoTurno: '17:00 – 18:00',
+      esPico: false,
+      estado: 'OCUPADO',
+      precioEstimado: 10000,
+    },
+    {
+      id: '18:00-19:00',
+      horaInicio: '18:00',
+      horaFin: '19:00',
+      textoTurno: '18:00 – 19:00',
+      esPico: false,
+      estado: 'MANTENIMIENTO',
+      precioEstimado: 10000,
+    },
+    {
+      id: '19:00-20:00',
+      horaInicio: '19:00',
+      horaFin: '20:00',
+      textoTurno: '19:00 – 20:00',
+      esPico: true,
+      estado: 'LIBRE',
+      precioEstimado: 10000,
+    },
+    {
+      id: '20:00-21:00',
+      horaInicio: '20:00',
+      horaFin: '21:00',
+      textoTurno: '20:00 – 21:00',
+      esPico: true,
+      estado: 'RECIEN_TOMADO',
+      precioEstimado: 10000,
+    },
+    {
+      id: '21:00-22:00',
+      horaInicio: '21:00',
+      horaFin: '22:00',
+      textoTurno: '21:00 – 22:00',
+      esPico: false,
+      estado: 'LIBRE',
+      precioEstimado: 10000,
+    },
+  ]);
+
+  const [pgError409, setPgError409] = useState<string | null>(null);
+  const [pgDemoCanchaEnMantenimiento, setPgDemoCanchaEnMantenimiento] = useState(false);
+  const [pgDemoCanchaSelected, setPgDemoCanchaSelected] = useState(false);
+
+  const pgDemoCancha: CanchaDTO = {
+    idCancha: 1,
+    sede: mockSede,
+    nombre: 'Cancha 1 — Pádel Pro',
+    tipo: 'PADEL',
+    precioBaseHora: pgCanchaBasePrice,
+    enMantenimiento: pgDemoCanchaEnMantenimiento,
+  };
 
   const shouldShow = (tabId: string) => activeTab === 'all' || activeTab === tabId;
 
@@ -661,6 +768,27 @@ export function PlaygroundPage() {
                   <StatusBadge status="ACTIVO" size="lg" showDot={showStatusDots} />
                 </div>
               </div>
+
+              {/* Generic Badge component */}
+              <div className="pt-4 border-t border-slate-100">
+                <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block mb-3">
+                  Componente Badge Genérico — Variantes de Color
+                </span>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <Badge variant="navy">Navy</Badge>
+                  <Badge variant="navy-soft">Navy Soft</Badge>
+                  <Badge variant="coral">Coral</Badge>
+                  <Badge variant="coral-soft">Coral Soft</Badge>
+                  <Badge variant="green">Green</Badge>
+                  <Badge variant="green-soft">Green Soft</Badge>
+                  <Badge variant="gold">Gold</Badge>
+                  <Badge variant="gold-soft">Gold Soft</Badge>
+                  <Badge variant="red">Red</Badge>
+                  <Badge variant="red-soft">Red Soft</Badge>
+                  <Badge variant="dark">Dark</Badge>
+                  <Badge variant="default">Default</Badge>
+                </div>
+              </div>
             </div>
           </Card>
         </section>
@@ -727,6 +855,43 @@ export function PlaygroundPage() {
                 Diseñada para módulos de alto impacto visual como balances, pase digital QR o promociones destacadas.
               </p>
             </Card>
+          </div>
+
+          {/* StatCard Showcase */}
+          <div className="pt-2">
+            <span className="text-xs font-black uppercase text-slate-400 tracking-wider block mb-3">
+              Componente StatCard — Métricas y Estadísticas de Dashboard
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                title="Socios Activos"
+                value="1.248"
+                change="+12% este mes"
+                changeType="positive"
+                color="navy"
+              />
+              <StatCard
+                title="Ocupación Clases"
+                value="88%"
+                change="Alta demanda"
+                changeType="neutral"
+                color="coral"
+              />
+              <StatCard
+                title="Ingresos del Mes"
+                value="$3.450.000"
+                change="+8% vs objetivo"
+                changeType="positive"
+                color="green"
+              />
+              <StatCard
+                title="Turnos Reservados"
+                value="142"
+                change="-3% vs ayer"
+                changeType="negative"
+                color="white"
+              />
+            </div>
           </div>
         </section>
       )}
@@ -1664,7 +1829,7 @@ export function PlaygroundPage() {
         </section>
       )}
 
-      {/* 10. AGENDA DE CLASES GRUPALES (RF-06) */}
+      {/* 11. AGENDA DE CLASES GRUPALES (RF-06) */}
       {shouldShow('clases') && (
         <section className="space-y-8 pt-4 border-t-2 border-slate-100">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1675,7 +1840,7 @@ export function PlaygroundPage() {
                 </span>
               </div>
               <h2 className="text-2xl font-black text-[#1B2A55] font-outfit mt-1">
-                10. Módulo Agenda de Clases Grupales (RF-06)
+                11. Módulo Agenda de Clases Grupales (RF-06)
               </h2>
               <p className="text-xs text-slate-500 max-w-2xl">
                 Componentes <code className="text-[#1B2A55] font-mono">AgendaSemanal</code>,{' '}
@@ -1685,8 +1850,8 @@ export function PlaygroundPage() {
             </div>
           </div>
 
-          {/* 10.1 AgendaSemanal — Live grid */}
-          <Card title="10.1 AgendaSemanal — Grilla Semanal Interactiva" subtitle="Hacé clic sobre una clase para editarla, o usá el botón Eliminar">
+          {/* 11.1 AgendaSemanal — Live grid */}
+          <Card title="11.1 AgendaSemanal — Grilla Semanal Interactiva" subtitle="Hacé clic sobre una clase para editarla, o usá el botón Eliminar">
             <div className="mb-4 flex items-center gap-2">
               <Button
                 id="pg-btn-agregar-clase-demo"
@@ -1734,8 +1899,8 @@ export function PlaygroundPage() {
             />
           </Card>
 
-          {/* 10.2 ClaseForm */}
-          <Card title="10.2 ClaseForm — Formulario de Alta y Edición" subtitle="Cambiá el modo para ver cómo se pre-populan los campos">
+          {/* 11.2 ClaseForm */}
+          <Card title="11.2 ClaseForm — Formulario de Alta y Edición" subtitle="Cambiá el modo para ver cómo se pre-populan los campos">
             <div className="flex items-center gap-3 mb-6">
               <span className="text-xs font-black text-[#1B2A55] uppercase tracking-wider">Modo activo:</span>
               <Button
@@ -1786,8 +1951,8 @@ export function PlaygroundPage() {
             </div>
           </Card>
 
-          {/* 10.3 CupoIndicator */}
-          <Card title="10.3 CupoIndicator — Barra de Ocupación" subtitle="Varía el color según el porcentaje: verde (< 50%), rojo (≥ 50%)">
+          {/* 11.3 CupoIndicator */}
+          <Card title="11.3 CupoIndicator — Barra de Ocupación" subtitle="Varía el color según el porcentaje: verde (< 50%), rojo (≥ 50%)">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
               {[
                 { label: 'Sin inscriptos', disponible: 20, maximo: 20 },
@@ -1806,13 +1971,13 @@ export function PlaygroundPage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          11. CLASES SOCIO — SCRUM-83: ClaseCard, ReservaClaseItem, PosicionEsperaBadge
+          12. CLASES SOCIO — SCRUM-83: ClaseCard, ReservaClaseItem, PosicionEsperaBadge
           Demos de los 3 componentes nuevos del módulo de clases para la vista socio.
       ══════════════════════════════════════════════════════════════════════ */}
       {shouldShow('clases-socio') && (
         <section className="space-y-6">
           <div>
-            <h2 className="text-xl font-black text-[#1B2A55] font-outfit">11. Clases Grupales — Vista Socio (SCRUM-83)</h2>
+            <h2 className="text-xl font-black text-[#1B2A55] font-outfit">12. Clases Grupales — Vista Socio (SCRUM-83)</h2>
             <p className="text-xs text-slate-500 mt-1">
               Componentes presentacionales: <code className="text-[#1B2A55] font-mono">ClaseCard</code>,{' '}
               <code className="text-[#1B2A55] font-mono">ReservaClaseItem</code> y{' '}
@@ -1820,8 +1985,8 @@ export function PlaygroundPage() {
             </p>
           </div>
 
-          {/* 11.1 PosicionEsperaBadge */}
-          <Card title="11.1 PosicionEsperaBadge — Posición en cola de espera" subtitle="Muestra la posición del socio usando Badge 'gold-soft'. Acepta size='xs'|'sm'.">
+          {/* 12.1 PosicionEsperaBadge */}
+          <Card title="12.1 PosicionEsperaBadge — Posición en cola de espera" subtitle="Muestra la posición del socio usando Badge 'gold-soft'. Acepta size='xs'|'sm'.">
             <div className="flex flex-wrap items-center gap-3">
               <PosicionEsperaBadge ordenPosicion={1} size="xs" />
               <PosicionEsperaBadge ordenPosicion={3} size="sm" />
@@ -1830,9 +1995,9 @@ export function PlaygroundPage() {
             </div>
           </Card>
 
-          {/* 11.2 ClaseCard — 4 estados del botón */}
+          {/* 12.2 ClaseCard — 4 estados del botón */}
           <Card
-            title="11.2 ClaseCard — Los 4 estados del botón de acción"
+            title="12.2 ClaseCard — Los 4 estados del botón de acción"
             subtitle="Ventana 48 hs: dentro = Reservar / En espera. Fuera = deshabilitado. Ya reservada = deshabilitado."
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1928,9 +2093,9 @@ export function PlaygroundPage() {
             </div>
           </Card>
 
-          {/* 11.3 ReservaClaseItem — 3 variantes */}
+          {/* 12.3 ReservaClaseItem — 3 variantes */}
           <Card
-            title="11.3 ReservaClaseItem — Estados de la reserva"
+            title="12.3 ReservaClaseItem — Estados de la reserva"
             subtitle="BUG-02: solo se cancela si estado=CONFIRMADA y faltan >2 hs. Los demás estados no tienen acción."
           >
             <div className="space-y-3">
@@ -2003,6 +2168,526 @@ export function PlaygroundPage() {
 
             </div>
           </Card>
+        </section>
+      )}
+
+      {/* 13. CÓDIGO QR DE ACCESO & CUENTA REGRESIVA (SCRUM-85) SECTION */}
+      {shouldShow('acceso') && (
+        <section className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-[#1B2A55] font-outfit">
+                13. Código QR Dinámico & Cuenta Regresiva (SCRUM-85)
+              </h2>
+              <p className="text-xs text-slate-500">
+                Pase digital de acceso para socios con rotación de token automática cada 60s y bloqueo en membresías inactivas.
+              </p>
+            </div>
+          </div>
+
+          {/* 13.1 QrDinamico */}
+          <Card
+            title="13.1 QrDinamico — Componente de Código QR con Refresco Automático"
+            subtitle="Renderiza el QR a partir del token emitido. Al llegar a cero solicita automáticamente un nuevo token."
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* Controles interactivos */}
+              <div className="lg:col-span-5 space-y-4">
+                <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block">
+                  Controles de Simulación
+                </span>
+
+                <TextField
+                  label="Token actual codificado"
+                  value={demoQrToken}
+                  onChange={(e) => setDemoQrToken(e.target.value)}
+                  placeholder="FZ-QR-..."
+                  helperText="Cambiá el texto para observar cómo se re-renderiza el QR al instante."
+                />
+
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-slate-700">Duración del ciclo:</span>
+                  <div className="flex gap-2">
+                    {[15, 30, 60, 90].map((s) => (
+                      <Button
+                        key={s}
+                        size="xs"
+                        variant={demoQrDuracion === s ? 'primary' : 'secondary'}
+                        onClick={() => setDemoQrDuracion(s)}
+                      >
+                        {s}s
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-2">
+                  <Button
+                    size="xs"
+                    variant="coral"
+                    onClick={() => {
+                      const nuevo = `FZ-QR-DEMO-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+                      setDemoQrToken(nuevo);
+                      setDemoQrError(null);
+                      addToast('Token Generado', `Nuevo token: ${nuevo}`, 'success');
+                    }}
+                  >
+                    Generar Nuevo Token Mock
+                  </Button>
+
+                  <Button
+                    size="xs"
+                    variant={demoQrCargando ? 'primary' : 'secondary'}
+                    onClick={() => setDemoQrCargando(!demoQrCargando)}
+                  >
+                    {demoQrCargando ? 'Loading: ON' : 'Simular Cargando'}
+                  </Button>
+
+                  <Button
+                    size="xs"
+                    variant={demoQrError ? 'danger' : 'secondary'}
+                    onClick={() => {
+                      if (demoQrError) {
+                        setDemoQrError(null);
+                      } else {
+                        setDemoQrError('Conexión con el servicio de acceso interrumpida.');
+                      }
+                    }}
+                  >
+                    {demoQrError ? 'Quitar Error' : 'Simular Error'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Render del componente */}
+              <div className="lg:col-span-7 flex justify-center">
+                <QrDinamico
+                  token={demoQrToken}
+                  duracionSegundos={demoQrDuracion}
+                  cargando={demoQrCargando}
+                  error={demoQrError}
+                  onSolicitarNuevoToken={async () => {
+                    const nuevo = `FZ-QR-ROTATED-${Date.now()}`;
+                    setDemoQrToken(nuevo);
+                    addToast('Refresco Automático', 'El contador llegó a cero y se solicitó un nuevo token.', 'info');
+                  }}
+                  className="max-w-xs w-full"
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* 13.2 CuentaRegresiva */}
+          <Card
+            title="13.2 CuentaRegresiva — Indicador Visual de Tiempo Restante"
+            subtitle="Barra progresiva y contador numérico. Cambia de color dinámicamente según la urgencia."
+          >
+            <div className="space-y-6 max-w-xl">
+              <div>
+                <label className="text-xs font-black uppercase text-slate-500 block mb-2">
+                  Ajustar segundos restantes: {demoCuentaSegundos}s / 60s
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="60"
+                  value={demoCuentaSegundos}
+                  onChange={(e) => setDemoCuentaSegundos(Number(e.target.value))}
+                  className="w-full accent-fitzone-navy cursor-pointer"
+                />
+                <div className="flex justify-between text-[11px] text-slate-400 mt-1">
+                  <span>0s (Expirado)</span>
+                  <span>10s (Urgente - Coral)</span>
+                  <span>20s (Alerta - Ámbar)</span>
+                  <span>60s (Normal - Verde)</span>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={demoCuentaBarra}
+                    onChange={(e) => setDemoCuentaBarra(e.target.checked)}
+                    className="rounded border-slate-300 text-fitzone-navy focus:ring-fitzone-navy"
+                  />
+                  <span>Mostrar Barra de Progreso</span>
+                </label>
+
+                <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={demoCuentaTexto}
+                    onChange={(e) => setDemoCuentaTexto(e.target.checked)}
+                    className="rounded border-slate-300 text-fitzone-navy focus:ring-fitzone-navy"
+                  />
+                  <span>Mostrar Contador Numérico</span>
+                </label>
+              </div>
+
+              {/* Vista previa en tarjeta */}
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <CuentaRegresiva
+                  segundosRestantes={demoCuentaSegundos}
+                  totalSegundos={60}
+                  mostrarBarra={demoCuentaBarra}
+                  mostrarTexto={demoCuentaTexto}
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* 13.3 Regla de Negocio Crítica: Membresía Inactiva Bloquea QR */}
+          <Card
+            title="13.3 Integración con MembresiaEstadoCard & Regla de Negocio Crítica"
+            subtitle="Si la membresía no está activa (VENCIDO, SUSPENDIDO, CANCELADO, SIN_MEMBRESIA), no debe mostrar el QR y en su lugar exhibirá un banner/mensaje informando el motivo."
+          >
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-black uppercase text-slate-500 mr-2">
+                  Estado de membresía a evaluar:
+                </span>
+                {(['ACTIVO', 'VENCIDO', 'SUSPENDIDO', 'CANCELADO', 'SIN_MEMBRESIA'] as const).map(
+                  (estado) => (
+                    <Button
+                      key={estado}
+                      size="xs"
+                      variant={demoQrMembresiaEstado === estado ? 'primary' : 'secondary'}
+                      onClick={() => setDemoQrMembresiaEstado(estado)}
+                    >
+                      {estado}
+                    </Button>
+                  )
+                )}
+              </div>
+
+              <div className="max-w-md mx-auto space-y-4 pt-4 border-t border-slate-100">
+                {/* MembresiaEstadoCard simulada */}
+                <MembresiaEstadoCard
+                  membresia={
+                    demoQrMembresiaEstado === 'SIN_MEMBRESIA'
+                      ? null
+                      : {
+                          idMembresia: 99,
+                          usuario: {
+                            idUsuario: 2,
+                            authId: 'uuid-socio-2',
+                            dni: '28456789',
+                            nombre: 'Valentina',
+                            apellido: 'García',
+                            email: 'vgarcia@email.com',
+                            telefono: '11-5432-1098',
+                            fotoUrl: null,
+                            tipoUsuario: 'SOCIO',
+                            idSede: 1,
+                          },
+                          plan: MOCK_PLANES[1],
+                          fechaInicio: '2026-08-15',
+                          fechaVencimiento:
+                            demoQrMembresiaEstado === 'VENCIDO' ? '2026-10-01' : '2026-11-15',
+                          fechaCancelacion:
+                            demoQrMembresiaEstado === 'CANCELADO' ? '2026-10-10' : null,
+                          estado: demoQrMembresiaEstado,
+                        }
+                  }
+                  socio={{
+                    idUsuario: 2,
+                    authId: 'uuid-socio-2',
+                    dni: '28456789',
+                    nombre: 'Valentina',
+                    apellido: 'García',
+                    email: 'vgarcia@email.com',
+                    telefono: '11-5432-1098',
+                    fotoUrl: null,
+                    tipoUsuario: 'SOCIO',
+                    idSede: 1,
+                  }}
+                />
+
+                {/* Evaluación condicional del QR */}
+                {demoQrMembresiaEstado === 'ACTIVO' ? (
+                  <QrDinamico
+                    token={demoQrToken}
+                    duracionSegundos={60}
+                    onSolicitarNuevoToken={() => {
+                      addToast('Token refrescado', 'Ciclo de 60s completado', 'info');
+                    }}
+                  />
+                ) : (
+                  <Alert
+                    type={demoQrMembresiaEstado === 'VENCIDO' ? 'error' : 'warning'}
+                    title={`Acceso Bloqueado · Membresía ${demoQrMembresiaEstado}`}
+                    message={`El código QR no se genera porque la membresía no se encuentra activa. Estado actual: ${demoQrMembresiaEstado}.`}
+                    action={
+                      <Button
+                        variant="coral"
+                        size="xs"
+                        onClick={() => addToast('Renovar', 'Redirigiendo a membresías...', 'info')}
+                      >
+                        Regularizar
+                      </Button>
+                    }
+                  />
+                )}
+              </div>
+            </div>
+          </Card>
+        </section>
+      )}
+
+      {/* 14. MÓDULO CANCHAS (RF-10, RF-11, SCRUM-73, SCRUM-75) */}
+      {shouldShow('canchas') && (
+        <section className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+            <div>
+              <h2 className="text-xl font-black text-[#1B2A55] font-outfit">
+                14. Módulo de Canchas (RF-10, RF-11)
+              </h2>
+              <p className="text-xs text-slate-500">
+                Componentes reutilizables: <code className="text-[#1B2A55] font-mono">CanchaCard</code>,{' '}
+                <code className="text-[#1B2A55] font-mono">MantenimientoToggle</code>,{' '}
+                <code className="text-[#1B2A55] font-mono">SelectorFecha</code>,{' '}
+                <code className="text-[#1B2A55] font-mono">GrillaDisponibilidad</code> y{' '}
+                <code className="text-[#1B2A55] font-mono">DesglosePrecio</code> con manejo de conflicto (409).
+              </p>
+            </div>
+
+            {/* Controles interactivos de playground */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setPgCanchaEsSocio((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  pgCanchaEsSocio
+                    ? 'bg-[#2E9E5B] text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {pgCanchaEsSocio ? 'Beneficio Socio Activo: ACTIVADO (-15%)' : 'Modo: Cliente Externo (Tarifa Plena)'}
+              </button>
+
+              <select
+                aria-label="Tarifa base de la cancha"
+                value={pgCanchaBasePrice}
+                onChange={(e) => setPgCanchaBasePrice(Number(e.target.value))}
+                className="text-xs font-bold bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1.5 text-fitzone-navy"
+              >
+                <option value={8000}>Tarifa base: $8.000 / hora</option>
+                <option value={10000}>Tarifa base: $10.000 / hora</option>
+                <option value={12000}>Tarifa base: $12.000 / hora</option>
+                <option value={16000}>Tarifa base: $16.000 / hora</option>
+              </select>
+            </div>
+          </div>
+
+          {/* 14.1 CanchaCard & MantenimientoToggle */}
+          <Card
+            title="14.1 CanchaCard & MantenimientoToggle — Tarjeta de Cancha y Control Operativo"
+            subtitle="Tarjeta con badge de estado, tarifa por hora, switch accesible de mantenimiento (RF-12) y modo selección."
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+              <div className="space-y-2">
+                <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block">
+                  Vista Administrativa (Con MantenimientoToggle y Edición)
+                </span>
+                <CanchaCard
+                  cancha={pgDemoCancha}
+                  showAdminControls={true}
+                  onEditar={(c) => addToast('Editar Cancha', `Modificar datos de ${c.nombre}`, 'info')}
+                  onToggleMantenimiento={(_id, nuevo) => {
+                    setPgDemoCanchaEnMantenimiento(nuevo);
+                    addToast(
+                      nuevo ? 'Cancha en Mantenimiento' : 'Cancha Habilitada',
+                      nuevo ? 'Se suspendieron nuevos turnos.' : 'La cancha vuelve a estar disponible.',
+                      nuevo ? 'warning' : 'success'
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block">
+                  Vista Reserva de Turnos (Modo Selección)
+                </span>
+                <CanchaCard
+                  cancha={{
+                    idCancha: 2,
+                    sede: mockSede,
+                    nombre: 'Cancha 2 — Fútbol 5 Techado',
+                    tipo: 'FUTBOL_5',
+                    precioBaseHora: 14000,
+                    enMantenimiento: false,
+                  }}
+                  showAdminControls={false}
+                  selected={pgDemoCanchaSelected}
+                  onSelect={() => {
+                    setPgDemoCanchaSelected(!pgDemoCanchaSelected);
+                    addToast('Cancha Seleccionada', 'Cancha 2 seleccionada para reservar turno.', 'info');
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block">
+                  MantenimientoToggle Aislado (RF-12 con ConfirmDialog)
+                </span>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">{pgDemoCancha.nombre}</p>
+                    <p className="text-[11px] text-slate-500">
+                      Switch directo para alternar mantenimiento con advertencia de turnos confirmados.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                    <span className="text-xs font-medium text-slate-600">Estado operativo:</span>
+                    <MantenimientoToggle
+                      idCancha={pgDemoCancha.idCancha}
+                      nombreCancha={pgDemoCancha.nombre}
+                      enMantenimiento={pgDemoCanchaEnMantenimiento}
+                      onToggle={(nuevo) => {
+                        setPgDemoCanchaEnMantenimiento(nuevo);
+                        addToast(
+                          nuevo ? 'Cancha en Mantenimiento' : 'Cancha Habilitada',
+                          nuevo ? 'Se suspendieron nuevos turnos.' : 'La cancha vuelve a estar disponible.',
+                          nuevo ? 'warning' : 'success'
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* 14.2 SelectorFecha */}
+          <Card
+            title="14.2 SelectorFecha — Navegación de Fechas"
+            subtitle="Navegación día a día, accesos rápidos (Hoy, Mañana...) y datepicker nativo con fecha mínima hoy."
+          >
+            <div className="space-y-4">
+              <SelectorFecha
+                fechaSeleccionada={pgCanchaFecha}
+                onFechaChange={(f) => {
+                  setPgCanchaFecha(f);
+                  addToast('Fecha seleccionada', `Nueva fecha: ${f}`, 'info');
+                }}
+              />
+              <div className="text-xs text-slate-500 font-medium">
+                Fecha actualmente en estado:{' '}
+                <strong className="text-fitzone-navy font-mono">{pgCanchaFecha}</strong>
+              </div>
+            </div>
+          </Card>
+
+          {/* 14.3 GrillaDisponibilidad */}
+          <Card
+            title="14.3 GrillaDisponibilidad — Franjas Horarias y Franja Pico"
+            subtitle="Destaca franja pico (19 a 21 hs), estados LIBRE, OCUPADO, MANTENIMIENTO y RECIEN_TOMADO con precios dinámicos."
+          >
+            <div className="space-y-4">
+              <GrillaDisponibilidad
+                franjas={pgFranjasDemo}
+                cancha={pgDemoCancha}
+                fecha={pgCanchaFecha}
+                turnoSeleccionado={pgCanchaTurno}
+                onSeleccionarTurno={(turno) => {
+                  setPgCanchaTurno(turno);
+                  setPgError409(null);
+                  addToast('Turno seleccionado', `${turno.textoTurno} · Pico: ${turno.esPico ? 'Sí (+20%)' : 'No'}`, 'success');
+                }}
+                esSocio={pgCanchaEsSocio}
+              />
+            </div>
+          </Card>
+
+          {/* 14.4 DesglosePrecio */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card
+              title="14.4 DesglosePrecio — Cotización de Reserva"
+              subtitle="Calcula base, recargo pico (+20%) y beneficio socio (-15%). Reutilizable en checkout de pago."
+            >
+              {pgCanchaTurno ? (
+                <DesglosePrecio
+                  cotizacion={calcularCotizacion(
+                    pgCanchaBasePrice,
+                    pgCanchaTurno.horaInicio,
+                    pgCanchaEsSocio
+                  )}
+                  variant="card"
+                  mostrarExplicacion={true}
+                />
+              ) : (
+                <div className="p-6 text-center text-xs text-slate-400">
+                  Seleccioná un turno en la grilla para ver la cotización.
+                </div>
+              )}
+            </Card>
+
+            {/* 14.5 Simulación de Conflicto 409 */}
+            <Card
+              title="14.5 Simulación de Horario Tomado (Error 409)"
+              subtitle="Demuestra la captura del error 409, mensaje de conflicto y refresco automático de grilla."
+            >
+              <div className="space-y-4">
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Al intentar confirmar un turno que ya fue ocupado en simultáneo por otro deportista, el backend responde con código <strong className="text-fitzone-red">409 Conflict</strong>.
+                </p>
+
+                {pgError409 && (
+                  <Alert
+                    type="error"
+                    title="Conflicto de Horario (409)"
+                    message={pgError409}
+                  />
+                )}
+
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="coral"
+                    size="sm"
+                    onClick={() => {
+                      if (!pgCanchaTurno) {
+                        addToast('Atención', 'Seleccioná un turno primero en la grilla', 'warning');
+                        return;
+                      }
+                      // Simular conflicto 409
+                      setPgError409('El horario ya fue tomado por otro usuario (409). La disponibilidad fue actualizada.');
+                      // Marcar el turno actual como RECIEN_TOMADO / OCUPADO en la grilla demo
+                      setPgFranjasDemo((prev) =>
+                        prev.map((f) =>
+                          f.id === pgCanchaTurno.id ? { ...f, estado: 'RECIEN_TOMADO' } : f
+                        )
+                      );
+                      setPgCanchaTurno(null);
+                      addToast('Error 409 Simulado', 'El turno fue tomado por otro usuario. Se refrescó la grilla.', 'error');
+                    }}
+                  >
+                    Simular Conflicto 409 al Reservar
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Restaurar grilla demo
+                      setPgFranjasDemo([
+                        { id: '16:00-17:00', horaInicio: '16:00', horaFin: '17:00', textoTurno: '16:00 – 17:00', esPico: false, estado: 'LIBRE', precioEstimado: 10000 },
+                        { id: '17:00-18:00', horaInicio: '17:00', horaFin: '18:00', textoTurno: '17:00 – 18:00', esPico: false, estado: 'OCUPADO', precioEstimado: 10000 },
+                        { id: '18:00-19:00', horaInicio: '18:00', horaFin: '19:00', textoTurno: '18:00 – 19:00', esPico: false, estado: 'MANTENIMIENTO', precioEstimado: 10000 },
+                        { id: '19:00-20:00', horaInicio: '19:00', horaFin: '20:00', textoTurno: '19:00 – 20:00', esPico: true, estado: 'LIBRE', precioEstimado: 10000 },
+                        { id: '20:00-21:00', horaInicio: '20:00', horaFin: '21:00', textoTurno: '20:00 – 21:00', esPico: true, estado: 'RECIEN_TOMADO', precioEstimado: 10000 },
+                        { id: '21:00-22:00', horaInicio: '21:00', horaFin: '22:00', textoTurno: '21:00 – 22:00', esPico: false, estado: 'LIBRE', precioEstimado: 10000 },
+                      ]);
+                      setPgError409(null);
+                      addToast('Grilla restablecida', 'Se restauró el estado inicial de turnos.', 'info');
+                    }}
+                  >
+                    Restablecer Grilla
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
         </section>
       )}
     </div>
