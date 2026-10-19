@@ -141,7 +141,7 @@ export function StatusBadge({
   return (
     <span
       className={`
-        inline-flex items-center font-bold tracking-wide uppercase rounded-full select-none transition-colors
+        inline-flex items-center font-bold tracking-wide uppercase rounded-full select-none transition-colors whitespace-nowrap shrink-0
         ${sizeStyles[size] || sizeStyles.sm}
         ${currentVariant.badge}
         ${className}

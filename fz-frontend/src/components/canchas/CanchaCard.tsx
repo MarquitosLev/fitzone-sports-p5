@@ -49,6 +49,7 @@ export function CanchaCard({
 
   return (
     <Card
+      padded={false}
       variant={isMantenimiento ? 'flat' : 'default'}
       className={`
         transition-all duration-200 overflow-hidden border
@@ -58,39 +59,45 @@ export function CanchaCard({
       `}
     >
       <div className="p-5 flex flex-col justify-between h-full space-y-4">
-        {/* Cabecera con Nombre y Estado */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <div
-              className={`
-                w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-colors
-                ${isMantenimiento ? 'bg-[#FEF7E6] text-[#B7791F]' : 'bg-[#1B2A55]/5 text-[#1B2A55]'}
-              `}
-            >
-              <Layers className="w-5 h-5" />
-            </div>
-
-            <div className="min-w-0">
-              <h3 className="text-base font-black text-[#1B2A55] font-outfit truncate tracking-tight">
-                {cancha.nombre}
-              </h3>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                  <Activity className="w-3 h-3 text-slate-400" />
-                  {tipoLabel}
-                </span>
-                <span className="text-xs text-slate-400 font-medium truncate">
-                  {cancha.sede?.nombre}
-                </span>
-              </div>
-            </div>
-          </div>
+        {/* Cabecera: Fila superior con Tipo de Deporte y Estado */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-md whitespace-nowrap shrink-0">
+            <Activity className="w-3.5 h-3.5 text-slate-400" />
+            {tipoLabel}
+          </span>
 
           <StatusBadge
             status={isMantenimiento ? 'EN_MANTENIMIENTO' : 'DISPONIBLE'}
             showDot
             size="sm"
+            className="shrink-0"
           />
+        </div>
+
+        {/* Fila Principal: Icono y Nombre de la Cancha */}
+        <div className="flex items-center gap-3">
+          <div
+            className={`
+              w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-colors
+              ${isMantenimiento ? 'bg-[#FEF7E6] text-[#B7791F]' : 'bg-[#1B2A55]/5 text-[#1B2A55]'}
+            `}
+          >
+            <Layers className="w-5 h-5" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h3
+              className="text-base font-black text-[#1B2A55] font-outfit truncate tracking-tight"
+              title={cancha.nombre}
+            >
+              {cancha.nombre}
+            </h3>
+            {cancha.sede?.nombre && (
+              <span className="text-xs text-slate-400 font-medium truncate block mt-0.5">
+                {cancha.sede.nombre}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Sección de Precio y métricas */}

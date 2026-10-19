@@ -35,9 +35,15 @@ export interface QRCodePassProps {
  * QRCodePass
  *
  * ARQUITECTURA Y SEGURIDAD:
- * Para control de accesos real en producción, este componente debe recibir imperativamente
- * un `token` firmado desde el backend. Si `requireSignedToken={true}` y no hay `token`,
- * no se generará ningún QR simulado y se mostrará una advertencia de seguridad explícita.
+ * Para control de accesos real en producción (USE_MOCK=false), este componente debe recibir
+ * imperativamente un `token` firmado desde el backend (JWT / HMAC).
+ *
+ * COMPORTAMIENTO DEL DEMO TOKEN:
+ * - En modo desarrollo o mock (cuando no se pasa un `token` externo y `requireSignedToken` es false),
+ *   el componente genera periódicamente un token demo en memoria con `_demoMock: true` para
+ *   simular la rotación del código QR y permitir pruebas en el frontend sin backend activo.
+ * - Si `requireSignedToken={true}` y no hay `token`, no se generará ningún QR simulado y se
+ *   mostrará una advertencia de seguridad explícita bloqueando el pase.
  */
 export function QRCodePass({
   user,

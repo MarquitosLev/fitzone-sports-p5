@@ -14,7 +14,7 @@
  */
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { SedeProvider } from './context/SedeContext';
 import { AppLayout } from './components/layout/AppLayout';
@@ -26,11 +26,13 @@ import { AccesoPage } from './pages/AccesoPage';
 import { ClasesPage } from './pages/ClasesPage';
 import { CanchasPage } from './pages/CanchasPage';
 import { PagosPage } from './pages/PagosPage';
-import { registerHttpErrorHandler } from './services/httpClient';
+import { httpClient, registerHttpErrorHandler } from './services/httpClient';
+import { Spinner } from './components/ui';
+import { USE_MOCK } from './config';
 import type { SedeDTO } from './types';
 import './App.css';
 
-// Sedes mock para el SedeProvider (se reemplazará por una llamada a la API cuando exista)
+// Sedes mock para el SedeProvider (usadas únicamente cuando USE_MOCK === true)
 const SEDES_MOCK: SedeDTO[] = [
   { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
   { idSede: 2, nombre: 'FitZone Belgrano', aforoMaximo: 60 },
@@ -56,6 +58,46 @@ function HttpErrorConnector({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const [sedes, setSedes] = useState<SedeDTO[] | null>(USE_MOCK ? SEDES_MOCK : null);
+  const [loading, setLoading] = useState(!USE_MOCK);
+
+  useEffect(() => {
+    if (!USE_MOCK) {
+      let isMounted = true;
+      setLoading(true);
+      httpClient
+        .get<SedeDTO[]>('/v1/sedes')
+        .then((data) => {
+          if (isMounted) {
+            setSedes(Array.isArray(data) ? data : []);
+          }
+        })
+        .catch((err) => {
+          console.error('Error cargando sedes', err);
+          if (isMounted) {
+            setSedes([]);
+          }
+        })
+        .finally(() => {
+          if (isMounted) {
+            setLoading(false);
+          }
+        });
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
+        <Spinner size="lg" color="navy" label="Cargando sedes..." />
+      </div>
+    );
+  }
+
   return (
     // BrowserRouter habilita la navegación basada en URL (History API del navegador)
     <BrowserRouter>
@@ -63,7 +105,7 @@ export default function App() {
       <ToastProvider>
         <HttpErrorConnector>
           {/* SedeProvider: la sede activa está disponible en toda la app */}
-          <SedeProvider sedes={SEDES_MOCK}>
+          <SedeProvider sedes={USE_MOCK ? SEDES_MOCK : (sedes ?? [])}>
             <Routes>
               {/* 
                 AppLayout actúa como "layout raíz":

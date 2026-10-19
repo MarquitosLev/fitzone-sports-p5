@@ -11,8 +11,19 @@ export type {
   MotivoRechazoAcceso,
   ValidacionIngresoRequestDTO,
   ResultadoValidacionDTO,
+  QrTokenDTO,
 } from './acceso';
 export type { EstadoReservaClase, ClaseGrupalDTO, ReservaClaseDTO, ListaEsperaDTO } from './clase';
-export type { CanchaDTO, ReservaCanchaDTO, TipoCancha, CanchaFormData } from './cancha';
+export type {
+  CanchaDTO,
+  ReservaCanchaDTO,
+  TipoCancha,
+  CanchaFormData,
+  EstadoTurno,
+  FranjaHorariaDTO,
+  CotizacionReservaDTO,
+  EstadoReservaCancha,
+  CrearReservaPayload,
+} from './cancha';
 export type { EstadoPago, TipoOrigenTransaccion, TransaccionDTO, ComprobanteDTO } from './pago';
 
