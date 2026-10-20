@@ -15,4 +15,10 @@ public interface ClaseGrupalRepository extends JpaRepository<ClaseGrupal, Long> 
 
     // Agenda de clases de una sede en un rango de fechas (ej: agenda semanal)
     List<ClaseGrupal> findBySede_IdSedeAndFechaHoraInicioBetween(Long idSede, LocalDateTime inicio, LocalDateTime fin);
+
+    // Agenda de clases a partir de una fecha determinada
+    List<ClaseGrupal> findBySede_IdSedeAndFechaHoraInicioGreaterThanEqual(Long idSede, LocalDateTime desde);
+
+    // Agenda de clases hasta una fecha determinada
+    List<ClaseGrupal> findBySede_IdSedeAndFechaHoraInicioLessThanEqual(Long idSede, LocalDateTime hasta);
 }
