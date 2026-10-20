@@ -48,6 +48,10 @@ class UsuarioControllerTest {
     @MockitoBean
     private com.fitzone.modulo.usuarios.service.MembresiaService membresiaService;
 
+    @MockitoBean
+    private com.fitzone.modulo.gimnasio.service.AccesoService accesoService;
+
+
 
     @Test
     @DisplayName("POST /v1/usuarios responde 201 Created cuando los datos son válidos")
@@ -248,5 +252,20 @@ class UsuarioControllerTest {
                 .andExpect(jsonPath("$.idMembresia", is(10)))
                 .andExpect(jsonPath("$.estado", is("ACTIVO")));
     }
-}
 
+    @Test
+    @DisplayName("GET /v1/usuarios/{id}/qr retorna 200 con el token QR y segundos restantes")
+    void obtenerQr_retorna200() throws Exception {
+        com.fitzone.modulo.gimnasio.models.QrTokenResponse qrResponse = com.fitzone.modulo.gimnasio.models.QrTokenResponse.builder()
+                .tokenQr("mock-qr-token-base64")
+                .segundosRestantes(45L)
+                .build();
+
+        when(accesoService.generarQr(1L)).thenReturn(qrResponse);
+
+        mockMvc.perform(get("/v1/usuarios/1/qr"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tokenQr", is("mock-qr-token-base64")))
+                .andExpect(jsonPath("$.segundosRestantes", is(45)));
+    }
+}
