@@ -1,17 +1,27 @@
 package com.fitzone.modulo.canchas.service;
 
+import com.fitzone.core.domain.enums.EstadoMembresia;
+import com.fitzone.core.domain.enums.TipoUsuario;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.RecursoNoEncontradoException;
 import com.fitzone.core.exception.ReglaNegocioException;
+import com.fitzone.modulo.canchas.dto.CotizacionDTO;
 import com.fitzone.modulo.canchas.models.Cancha;
 import com.fitzone.modulo.canchas.repository.CanchaRepository;
+import com.fitzone.modulo.canchas.strategy.CalculadorPrecioCancha;
+import com.fitzone.modulo.canchas.strategy.ContextoPrecio;
 import com.fitzone.modulo.gimnasio.models.Sede;
 import com.fitzone.modulo.gimnasio.repository.SedeRepository;
+import com.fitzone.modulo.usuarios.models.Usuario;
+import com.fitzone.modulo.usuarios.repository.MembresiaRepository;
+import com.fitzone.modulo.usuarios.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -20,6 +30,9 @@ public class CanchaService {
 
     private final CanchaRepository canchaRepository;
     private final SedeRepository sedeRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final MembresiaRepository membresiaRepository;
+    private final CalculadorPrecioCancha calculadorPrecioCancha;
 
     @Transactional
     public Cancha crear(Cancha cancha) {
@@ -94,5 +107,33 @@ public class CanchaService {
         Cancha cancha = obtenerPorId(id);
         cancha.setEnMantenimiento(enMantenimiento);
         return canchaRepository.save(cancha);
+    }
+
+    @Transactional(readOnly = true)
+    public CotizacionDTO cotizar(Long idCancha, Long idUsuario, LocalDateTime inicio, LocalDateTime fin) {
+        if (inicio == null || fin == null || !inicio.isBefore(fin)) {
+            throw new ReglaNegocioException("La fecha y hora de inicio debe ser anterior a la de fin");
+        }
+        Cancha cancha = obtenerPorId(idCancha);
+
+        Usuario usuario = null;
+        boolean esSocioActivo = false;
+        if (idUsuario != null) {
+            usuario = usuarioRepository.findById(idUsuario)
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Usuario", idUsuario));
+            if (usuario.getTipoUsuario() == TipoUsuario.SOCIO) {
+                esSocioActivo = membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
+                        idUsuario, List.of(EstadoMembresia.ACTIVO), LocalDate.now());
+            }
+        }
+
+        ContextoPrecio contexto = ContextoPrecio.builder()
+                .cancha(cancha)
+                .usuario(usuario)
+                .inicio(inicio)
+                .fin(fin)
+                .esSocioActivo(esSocioActivo)
+                .build();
+        return calculadorPrecioCancha.calcular(contexto);
     }
 }

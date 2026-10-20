@@ -1,0 +1,20 @@
+meta {
+  name: 01 - Crear Cancha
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/canchas
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idSede": 2,
+    "nombre": "Cancha Pádel Cristal 1",
+    "tipo": "PADEL",
+    "precioBaseHora": 10000.00
+  }
+}

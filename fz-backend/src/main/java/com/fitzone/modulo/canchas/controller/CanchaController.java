@@ -1,5 +1,6 @@
 package com.fitzone.modulo.canchas.controller;
 
+import com.fitzone.modulo.canchas.dto.CotizacionDTO;
 import com.fitzone.modulo.canchas.models.Cancha;
 import com.fitzone.modulo.canchas.service.CanchaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -8,6 +9,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -63,5 +66,15 @@ public class CanchaController {
     public Cancha cambiarMantenimiento(@PathVariable @Positive Long id, @RequestBody Map<String, Boolean> body) {
         boolean enMantenimiento = body.getOrDefault("enMantenimiento", false);
         return canchaService.cambiarMantenimiento(id, enMantenimiento);
+    }
+
+    @GetMapping("/{id}/cotizacion")
+    @Operation(summary = "Cotización y desglose dinámico del precio de un turno")
+    public CotizacionDTO cotizar(
+            @PathVariable @Positive Long id,
+            @RequestParam(required = false) Long idUsuario,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fin) {
+        return canchaService.cotizar(id, idUsuario, inicio, fin);
     }
 }
