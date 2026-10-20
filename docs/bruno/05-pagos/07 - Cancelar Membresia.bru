@@ -1,0 +1,17 @@
+meta {
+  name: 07 - Cancelar Membresia
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/v1/membresias/1/estado
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "estado": "CANCELADO"
+  }
+}

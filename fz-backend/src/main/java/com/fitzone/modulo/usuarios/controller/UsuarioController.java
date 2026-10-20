@@ -1,7 +1,9 @@
 package com.fitzone.modulo.usuarios.controller;
 
 import com.fitzone.core.domain.enums.TipoUsuario;
+import com.fitzone.modulo.usuarios.models.Membresia;
 import com.fitzone.modulo.usuarios.models.Usuario;
+import com.fitzone.modulo.usuarios.service.MembresiaService;
 import com.fitzone.modulo.usuarios.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,6 +31,7 @@ import java.util.List;
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+    private final MembresiaService membresiaService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -44,6 +47,12 @@ public class UsuarioController {
     @Operation(summary = "Detalle del perfil de un usuario por su ID interno")
     public Usuario obtenerPorId(@PathVariable @Positive Long id) {
         return usuarioService.obtenerPorId(id);
+    }
+
+    @GetMapping("/{id}/membresia")
+    @Operation(summary = "Obtiene la membresía vigente (activa o suspendida) de un usuario")
+    public Membresia obtenerMembresiaVigente(@PathVariable @Positive Long id) {
+        return membresiaService.obtenerVigentePorUsuario(id);
     }
 
     @GetMapping
@@ -68,3 +77,4 @@ public class UsuarioController {
         return usuarioService.actualizar(id, usuario, idOperador);
     }
 }
+

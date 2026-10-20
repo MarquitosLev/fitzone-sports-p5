@@ -1,0 +1,21 @@
+meta {
+  name: 04 - Actualizar Clase Grupal
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/v1/clases/1
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idSede": 1,
+    "nombreActividad": "Spinning Avanzado",
+    "fechaHoraInicio": "2026-10-25T19:00:00",
+    "duracionMinutos": 50,
+    "cupoMaximo": 25
+  }
+}
