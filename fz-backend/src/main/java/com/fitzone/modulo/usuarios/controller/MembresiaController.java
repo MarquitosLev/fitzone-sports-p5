@@ -31,8 +31,10 @@ public class MembresiaController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Alta de una nueva membresía para un socio")
     public Membresia crear(@RequestBody Membresia membresia) {
+        membresia.setIdMembresia(null);
         return membresiaService.crear(membresia);
     }
+
 
     @PostMapping("/{id}/renovar")
     @Operation(summary = "Renovación manual de una membresía existente")

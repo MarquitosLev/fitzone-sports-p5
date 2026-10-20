@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -105,8 +106,9 @@ class MembresiaServiceTest {
         nueva.setIdUsuario(1L);
         nueva.setIdPlan(1);
 
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(socio));
-        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoIn(1L, List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO)))
+        when(usuarioRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(socio));
+        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
+                eq(1L), eq(List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO)), any(LocalDate.class)))
                 .thenReturn(false);
         when(planRepository.findById(1)).thenReturn(Optional.of(planMensual));
         when(membresiaRepository.save(any(Membresia.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -121,13 +123,36 @@ class MembresiaServiceTest {
     }
 
     @Test
+    @DisplayName("crear membresía elimina idMembresia provisto por el cliente para no sobrescribir registros existentes")
+    void crear_conIdMembresiaEnviado_eliminaIdAntesDeGuardar() {
+        Membresia nuevaConId = Membresia.builder()
+                .idMembresia(99L)
+                .build();
+        nuevaConId.setIdUsuario(1L);
+        nuevaConId.setIdPlan(1);
+
+        when(usuarioRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(socio));
+        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
+                eq(1L), any(), any()))
+                .thenReturn(false);
+        when(planRepository.findById(1)).thenReturn(Optional.of(planMensual));
+        when(membresiaRepository.save(any(Membresia.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        membresiaService.crear(nuevaConId);
+
+        ArgumentCaptor<Membresia> captor = ArgumentCaptor.forClass(Membresia.class);
+        verify(membresiaRepository).save(captor.capture());
+        assertThat(captor.getValue().getIdMembresia()).isNull();
+    }
+
+    @Test
     @DisplayName("crear membresía para usuario con rol EXTERNO lanza ReglaNegocioException (422)")
     void crear_usuarioNoSocio_lanza422() {
         Membresia nueva = Membresia.builder().build();
         nueva.setIdUsuario(2L);
         nueva.setIdPlan(1);
 
-        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(externo));
+        when(usuarioRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(externo));
 
         assertThatThrownBy(() -> membresiaService.crear(nueva))
                 .isInstanceOf(ReglaNegocioException.class)
@@ -137,14 +162,15 @@ class MembresiaServiceTest {
     }
 
     @Test
-    @DisplayName("crear membresía para socio que ya tiene membresía activa lanza ConflictoException (409)")
+    @DisplayName("crear membresía para socio que ya tiene membresía vigente lanza ConflictoException (409)")
     void crear_socioConMembresiaVigente_lanza409() {
         Membresia nueva = Membresia.builder().build();
         nueva.setIdUsuario(1L);
         nueva.setIdPlan(1);
 
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(socio));
-        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoIn(1L, List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO)))
+        when(usuarioRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(socio));
+        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
+                eq(1L), eq(List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO)), any(LocalDate.class)))
                 .thenReturn(true);
 
         assertThatThrownBy(() -> membresiaService.crear(nueva))
@@ -155,10 +181,11 @@ class MembresiaServiceTest {
     }
 
     @Test
-    @DisplayName("obtenerVigentePorUsuario retorna membresía vigente si existe")
+    @DisplayName("obtenerVigentePorUsuario retorna membresía vigente si existe y no ha vencido")
     void obtenerVigentePorUsuario_existe_retornaMembresia() {
         when(usuarioRepository.existsById(1L)).thenReturn(true);
-        when(membresiaRepository.findFirstByUsuario_IdUsuarioAndEstadoInOrderByFechaVencimientoDesc(1L, List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO)))
+        when(membresiaRepository.findFirstByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqualOrderByFechaVencimientoDesc(
+                eq(1L), eq(List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO)), any(LocalDate.class)))
                 .thenReturn(Optional.of(membresiaActiva));
 
         Membresia resultado = membresiaService.obtenerVigentePorUsuario(1L);
@@ -167,10 +194,11 @@ class MembresiaServiceTest {
     }
 
     @Test
-    @DisplayName("obtenerVigentePorUsuario lanza 404 si el usuario no tiene membresía activa")
+    @DisplayName("obtenerVigentePorUsuario lanza 404 si el usuario no tiene membresía activa o suspendida vigente")
     void obtenerVigentePorUsuario_noTiene_lanza404() {
         when(usuarioRepository.existsById(1L)).thenReturn(true);
-        when(membresiaRepository.findFirstByUsuario_IdUsuarioAndEstadoInOrderByFechaVencimientoDesc(1L, List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO)))
+        when(membresiaRepository.findFirstByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqualOrderByFechaVencimientoDesc(
+                eq(1L), eq(List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO)), any(LocalDate.class)))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> membresiaService.obtenerVigentePorUsuario(1L))
@@ -255,14 +283,22 @@ class MembresiaServiceTest {
     }
 
     @Test
-    @DisplayName("expirarMembresiasVencidas actualiza a VENCIDO membresías expiradas")
+    @DisplayName("expirarMembresiasVencidas actualiza a VENCIDO tanto membresías ACTIVAS como SUSPENDIDAS vencidas")
     void expirarMembresiasVencidas_marcaComoVencido() {
-        when(membresiaRepository.findByEstadoAndFechaVencimientoBefore(eq(EstadoMembresia.ACTIVO), any(LocalDate.class)))
-                .thenReturn(List.of(membresiaActiva));
+        Membresia suspendidaVencida = Membresia.builder()
+                .idMembresia(11L)
+                .estado(EstadoMembresia.SUSPENDIDO)
+                .fechaVencimiento(LocalDate.now().minusDays(1))
+                .build();
+
+        when(membresiaRepository.findByEstadoInAndFechaVencimientoBefore(
+                eq(List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO)), any(LocalDate.class)))
+                .thenReturn(List.of(membresiaActiva, suspendidaVencida));
 
         membresiaService.expirarMembresiasVencidas();
 
         assertThat(membresiaActiva.getEstado()).isEqualTo(EstadoMembresia.VENCIDO);
-        verify(membresiaRepository).saveAll(List.of(membresiaActiva));
+        assertThat(suspendidaVencida.getEstado()).isEqualTo(EstadoMembresia.VENCIDO);
+        verify(membresiaRepository).saveAll(List.of(membresiaActiva, suspendidaVencida));
     }
 }

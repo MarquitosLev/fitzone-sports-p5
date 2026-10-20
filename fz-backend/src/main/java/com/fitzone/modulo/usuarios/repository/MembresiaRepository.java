@@ -26,18 +26,19 @@ public interface MembresiaRepository extends JpaRepository<Membresia, Long> {
     // Membresías cuya fecha de inicio cae dentro del rango [desde, hasta]
     List<Membresia> findByFechaInicioBetween(LocalDate desde, LocalDate hasta);
 
-    // Verifica si el socio ya tiene membresía en estados específicos (ej: ACTIVO o SUSPENDIDO)
-    boolean existsByUsuario_IdUsuarioAndEstadoIn(Long idUsuario, List<EstadoMembresia> estados);
+    // Verifica si el socio ya tiene membresía vigente en estados específicos (ej: ACTIVO o SUSPENDIDO) que no hayan vencido aún
+    boolean existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(Long idUsuario, List<EstadoMembresia> estados, LocalDate fecha);
 
-    // Obtener membresía vigente (ACTIVO o SUSPENDIDO) de un socio
+    // Obtener membresía vigente (ACTIVO o SUSPENDIDO) de un socio cuya fecha de vencimiento sea hoy o posterior
     @EntityGraph(attributePaths = {"usuario", "plan"})
-    Optional<Membresia> findFirstByUsuario_IdUsuarioAndEstadoInOrderByFechaVencimientoDesc(Long idUsuario, List<EstadoMembresia> estados);
+    Optional<Membresia> findFirstByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqualOrderByFechaVencimientoDesc(
+            Long idUsuario, List<EstadoMembresia> estados, LocalDate fecha);
 
     // Obtener la membresía más reciente de un socio independientemente del estado
     @EntityGraph(attributePaths = {"usuario", "plan"})
     Optional<Membresia> findFirstByUsuario_IdUsuarioOrderByFechaVencimientoDesc(Long idUsuario);
 
-    // Tarea programada diaria: membresías ACTIVAS vencidas antes de hoy
+    // Tarea programada diaria: membresías ACTIVAS o SUSPENDIDAS vencidas antes de una fecha
     @EntityGraph(attributePaths = {"usuario", "plan"})
-    List<Membresia> findByEstadoAndFechaVencimientoBefore(EstadoMembresia estado, LocalDate fecha);
-}
+    List<Membresia> findByEstadoInAndFechaVencimientoBefore(List<EstadoMembresia> estados, LocalDate fecha);
+}

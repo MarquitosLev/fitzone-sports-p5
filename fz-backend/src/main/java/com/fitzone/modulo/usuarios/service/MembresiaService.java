@@ -36,6 +36,9 @@ public class MembresiaService {
 
     @Transactional
     public Membresia crear(Membresia membresia) {
+        // Elimina cualquier ID provisto por el cliente para evitar sobrescribir membresías existentes
+        membresia.setIdMembresia(null);
+
         if (membresia.getUsuario() == null || membresia.getUsuario().getIdUsuario() == null) {
             throw new ReglaNegocioException("Debe especificar el idUsuario para asociar la membresía");
         }
@@ -46,7 +49,8 @@ public class MembresiaService {
         Long idUsuario = membresia.getUsuario().getIdUsuario();
         Integer idPlan = membresia.getPlan().getIdPlan();
 
-        Usuario usuario = usuarioRepository.findById(idUsuario)
+        // Bloqueo pesimista sobre el usuario para serializar atómicamente creaciones concurrentes del mismo usuario
+        Usuario usuario = usuarioRepository.findByIdForUpdate(idUsuario)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario", idUsuario));
 
         // Solo usuarios SOCIO pueden tener membresía (si es EXTERNO o rol administrativo -> 422)
@@ -54,9 +58,11 @@ public class MembresiaService {
             throw new ReglaNegocioException("Solo los usuarios con rol SOCIO pueden tener una membresía");
         }
 
-        // Un socio no puede tener más de una membresía activa o suspendida al mismo tiempo (409)
-        boolean yaTieneVigente = membresiaRepository.existsByUsuario_IdUsuarioAndEstadoIn(
-                idUsuario, List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO));
+        // Un socio no puede tener más de una membresía activa o suspendida vigente (409).
+        // Comprueba contra la fecha de vencimiento actual para no bloquear si ya venció
+        LocalDate hoy = LocalDate.now();
+        boolean yaTieneVigente = membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
+                idUsuario, List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO), hoy);
         if (yaTieneVigente) {
             throw new ConflictoException("El usuario ya cuenta con una membresía activa o suspendida");
         }
@@ -64,7 +70,7 @@ public class MembresiaService {
         Plan plan = planRepository.findById(idPlan)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Plan", idPlan));
 
-        LocalDate fechaInicio = membresia.getFechaInicio() != null ? membresia.getFechaInicio() : LocalDate.now();
+        LocalDate fechaInicio = membresia.getFechaInicio() != null ? membresia.getFechaInicio() : hoy;
         int duracionMeses = plan.getDuracionMeses() != null ? plan.getDuracionMeses() : 1;
         LocalDate fechaVencimiento = fechaInicio.plusMonths(duracionMeses);
 
@@ -84,8 +90,9 @@ public class MembresiaService {
             throw new RecursoNoEncontradoException("Usuario", idUsuario);
         }
 
-        return membresiaRepository.findFirstByUsuario_IdUsuarioAndEstadoInOrderByFechaVencimientoDesc(
-                        idUsuario, List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO))
+        LocalDate hoy = LocalDate.now();
+        return membresiaRepository.findFirstByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqualOrderByFechaVencimientoDesc(
+                        idUsuario, List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO), hoy)
                 .orElseThrow(() -> new RecursoNoEncontradoException("El usuario no posee una membresía activa o suspendida"));
     }
 
@@ -141,18 +148,19 @@ public class MembresiaService {
         return membresiaRepository.save(membresia);
     }
 
-    // RN-03: tarea diaria que pasa a VENCIDO las membresías activas cuya fecha_vencimiento ya pasó
+    // RN-03: tarea diaria que pasa a VENCIDO las membresías activas o suspendidas cuya fecha_vencimiento ya pasó
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void expirarMembresiasVencidas() {
         LocalDate hoy = LocalDate.now();
-        List<Membresia> vencidas = membresiaRepository.findByEstadoAndFechaVencimientoBefore(EstadoMembresia.ACTIVO, hoy);
+        List<Membresia> vencidas = membresiaRepository.findByEstadoInAndFechaVencimientoBefore(
+                List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO), hoy);
         if (!vencidas.isEmpty()) {
             for (Membresia m : vencidas) {
                 m.setEstado(EstadoMembresia.VENCIDO);
             }
             membresiaRepository.saveAll(vencidas);
-            log.info("Tarea programada ejecutada: se marcaron {} membresías como VENCIDO", vencidas.size());
+            log.info("Tarea programada ejecutada: se marcaron {} membresías (activas/suspendidas vencidas) como VENCIDO", vencidas.size());
         }
     }
 }

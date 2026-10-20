@@ -43,7 +43,7 @@ class MembresiaControllerTest {
     private MembresiaService membresiaService;
 
     @Test
-    @DisplayName("POST /v1/membresias crea membresía y retorna 201")
+    @DisplayName("POST /v1/membresias crea membresía, vincula idUsuario e idPlan y retorna 201")
     void crear_retorna201() throws Exception {
         Membresia membresiaCreada = Membresia.builder()
                 .idMembresia(1L)
@@ -56,11 +56,20 @@ class MembresiaControllerTest {
 
         mockMvc.perform(post("/v1/membresias")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"idUsuario\": 1, \"idPlan\": 1}"))
+                        .content("{\"idUsuario\": 1, \"idPlan\": 2}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.idMembresia", is(1)))
                 .andExpect(jsonPath("$.estado", is("ACTIVO")));
+
+        org.mockito.ArgumentCaptor<Membresia> captor = org.mockito.ArgumentCaptor.forClass(Membresia.class);
+        org.mockito.Mockito.verify(membresiaService).crear(captor.capture());
+        Membresia enviada = captor.getValue();
+        org.assertj.core.api.Assertions.assertThat(enviada.getUsuario()).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(enviada.getUsuario().getIdUsuario()).isEqualTo(1L);
+        org.assertj.core.api.Assertions.assertThat(enviada.getPlan()).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(enviada.getPlan().getIdPlan()).isEqualTo(2);
     }
+
 
     @Test
     @DisplayName("POST /v1/membresias/{id}/renovar renueva y retorna 200")
