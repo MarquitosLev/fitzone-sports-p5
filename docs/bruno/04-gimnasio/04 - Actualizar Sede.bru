@@ -1,0 +1,18 @@
+meta {
+  name: 04 - Actualizar Sede
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/v1/sedes/1
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "nombre": "Sede Belgrano Modificada",
+    "aforoMaximo": 200
+  }
+}

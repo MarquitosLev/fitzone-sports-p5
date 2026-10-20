@@ -1,5 +1,7 @@
 package com.fitzone.modulo.usuarios.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fitzone.core.domain.common.BaseEntity;
 import com.fitzone.core.domain.enums.EstadoMembresia;
 import jakarta.persistence.Column;
@@ -37,10 +39,12 @@ public class Membresia extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_usuario", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Usuario usuario;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_plan", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Plan plan;
 
     @Column(name = "fecha_inicio", nullable = false)
@@ -55,4 +59,26 @@ public class Membresia extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false)
     private EstadoMembresia estado;
+
+    @JsonProperty("idUsuario")
+    public void setIdUsuario(Long idUsuario) {
+        if (idUsuario != null) {
+            if (this.usuario == null) {
+                this.usuario = Usuario.builder().idUsuario(idUsuario).build();
+            } else {
+                this.usuario.setIdUsuario(idUsuario);
+            }
+        }
+    }
+
+    @JsonProperty("idPlan")
+    public void setIdPlan(Integer idPlan) {
+        if (idPlan != null) {
+            if (this.plan == null) {
+                this.plan = Plan.builder().idPlan(idPlan).build();
+            } else {
+                this.plan.setIdPlan(idPlan);
+            }
+        }
+    }
 }

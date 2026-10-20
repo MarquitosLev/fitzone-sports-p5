@@ -45,6 +45,10 @@ class UsuarioControllerTest {
     @MockitoBean
     private UsuarioService usuarioService;
 
+    @MockitoBean
+    private com.fitzone.modulo.usuarios.service.MembresiaService membresiaService;
+
+
     @Test
     @DisplayName("POST /v1/usuarios responde 201 Created cuando los datos son válidos")
     void crear_retorna201() throws Exception {
@@ -226,4 +230,23 @@ class UsuarioControllerTest {
                 .andExpect(jsonPath("$.nombre", is("Martin Actualizado")))
                 .andExpect(jsonPath("$.email", is("martin.nuevo@fitzone.com")));
     }
+
+    @Test
+    @DisplayName("GET /v1/usuarios/{id}/membresia retorna 200 con la membresía activa")
+    void obtenerMembresiaVigente_retorna200() throws Exception {
+        com.fitzone.modulo.usuarios.models.Membresia membresia = com.fitzone.modulo.usuarios.models.Membresia.builder()
+                .idMembresia(10L)
+                .estado(com.fitzone.core.domain.enums.EstadoMembresia.ACTIVO)
+                .fechaInicio(java.time.LocalDate.now())
+                .fechaVencimiento(java.time.LocalDate.now().plusMonths(1))
+                .build();
+
+        when(membresiaService.obtenerVigentePorUsuario(1L)).thenReturn(membresia);
+
+        mockMvc.perform(get("/v1/usuarios/1/membresia"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.idMembresia", is(10)))
+                .andExpect(jsonPath("$.estado", is("ACTIVO")));
+    }
 }
+

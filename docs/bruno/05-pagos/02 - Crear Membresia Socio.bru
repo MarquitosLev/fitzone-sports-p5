@@ -1,0 +1,18 @@
+meta {
+  name: 02 - Crear Membresia Socio
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/membresias
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idUsuario": 1,
+    "idPlan": 1
+  }
+}

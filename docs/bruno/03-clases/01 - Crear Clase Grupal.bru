@@ -1,0 +1,21 @@
+meta {
+  name: 01 - Crear Clase Grupal
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/clases
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idSede": 1,
+    "nombreActividad": "Spinning Power",
+    "fechaHoraInicio": "2026-10-25T18:00:00",
+    "duracionMinutos": 45,
+    "cupoMaximo": 20
+  }
+}
