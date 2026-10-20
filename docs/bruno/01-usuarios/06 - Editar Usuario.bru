@@ -1,0 +1,27 @@
+meta {
+  name: 06 - Editar Usuario
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/v1/usuarios/1?idOperador={{idOperador}}
+  body: json
+  auth: none
+}
+
+params:query {
+  idOperador: {{idOperador}}
+}
+
+body:json {
+  {
+    "dni": "00000001",
+    "nombre": "Admin Modificado",
+    "apellido": "Gerente",
+    "email": "gerente@fitzone.com",
+    "telefono": "+5491199998888",
+    "tipoUsuario": "GERENTE",
+    "idSede": 1
+  }
+}

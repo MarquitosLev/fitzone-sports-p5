@@ -1,0 +1,26 @@
+meta {
+  name: 07 - Error DNI Duplicado (409)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/v1/usuarios?idOperador={{idOperador}}
+  body: json
+  auth: none
+}
+
+params:query {
+  idOperador: {{idOperador}}
+}
+
+body:json {
+  {
+    "dni": "00000001",
+    "nombre": "Test",
+    "apellido": "Duplicado",
+    "email": "duplicado@fitzone.com",
+    "tipoUsuario": "SOCIO",
+    "password": "Password123!"
+  }
+}

@@ -96,6 +96,17 @@ Todo el backend vive en el mismo repositorio (`fz-backend`), organizado en 5 mó
   4. `JwtAuthConverter` lee el claim `sub` (el UID de Supabase), busca en `fz_usr_usuarios` dónde `auth_id = sub`, y carga las autoridades `ROLE_SOCIO`, `ROLE_RECEPCIONISTA` o `ROLE_GERENTE`.
   5. Los endpoints aplican autorización granular con `@PreAuthorize("hasRole('...')")`.
 
+### Alta y Gestión de Usuarios con Supabase Admin API
+* **Mecanismo:** El backend interactúa directamente con la Admin API de Supabase Auth mediante `SupabaseAuthClient` usando la `service_role` key (confidencial, solo en variables de entorno del backend).
+* **Modos de Alta (`fitzone.supabase.alta-por-email`):**
+  - `true` (por defecto): Invitación por correo (`/auth/v1/invite`). Supabase envía el email para que el usuario elija su contraseña.
+  - `false`: Creación confirmada directa en el sistema (`/auth/v1/admin/users`), requiriendo el campo `password` inicial.
+* **Compensación de Fallos:** Si al crear un usuario en Supabase la inserción en la base de datos falla, el backend ejecuta una llamada de compensación (`DELETE /auth/v1/admin/users/{id}`) para evitar registros huérfanos.
+* **Matriz de Permisos de Operador:**
+  - El **GERENTE** es el administrador total: único habilitado para dar de alta o editar personal (`RECEPCIONISTA`, `GERENTE`) y asignar/cambiar roles (`tipoUsuario`).
+  - El **RECEPCIONISTA** solo puede dar de alta y editar usuarios `SOCIO` y `EXTERNO`.
+* **Guía Completa:** Ver [docs/GUIA_SUPABASE_USUARIOS.md](./GUIA_SUPABASE_USUARIOS.md).
+
 ---
 
 ## 4. CONVENCIONES Y NOMENCLATURAS DE CÓDIGO

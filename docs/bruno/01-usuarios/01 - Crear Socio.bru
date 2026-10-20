@@ -1,0 +1,27 @@
+meta {
+  name: 01 - Crear Socio
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/usuarios?idOperador={{idOperador}}
+  body: json
+  auth: none
+}
+
+params:query {
+  idOperador: {{idOperador}}
+}
+
+body:json {
+  {
+    "dni": "40111222",
+    "nombre": "Lucas",
+    "apellido": "Perez",
+    "email": "lucas.socio@fitzone.com",
+    "telefono": "+5491144445555",
+    "tipoUsuario": "SOCIO",
+    "password": "Password123!"
+  }
+}
