@@ -1,0 +1,22 @@
+meta {
+  name: 03 - Error Root Key Invalida (401)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/admin/database/query
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: clave_invalida_o_inexistente
+}
+
+body:json {
+  {
+    "query": "SELECT * FROM usuarios",
+    "maxFilas": 10
+  }
+}

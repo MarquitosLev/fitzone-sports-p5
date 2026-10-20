@@ -33,6 +33,8 @@ public class SecurityConfig {
                         // TEMPORAL hasta la historia de JWT: los endpoints de negocio quedan abiertos y el usuario
                         // y la sede viajan por parámetro o en el body. Con JWT, pasar /v1/** a authenticated().
                         .requestMatchers("/v1/**").permitAll()
+                        // Endpoint administrativo protegido internamente con Bearer Root Key
+                        .requestMatchers("/admin/database/**").permitAll()
                         .anyRequest().authenticated());
 
         return http.build();
