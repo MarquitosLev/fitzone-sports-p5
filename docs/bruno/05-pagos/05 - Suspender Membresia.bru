@@ -1,0 +1,17 @@
+meta {
+  name: 05 - Suspender Membresia
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/v1/membresias/1/estado
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "estado": "SUSPENDIDO"
+  }
+}

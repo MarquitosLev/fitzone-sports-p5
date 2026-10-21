@@ -34,4 +34,7 @@ public class Plan extends BaseEntity {
 
     @Column(name = "precio_base", nullable = false, scale = 2)
     private BigDecimal precioBase;
+
+    @Column(name = "duracion_meses", nullable = false)
+    private Integer duracionMeses;
 }

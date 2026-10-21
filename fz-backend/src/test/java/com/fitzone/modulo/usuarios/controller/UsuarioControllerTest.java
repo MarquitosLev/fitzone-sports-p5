@@ -45,6 +45,14 @@ class UsuarioControllerTest {
     @MockitoBean
     private UsuarioService usuarioService;
 
+    @MockitoBean
+    private com.fitzone.modulo.usuarios.service.MembresiaService membresiaService;
+
+    @MockitoBean
+    private com.fitzone.modulo.gimnasio.service.AccesoService accesoService;
+
+
+
     @Test
     @DisplayName("POST /v1/usuarios responde 201 Created cuando los datos son válidos")
     void crear_retorna201() throws Exception {
@@ -225,5 +233,39 @@ class UsuarioControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nombre", is("Martin Actualizado")))
                 .andExpect(jsonPath("$.email", is("martin.nuevo@fitzone.com")));
+    }
+
+    @Test
+    @DisplayName("GET /v1/usuarios/{id}/membresia retorna 200 con la membresía activa")
+    void obtenerMembresiaVigente_retorna200() throws Exception {
+        com.fitzone.modulo.usuarios.models.Membresia membresia = com.fitzone.modulo.usuarios.models.Membresia.builder()
+                .idMembresia(10L)
+                .estado(com.fitzone.core.domain.enums.EstadoMembresia.ACTIVO)
+                .fechaInicio(java.time.LocalDate.now())
+                .fechaVencimiento(java.time.LocalDate.now().plusMonths(1))
+                .build();
+
+        when(membresiaService.obtenerVigentePorUsuario(1L)).thenReturn(membresia);
+
+        mockMvc.perform(get("/v1/usuarios/1/membresia"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.idMembresia", is(10)))
+                .andExpect(jsonPath("$.estado", is("ACTIVO")));
+    }
+
+    @Test
+    @DisplayName("GET /v1/usuarios/{id}/qr retorna 200 con el token QR y segundos restantes")
+    void obtenerQr_retorna200() throws Exception {
+        com.fitzone.modulo.gimnasio.models.QrTokenResponse qrResponse = com.fitzone.modulo.gimnasio.models.QrTokenResponse.builder()
+                .tokenQr("mock-qr-token-base64")
+                .segundosRestantes(45L)
+                .build();
+
+        when(accesoService.generarQr(1L)).thenReturn(qrResponse);
+
+        mockMvc.perform(get("/v1/usuarios/1/qr"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tokenQr", is("mock-qr-token-base64")))
+                .andExpect(jsonPath("$.segundosRestantes", is(45)));
     }
 }
