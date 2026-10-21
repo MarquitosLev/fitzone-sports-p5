@@ -71,7 +71,6 @@ public class UsuarioController {
     public List<ReservaCancha> listarReservasCancha(@PathVariable @Positive Long id) {
         return canchaService.listarReservasPorUsuario(id);
     }
-
     @GetMapping
     @Operation(summary = "Búsqueda y listado de usuarios con filtros opcionales por DNI, tipo y/o sede")
     public List<Usuario> buscar(

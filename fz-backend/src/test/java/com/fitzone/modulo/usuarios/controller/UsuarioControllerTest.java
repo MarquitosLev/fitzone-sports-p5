@@ -55,7 +55,6 @@ class UsuarioControllerTest {
     private com.fitzone.modulo.canchas.service.CanchaService canchaService;
 
 
-
     @Test
     @DisplayName("POST /v1/usuarios responde 201 Created cuando los datos son válidos")
     void crear_retorna201() throws Exception {
@@ -271,7 +270,6 @@ class UsuarioControllerTest {
                 .andExpect(jsonPath("$.tokenQr", is("mock-qr-token-base64")))
                 .andExpect(jsonPath("$.segundosRestantes", is(45)));
     }
-
     @Test
     @DisplayName("GET /v1/usuarios/{id}/reservas-cancha retorna 200 con la lista de reservas")
     void listarReservasCancha_retorna200() throws Exception {
