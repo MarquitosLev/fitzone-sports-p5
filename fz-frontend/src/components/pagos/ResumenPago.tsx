@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { ShieldCheck, Lock, CheckCircle2, AlertCircle, Calendar, Clock, MapPin, Sparkles } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, Button, Badge } from '../ui';
 import { DesglosePrecio } from '../canchas/DesglosePrecio';
@@ -31,6 +31,7 @@ export function ResumenPago({
   permitirSimularRechazo = true,
   className = '',
 }: ResumenPagoProps) {
+  const radioGroupName = useId();
   // En cumplimiento de RNF-02, la pasarela es simulada y solo maneja tokens de resultado
   const [tokenSimulado, setTokenSimulado] = useState<'tok_mock_aprobado' | 'tok_mock_rechazado'>('tok_mock_aprobado');
 
@@ -153,7 +154,7 @@ export function ResumenPago({
               <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
                 <input
                   type="radio"
-                  name="simulacionPasarela"
+                  name={radioGroupName}
                   value="tok_mock_aprobado"
                   checked={tokenSimulado === 'tok_mock_aprobado'}
                   onChange={() => setTokenSimulado('tok_mock_aprobado')}
@@ -166,7 +167,7 @@ export function ResumenPago({
               <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
                 <input
                   type="radio"
-                  name="simulacionPasarela"
+                  name={radioGroupName}
                   value="tok_mock_rechazado"
                   checked={tokenSimulado === 'tok_mock_rechazado'}
                   onChange={() => setTokenSimulado('tok_mock_rechazado')}

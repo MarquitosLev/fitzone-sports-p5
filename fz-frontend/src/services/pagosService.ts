@@ -27,6 +27,120 @@ export const PAGOS_ENDPOINTS = {
   descargarComprobantePdf: (idComprobante: number) => `/v1/comprobantes/${idComprobante}/pdf`,
 } as const;
 
+// ─── GENERADOR DE PDF MOCK BIEN FORMADO Y RENDERIZABLE ───────────────────────
+export interface DatosPdfMock {
+  numeroFactura: string;
+  monto: number;
+  titular?: string;
+  concepto?: string;
+  sede?: string;
+  fecha?: string;
+  cae?: string;
+}
+
+/**
+ * Genera un Blob PDF-1.4 binariamente válido y renderizable en navegadores
+ * y visores de PDF estándar (Chrome, Firefox, Acrobat, PDF.js).
+ */
+export function generarPdfMockValido(datos: DatosPdfMock): Blob {
+  const {
+    numeroFactura,
+    monto,
+    titular = 'Lucas Martinez',
+    concepto = 'Servicios Deportivos FitZone',
+    sede = 'FitZone Palermo',
+    fecha = new Date().toLocaleDateString('es-AR'),
+    cae = '74125896301245',
+  } = datos;
+
+  // Sanitizamos a caracteres ASCII estándar para coincidencia 1 a 1 de bytes en la tabla xref
+  const sanitizar = (str: string) =>
+    str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '');
+
+  const lineas = [
+    sanitizar(`FitZone Sports - Comprobante de Pago Oficial`),
+    sanitizar(`Factura N: ${numeroFactura}`),
+    sanitizar(`Titular: ${titular}`),
+    sanitizar(`Concepto: ${concepto}`),
+    sanitizar(`Sede: ${sede}`),
+    sanitizar(`Fecha de emision: ${fecha}`),
+    sanitizar(`Importe Total: ARS $${monto.toLocaleString('es-AR')}`),
+    sanitizar(`CAE: ${cae} - Comprobante Autorizado por AFIP`),
+  ];
+
+  let stream = 'BT\n/F1 16 Tf\n50 720 Td\n(' + lineas[0] + ') Tj\n/F1 11 Tf\n';
+  for (let i = 1; i < lineas.length; i++) {
+    stream += `0 -24 Td\n(${lineas[i]}) Tj\n`;
+  }
+  stream += 'ET';
+
+  const streamLength = stream.length;
+
+  const header = '%PDF-1.4\n';
+  const obj1 = '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n';
+  const obj2 = '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n';
+  const obj3 = '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n';
+  const obj4 = '4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n';
+  const obj5 = `5 0 obj\n<< /Length ${streamLength} >>\nstream\n${stream}\nendstream\nendobj\n`;
+
+  const off1 = header.length;
+  const off2 = off1 + obj1.length;
+  const off3 = off2 + obj2.length;
+  const off4 = off3 + obj3.length;
+  const off5 = off4 + obj4.length;
+  const startxref = off5 + obj5.length;
+
+  const pad = (n: number) => String(n).padStart(10, '0');
+
+  const xref =
+    `xref\n` +
+    `0 6\n` +
+    `0000000000 65535 f \n` +
+    `${pad(off1)} 00000 n \n` +
+    `${pad(off2)} 00000 n \n` +
+    `${pad(off3)} 00000 n \n` +
+    `${pad(off4)} 00000 n \n` +
+    `${pad(off5)} 00000 n \n`;
+
+  const trailer =
+    `trailer\n` +
+    `<< /Size 6 /Root 1 0 R >>\n` +
+    `startxref\n` +
+    `${startxref}\n` +
+    `%%EOF\n`;
+
+  const pdfStr = header + obj1 + obj2 + obj3 + obj4 + obj5 + xref + trailer;
+  return new Blob([pdfStr], { type: 'application/pdf' });
+}
+
+// ─── VALIDACIONES DE SEGURIDAD Y NEGOCIO ──────────────────────────────────────
+function validarPayloadCheckout(payload: ProcesarPagoPayload): void {
+  if (!payload) {
+    throw new Error('El payload de checkout es requerido.');
+  }
+  if (!payload.idSede || payload.idSede <= 0) {
+    throw new Error('La sede especificada no es válida.');
+  }
+  if (!payload.idUsuario || payload.idUsuario <= 0) {
+    throw new Error('El usuario especificado no es válido.');
+  }
+  if (typeof payload.monto !== 'number' || isNaN(payload.monto) || payload.monto <= 0) {
+    throw new Error('El monto a debitar debe ser un número positivo mayor a 0.');
+  }
+  if (!payload.tokenTransaccionPasarela || !payload.tokenTransaccionPasarela.trim()) {
+    throw new Error('El token de transacción de la pasarela es requerido.');
+  }
+  const conceptosValidos = ['RESERVA_SOCIO', 'RESERVA_EXTERNO', 'MEMBRESIA_SOCIO'];
+  if (!conceptosValidos.includes(payload.concepto)) {
+    throw new Error(`El concepto ${payload.concepto} no es válido.`);
+  }
+  if (payload.tipoComprobante === 'FACTURA_A') {
+    if (!payload.cuitFacturaA || !/^\d{2}-\d{8}-\d{1}$/.test(payload.cuitFacturaA.trim())) {
+      throw new Error('Para emitir Factura A debe proporcionar un CUIT válido (formato XX-XXXXXXXX-X).');
+    }
+  }
+}
+
 // ─── ESTADO MOCK EN MEMORIA ───────────────────────────────────────────────────
 const MOCK_PAGOS_INICIALES: TransaccionDTO[] = [
   {
@@ -130,6 +244,31 @@ const MOCK_PAGOS_INICIALES: TransaccionDTO[] = [
     fechaHoraConfirmacion: null,
     descripcion: 'Tenis · Cancha 1 (Checkout Invitado)',
   },
+  {
+    idTransaccion: 5,
+    usuario: {
+      idUsuario: 1,
+      authId: 'uuid-socio-1',
+      dni: '30123456',
+      nombre: 'Lucas',
+      apellido: 'Martínez',
+      email: 'lucas.martinez@email.com',
+      telefono: '11-4567-8901',
+      fotoUrl: null,
+      tipoUsuario: 'SOCIO',
+      idSede: 1,
+    },
+    sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
+    membresiaId: null,
+    reservaCanchaId: 8,
+    concepto: 'RESERVA_SOCIO',
+    monto: 7500,
+    estadoPago: 'REEMBOLSADO',
+    tokenTransaccionPasarela: 'tok_mock_reembolsado',
+    fechaHoraCreacion: '2026-10-10T11:00:00',
+    fechaHoraConfirmacion: '2026-10-10T15:30:00',
+    descripcion: 'Pádel · Cancha 2 (Turno cancelado con aviso > 24hs — Reembolsado)',
+  },
 ];
 
 let mockPagos: TransaccionDTO[] = JSON.parse(JSON.stringify(MOCK_PAGOS_INICIALES));
@@ -140,7 +279,7 @@ const MOCK_COMPROBANTES_INICIALES: ComprobanteDTO[] = [
     transaccion: mockPagos[0]!,
     numeroFactura: 'FAC-0001-00000123',
     tipoComprobante: 'FACTURA_B',
-    cae: '74125896301245',
+    cae: '74100000000001',
     fechaVencimientoCae: '25/10/2026',
     urlDescargaPdf: '',
   },
@@ -149,7 +288,7 @@ const MOCK_COMPROBANTES_INICIALES: ComprobanteDTO[] = [
     transaccion: mockPagos[2]!,
     numeroFactura: 'FAC-0001-00000105',
     tipoComprobante: 'FACTURA_B',
-    cae: '65478932145698',
+    cae: '74100000000002',
     fechaVencimientoCae: '11/10/2026',
     urlDescargaPdf: '',
   },
@@ -206,17 +345,21 @@ export async function obtenerComprobantePorTransaccion(
 /**
  * Procesa un nuevo pago a través del checkout con la pasarela simulada.
  * Si el token es 'tok_mock_rechazado', genera la transacción en estado RECHAZADO.
- * Si es aprobado, genera el comprobante fiscal automáticamente.
+ * Si es aprobado, genera el comprobante fiscal automáticamente con CAE determinístico.
  */
 export async function procesarPago(payload: ProcesarPagoPayload): Promise<ResultadoPagoDTO> {
+  // Validación estricta del payload antes de procesar
+  validarPayloadCheckout(payload);
+
   if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 600));
 
     const esRechazado = payload.tokenTransaccionPasarela === 'tok_mock_rechazado';
     const ahoraIso = toLocalISOString(new Date());
+    const nuevoIdTransaccion = mockPagos.length + 1;
 
     const nuevaTransaccion: TransaccionDTO = {
-      idTransaccion: mockPagos.length + 1,
+      idTransaccion: nuevoIdTransaccion,
       usuario: {
         idUsuario: payload.idUsuario,
         authId: 'uuid-socio-' + payload.idUsuario,
@@ -252,13 +395,16 @@ export async function procesarPago(payload: ProcesarPagoPayload): Promise<Result
 
     let nuevoComprobante: ComprobanteDTO | null = null;
     if (!esRechazado) {
-      const facturaNum = `FAC-0001-${String(100 + mockComprobantes.length + 1).padStart(8, '0')}`;
+      const nuevoIdComp = mockComprobantes.length + 1;
+      const facturaNum = `FAC-0001-${String(nuevoIdComp).padStart(8, '0')}`;
+      const caeDeterminista = `741${String(10000000000 + nuevoIdTransaccion * 7393).padStart(11, '0')}`;
+
       nuevoComprobante = {
-        idComprobante: mockComprobantes.length + 1,
+        idComprobante: nuevoIdComp,
         transaccion: nuevaTransaccion,
         numeroFactura: facturaNum,
         tipoComprobante: payload.tipoComprobante || 'FACTURA_B',
-        cae: `7${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
+        cae: caeDeterminista,
         fechaVencimientoCae: '30/10/2026',
         urlDescargaPdf: '',
       };
@@ -292,12 +438,26 @@ export async function reintentarPago(
   idTransaccion: number,
   nuevoTokenPasarela: string = 'tok_mock_aprobado'
 ): Promise<ResultadoPagoDTO> {
+  if (!idTransaccion || idTransaccion <= 0) {
+    throw new Error('El identificador de la transacción debe ser un número positivo.');
+  }
+  if (!nuevoTokenPasarela || !nuevoTokenPasarela.trim()) {
+    throw new Error('El token de pasarela para el reintento es requerido.');
+  }
+
   if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 600));
 
     const transaccion = mockPagos.find((p) => p.idTransaccion === idTransaccion);
     if (!transaccion) {
       throw new Error(`Transacción con ID ${idTransaccion} no encontrada.`);
+    }
+
+    // Regla de idempotencia y prevención de doble cobro:
+    if (transaccion.estadoPago === 'CONFIRMADO') {
+      throw new Error(
+        `La transacción ID ${idTransaccion} ya se encuentra confirmada. No se permite duplicar el cobro.`
+      );
     }
 
     const esRechazado = nuevoTokenPasarela === 'tok_mock_rechazado';
@@ -313,16 +473,18 @@ export async function reintentarPago(
 
     let comprobante: ComprobanteDTO | null = null;
     if (!esRechazado) {
-      // Verificamos si ya tenía comprobante o emitimos uno nuevo
       comprobante = mockComprobantes.find((c) => c.transaccion.idTransaccion === idTransaccion) || null;
       if (!comprobante) {
-        const facturaNum = `FAC-0001-${String(100 + mockComprobantes.length + 1).padStart(8, '0')}`;
+        const nuevoIdComp = mockComprobantes.length + 1;
+        const facturaNum = `FAC-0001-${String(nuevoIdComp).padStart(8, '0')}`;
+        const caeDeterminista = `741${String(10000000000 + idTransaccion * 7393).padStart(11, '0')}`;
+
         comprobante = {
-          idComprobante: mockComprobantes.length + 1,
+          idComprobante: nuevoIdComp,
           transaccion,
           numeroFactura: facturaNum,
           tipoComprobante: 'FACTURA_B',
-          cae: `7${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
+          cae: caeDeterminista,
           fechaVencimientoCae: '30/10/2026',
           urlDescargaPdf: '',
         };
@@ -345,24 +507,25 @@ export async function reintentarPago(
 
 /**
  * Descarga el comprobante en formato PDF como Blob.
- * En modo mock, sintetiza un PDF válido sin necesidad de pegarle al backend.
+ * En modo mock, sintetiza un PDF-1.4 válido y renderizable sin necesidad de pegarle al backend.
  */
 export async function descargarComprobantePdf(idComprobante: number): Promise<Blob> {
   if (USE_MOCK) {
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await new Promise((resolve) => setTimeout(resolve, 300));
     const comp = mockComprobantes.find((c) => c.idComprobante === idComprobante);
-    const numFactura = comp?.numeroFactura || `FAC-0001-${idComprobante}`;
-    const contenidoPdf = `%PDF-1.4
-% FitZone Sports - Factura Oficial Electrónica
-% N°: ${numFactura}
-% Monto: ARS ${comp?.transaccion.monto || '0.00'}
-1 0 obj
-<< /Title (Comprobante ${numFactura}) /Author (FitZone Sports S.A.) >>
-endobj
-trailer
-<< /Root 1 0 R >>
-%%EOF`;
-    return new Blob([contenidoPdf], { type: 'application/pdf' });
+    const numFactura = comp?.numeroFactura || `FAC-0001-${String(idComprobante).padStart(8, '0')}`;
+
+    return generarPdfMockValido({
+      numeroFactura: numFactura,
+      monto: comp?.transaccion.monto || 6800,
+      titular: comp
+        ? `${comp.transaccion.usuario.nombre} ${comp.transaccion.usuario.apellido}`
+        : 'Lucas Martinez',
+      concepto: comp?.transaccion.descripcion || 'Servicios Deportivos FitZone',
+      sede: comp?.transaccion.sede.nombre || 'FitZone Palermo',
+      fecha: comp?.transaccion.fechaHoraConfirmacion || new Date().toISOString(),
+      cae: comp?.cae || '74125896301245',
+    });
   }
 
   const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api';
@@ -380,7 +543,11 @@ trailer
 }
 
 /**
- * Utilidad auxiliar para disparar la descarga en el navegador de un Blob PDF.
+ * Dispara la descarga en el navegador de un Blob PDF de forma segura.
+ *
+ * NOTA DE SEGURIDAD Y ESTABILIDAD:
+ * Utiliza setTimeout para demorar la revocación de la URL (URL.revokeObjectURL),
+ * evitando cancelaciones prematuras en navegadores asíncronos.
  */
 export function descargarBlobEnNavegador(blob: Blob, nombreArchivo: string): void {
   const url = URL.createObjectURL(blob);
@@ -390,5 +557,9 @@ export function descargarBlobEnNavegador(blob: Blob, nombreArchivo: string): voi
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+
+  // Revocación diferida garantizada tras la captura del stream por el navegador
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1500);
 }

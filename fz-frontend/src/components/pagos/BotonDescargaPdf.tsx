@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '../ui';
+import { generarPdfMockValido, descargarBlobEnNavegador } from '../../services/pagosService';
 
 export interface BotonDescargaPdfProps {
   /** URL directa hacia el archivo PDF */
@@ -25,23 +26,6 @@ export interface BotonDescargaPdfProps {
   className?: string;
   /** Si está deshabilitado */
   disabled?: boolean;
-}
-
-/**
- * Genera un Blob descargable de PDF simulado para pruebas locales/mock
- * evitando errores 404 en el navegador cuando no hay backend activo.
- */
-function generarBlobPdfMock(numeroFactura: string): Blob {
-  const contenidoPdf = `%PDF-1.4
-% FitZone Sports - Comprobante de Pago Oficial
-% Factura N°: ${numeroFactura}
-1 0 obj
-<< /Title (Comprobante FitZone) /Author (FitZone Sports S.A.) >>
-endobj
-trailer
-<< /Root 1 0 R >>
-%%EOF`;
-  return new Blob([contenidoPdf], { type: 'application/pdf' });
 }
 
 export function BotonDescargaPdf({
@@ -87,16 +71,12 @@ export function BotonDescargaPdf({
         return;
       }
 
-      // Fallback para modo mock / pruebas locales: creamos un Blob simulado
-      const blob = generarBlobPdfMock(numeroFactura);
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
+      // Fallback para modo mock / pruebas locales: generamos un PDF-1.4 válido y renderizable
+      const blob = generarPdfMockValido({
+        numeroFactura,
+        monto: 0,
+      });
+      descargarBlobEnNavegador(blob, fileName);
     } catch (err) {
       console.error('Error al descargar comprobante PDF:', err);
     } finally {

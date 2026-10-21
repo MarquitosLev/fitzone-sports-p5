@@ -137,7 +137,9 @@ export function PagosPage() {
   const [transacciones, setTransacciones] = useState<TransaccionDTO[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filtroEstado, setFiltroEstado] = useState<'TODOS' | 'CONFIRMADO' | 'PENDIENTE' | 'RECHAZADO'>('TODOS');
+  const [filtroEstado, setFiltroEstado] = useState<
+    'TODOS' | 'CONFIRMADO' | 'PENDIENTE' | 'RECHAZADO' | 'REEMBOLSADO'
+  >('TODOS');
   const [vistaModo, setVistaModo] = useState<'tarjetas' | 'tabla'>('tarjetas');
   const [comprobantesMap, setComprobantesMap] = useState<Record<number, ComprobanteDTO>>({});
 
@@ -168,7 +170,43 @@ export function PagosPage() {
   };
 
   useEffect(() => {
-    void cargarTransacciones();
+    let cancelled = false;
+
+    const ejecutarCarga = async () => {
+      if (!sedeActiva) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await listarPagos(sedeActiva.idSede);
+        if (cancelled) return;
+        setTransacciones(data);
+
+        const confirmadas = data.filter((t) => t.estadoPago === 'CONFIRMADO');
+        const comps: Record<number, ComprobanteDTO> = {};
+        await Promise.all(
+          confirmadas.map(async (t) => {
+            const comp = await obtenerComprobantePorTransaccion(t.idTransaccion);
+            if (comp) comps[t.idTransaccion] = comp;
+          })
+        );
+        if (cancelled) return;
+        setComprobantesMap(comps);
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Error al cargar transacciones');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void ejecutarCarga();
+
+    return () => {
+      cancelled = true;
+    };
   }, [sedeActiva]);
 
   // Manejo de confirmación de pago en checkout
@@ -527,7 +565,7 @@ export function PagosPage() {
           {/* Barra de Filtros y Modo de Vista */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
-              {(['TODOS', 'CONFIRMADO', 'PENDIENTE', 'RECHAZADO'] as const).map((filtro) => (
+              {(['TODOS', 'CONFIRMADO', 'PENDIENTE', 'RECHAZADO', 'REEMBOLSADO'] as const).map((filtro) => (
                 <button
                   key={filtro}
                   type="button"
@@ -544,7 +582,9 @@ export function PagosPage() {
                     ? 'Confirmados'
                     : filtro === 'PENDIENTE'
                     ? 'Pendientes'
-                    : 'Rechazados'}
+                    : filtro === 'RECHAZADO'
+                    ? 'Rechazados'
+                    : 'Reembolsados'}
                 </button>
               ))}
             </div>

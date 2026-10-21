@@ -137,11 +137,86 @@ describe('pagosService (SCRUM-86, RF-13, RF-14)', () => {
       expect(comprobante).toBeNull();
     });
 
-    it('genera y descarga un Blob PDF de tipo application/pdf sin error', async () => {
+    it('genera y descarga un Blob PDF-1.4 estructuralmente válido y renderizable', async () => {
       const blob = await descargarComprobantePdf(1);
       expect(blob).toBeInstanceOf(Blob);
       expect(blob.type).toBe('application/pdf');
-      expect(blob.size).toBeGreaterThan(0);
+      expect(blob.size).toBeGreaterThan(100);
+
+      const textoPdf = await blob.text();
+      // Validar estándar PDF-1.4
+      expect(textoPdf.startsWith('%PDF-1.4')).toBe(true);
+      expect(textoPdf).toContain('/Type /Catalog');
+      expect(textoPdf).toContain('/Type /Pages');
+      expect(textoPdf).toContain('/Type /Page');
+      expect(textoPdf).toContain('/Font');
+      expect(textoPdf).toContain('stream');
+      expect(textoPdf).toContain('endstream');
+      expect(textoPdf).toContain('xref');
+      expect(textoPdf).toContain('trailer');
+      expect(textoPdf).toContain('startxref');
+      expect(textoPdf.trim().endsWith('%%EOF')).toBe(true);
+    });
+  });
+
+  describe('Validaciones de seguridad y payload de checkout', () => {
+    it('rechaza montos menores o iguales a cero', async () => {
+      const payloadInvalido = {
+        idSede: 1,
+        idUsuario: 1,
+        concepto: 'RESERVA_SOCIO' as const,
+        monto: 0,
+        tokenTransaccionPasarela: 'tok_mock_aprobado',
+      };
+      await expect(procesarPago(payloadInvalido)).rejects.toThrow('monto a debitar debe ser un número positivo');
+    });
+
+    it('rechaza cuando no se especifica token de pasarela', async () => {
+      const payloadSinToken = {
+        idSede: 1,
+        idUsuario: 1,
+        concepto: 'RESERVA_SOCIO' as const,
+        monto: 5000,
+        tokenTransaccionPasarela: '   ',
+      };
+      await expect(procesarPago(payloadSinToken)).rejects.toThrow('token de transacción');
+    });
+
+    it('rechaza sede o usuario inválidos', async () => {
+      const payloadSedeInvalida = {
+        idSede: 0,
+        idUsuario: 1,
+        concepto: 'RESERVA_SOCIO' as const,
+        monto: 5000,
+        tokenTransaccionPasarela: 'tok_mock_aprobado',
+      };
+      await expect(procesarPago(payloadSedeInvalida)).rejects.toThrow('sede especificada no es válida');
+    });
+
+    it('exige CUIT válido con formato XX-XXXXXXXX-X para Factura A', async () => {
+      const payloadFacturaA = {
+        idSede: 1,
+        idUsuario: 1,
+        concepto: 'RESERVA_SOCIO' as const,
+        monto: 5000,
+        tokenTransaccionPasarela: 'tok_mock_aprobado',
+        tipoComprobante: 'FACTURA_A' as const,
+        cuitFacturaA: '20123456789', // Formato sin guiones
+      };
+      await expect(procesarPago(payloadFacturaA)).rejects.toThrow('CUIT válido (formato XX-XXXXXXXX-X)');
+    });
+
+    it('protege contra doble cobro si se intenta reintentar una transacción ya confirmada', async () => {
+      // La transacción 1 ya está confirmada
+      await expect(reintentarPago(1, 'tok_mock_aprobado')).rejects.toThrow('ya se encuentra confirmada');
+    });
+
+    it('retorna transacciones en estado REEMBOLSADO en el historial de la sede', async () => {
+      const pagos = await listarPagos(1);
+      const reembolsado = pagos.find((p) => p.estadoPago === 'REEMBOLSADO');
+      expect(reembolsado).toBeDefined();
+      expect(reembolsado?.idTransaccion).toBe(5);
+      expect(reembolsado?.monto).toBe(7500);
     });
   });
 });
