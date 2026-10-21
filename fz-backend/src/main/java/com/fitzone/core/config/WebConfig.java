@@ -15,6 +15,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
         configurer.addPathPrefix("/v1", HandlerTypePredicate.forBasePackage("com.fitzone")
-                .and(controlador -> controlador != PingController.class));
+                .and(controlador -> controlador != PingController.class
+                        && controlador != com.fitzone.core.controller.AdminDatabaseController.class));
     }
 }

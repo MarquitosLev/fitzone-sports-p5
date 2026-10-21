@@ -41,4 +41,21 @@ public interface MembresiaRepository extends JpaRepository<Membresia, Long> {
     // Tarea programada diaria: membresías ACTIVAS o SUSPENDIDAS vencidas antes de una fecha
     @EntityGraph(attributePaths = {"usuario", "plan"})
     List<Membresia> findByEstadoInAndFechaVencimientoBefore(List<EstadoMembresia> estados, LocalDate fecha);
+
+    // Verifica si el socio tiene membresía activa ya iniciada y no vencida
+    boolean existsByUsuario_IdUsuarioAndEstadoAndFechaInicioLessThanEqualAndFechaVencimientoGreaterThanEqual(
+            Long idUsuario, EstadoMembresia estado, LocalDate fechaInicioMax, LocalDate fechaVencimientoMin);
+
+    // Búsqueda con bloqueo pesimista para coordinar cambios de estado
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT m FROM Membresia m WHERE m.idMembresia = :id")
+    Optional<Membresia> findByIdWithLock(@org.springframework.data.repository.query.Param("id") Long id);
+
+    // Búsqueda con bloqueo pesimista de membresía activa para sincronizar ingresos y evitar cancelaciones concurrentes
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT m FROM Membresia m WHERE m.usuario.idUsuario = :idUsuario AND m.estado = :estado AND m.fechaInicio <= :hoy AND m.fechaVencimiento >= :hoy")
+    Optional<Membresia> findMembresiaActivaParaIngreso(
+            @org.springframework.data.repository.query.Param("idUsuario") Long idUsuario,
+            @org.springframework.data.repository.query.Param("estado") EstadoMembresia estado,
+            @org.springframework.data.repository.query.Param("hoy") LocalDate hoy);
 }

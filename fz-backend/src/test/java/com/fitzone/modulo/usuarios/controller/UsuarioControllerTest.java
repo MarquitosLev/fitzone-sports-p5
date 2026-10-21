@@ -48,6 +48,13 @@ class UsuarioControllerTest {
     @MockitoBean
     private com.fitzone.modulo.usuarios.service.MembresiaService membresiaService;
 
+    @MockitoBean
+    private com.fitzone.modulo.gimnasio.service.AccesoService accesoService;
+
+    @MockitoBean
+    private com.fitzone.modulo.canchas.service.CanchaService canchaService;
+
+
 
     @Test
     @DisplayName("POST /v1/usuarios responde 201 Created cuando los datos son válidos")
@@ -248,5 +255,36 @@ class UsuarioControllerTest {
                 .andExpect(jsonPath("$.idMembresia", is(10)))
                 .andExpect(jsonPath("$.estado", is("ACTIVO")));
     }
-}
 
+    @Test
+    @DisplayName("GET /v1/usuarios/{id}/qr retorna 200 con el token QR y segundos restantes")
+    void obtenerQr_retorna200() throws Exception {
+        com.fitzone.modulo.gimnasio.models.QrTokenResponse qrResponse = com.fitzone.modulo.gimnasio.models.QrTokenResponse.builder()
+                .tokenQr("mock-qr-token-base64")
+                .segundosRestantes(45L)
+                .build();
+
+        when(accesoService.generarQr(1L)).thenReturn(qrResponse);
+
+        mockMvc.perform(get("/v1/usuarios/1/qr"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tokenQr", is("mock-qr-token-base64")))
+                .andExpect(jsonPath("$.segundosRestantes", is(45)));
+    }
+
+    @Test
+    @DisplayName("GET /v1/usuarios/{id}/reservas-cancha retorna 200 con la lista de reservas")
+    void listarReservasCancha_retorna200() throws Exception {
+        com.fitzone.modulo.canchas.models.ReservaCancha reserva = com.fitzone.modulo.canchas.models.ReservaCancha.builder()
+                .idReservaCancha(10L)
+                .fechaHoraInicio(java.time.LocalDateTime.now().plusDays(1))
+                .fechaHoraFin(java.time.LocalDateTime.now().plusDays(1).plusHours(1))
+                .build();
+
+        when(canchaService.listarReservasPorUsuario(1L)).thenReturn(java.util.List.of(reserva));
+
+        mockMvc.perform(get("/v1/usuarios/1/reservas-cancha"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].idReservaCancha", is(10)));
+    }
+}

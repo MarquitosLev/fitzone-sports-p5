@@ -23,4 +23,12 @@ public interface AccesoRepository extends JpaRepository<Acceso, Long> {
 
     // Listar historial de accesos de un usuario ordenado por fecha de ingreso descendente
     List<Acceso> findByUsuario_IdUsuarioOrderByFechaHoraIngresoDesc(Long idUsuario);
+
+    // Buscar acceso por token QR para garantizar idempotencia y prevenir reutilización
+    Optional<Acceso> findByTokenQr(String tokenQr);
+
+    // Búsqueda con bloqueo pesimista para egresos atómicos
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT a FROM Acceso a WHERE a.idAcceso = :id")
+    Optional<Acceso> findByIdWithLock(@org.springframework.data.repository.query.Param("id") Long id);
 }

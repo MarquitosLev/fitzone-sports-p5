@@ -14,10 +14,14 @@ import com.fitzone.modulo.usuarios.repository.PlanRepository;
 import com.fitzone.modulo.usuarios.repository.UsuarioRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest
 class FzBackendApplicationTests {
+
+    @MockitoBean
+    private JpaMetamodelMappingContext jpaMappingContext;
 
     @MockitoBean
     private SedeRepository sedeRepository;
@@ -54,6 +58,9 @@ class FzBackendApplicationTests {
 
     @MockitoBean
     private TransaccionRepository transaccionRepository;
+
+    @MockitoBean
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @Test
     void contextLoads() {
