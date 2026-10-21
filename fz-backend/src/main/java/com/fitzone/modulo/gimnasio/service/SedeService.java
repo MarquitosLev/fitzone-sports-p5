@@ -46,7 +46,8 @@ public class SedeService {
 
     @Transactional
     public Sede actualizar(Long id, Sede datos) {
-        Sede existente = obtenerPorId(id);
+        Sede existente = sedeRepository.findByIdWithLock(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Sede", id));
 
         if (datos.getAforoMaximo() == null || datos.getAforoMaximo() <= 0) {
             throw new ReglaNegocioException("El aforo máximo debe ser mayor a 0");

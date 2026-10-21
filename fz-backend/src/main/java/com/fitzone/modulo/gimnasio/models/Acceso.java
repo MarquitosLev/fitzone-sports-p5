@@ -61,4 +61,7 @@ public class Acceso extends BaseEntity {
 
     @Column(name = "fecha_hora_egreso")
     private LocalDateTime fechaHoraEgreso;
+
+    @Column(name = "token_qr", length = 500)
+    private String tokenQr;
 }

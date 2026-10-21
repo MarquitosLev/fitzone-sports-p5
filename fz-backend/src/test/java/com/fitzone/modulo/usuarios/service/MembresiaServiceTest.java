@@ -250,7 +250,7 @@ class MembresiaServiceTest {
     @Test
     @DisplayName("cambiarEstado a SUSPENDIDO suspende membresía activa")
     void cambiarEstado_activoASuspendido_exito() {
-        when(membresiaRepository.findById(10L)).thenReturn(Optional.of(membresiaActiva));
+        when(membresiaRepository.findByIdWithLock(10L)).thenReturn(Optional.of(membresiaActiva));
         when(membresiaRepository.save(any(Membresia.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Membresia resultado = membresiaService.cambiarEstado(10L, EstadoMembresia.SUSPENDIDO);
@@ -261,7 +261,7 @@ class MembresiaServiceTest {
     @Test
     @DisplayName("cambiarEstado a CANCELADO setea fecha de cancelación")
     void cambiarEstado_activoACancelado_seteaFechaCancelacion() {
-        when(membresiaRepository.findById(10L)).thenReturn(Optional.of(membresiaActiva));
+        when(membresiaRepository.findByIdWithLock(10L)).thenReturn(Optional.of(membresiaActiva));
         when(membresiaRepository.save(any(Membresia.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Membresia resultado = membresiaService.cambiarEstado(10L, EstadoMembresia.CANCELADO);
@@ -275,7 +275,7 @@ class MembresiaServiceTest {
     void cambiarEstado_transicionInvalida_lanza422() {
         membresiaActiva.setEstado(EstadoMembresia.CANCELADO);
 
-        when(membresiaRepository.findById(10L)).thenReturn(Optional.of(membresiaActiva));
+        when(membresiaRepository.findByIdWithLock(10L)).thenReturn(Optional.of(membresiaActiva));
 
         assertThatThrownBy(() -> membresiaService.cambiarEstado(10L, EstadoMembresia.ACTIVO))
                 .isInstanceOf(ReglaNegocioException.class)
