@@ -12,6 +12,11 @@ docs/bruno/
 ├── environments/
 │   ├── local.bru                   # http://localhost:8080/api (Docker / Local)
 │   └── dev.bru                     # Backend desplegado en Render
+├── 00-admin/                       # Administración y diagnóstico interno (no público)
+│   ├── 01 - Consultar Base de Datos (SELECT).bru
+│   ├── 02 - Consultar Tablas del Sistema.bru
+│   ├── 03 - Error Root Key Invalida (401).bru
+│   └── 04 - Error Sentencia Prohibida DDL-DML (422).bru
 ├── 01-usuarios/                    # Módulo 1: Usuarios, Sedes y Auth (SCRUM-65)
 │   ├── 01 - Crear Socio.bru
 │   ├── 02 - Crear Externo (Invitado).bru
@@ -42,3 +47,4 @@ docs/bruno/
 3. **Variables Disponibles:**
    - `baseUrl`: Prefijo de la API (`http://localhost:8080/api`).
    - `idOperador`: ID del usuario que realiza la acción (por defecto `1` para el Gerente inicial).
+   - `rootKey`: Clave secreta administrativa para consultas de mantenimiento a la base de datos (por defecto `fitzone-local-root-key-2026` en local).

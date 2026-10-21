@@ -1,0 +1,21 @@
+meta {
+  name: 01 - Consultar Base de Datos (SELECT)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/admin/database/query
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{rootKey}}
+}
+
+body:json {
+  {
+    "query": "SELECT * from fz_usr_usuarios"
+  }
+}

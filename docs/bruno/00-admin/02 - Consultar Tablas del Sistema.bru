@@ -1,0 +1,22 @@
+meta {
+  name: 02 - Consultar Tablas del Sistema
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/admin/database/query
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{rootKey}}
+}
+
+body:json {
+  {
+    "query": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name ASC",
+    "maxFilas": 100
+  }
+}
