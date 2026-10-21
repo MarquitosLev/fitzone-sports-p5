@@ -25,5 +25,15 @@ export type {
   EstadoReservaCancha,
   CrearReservaPayload,
 } from './cancha';
-export type { EstadoPago, TipoOrigenTransaccion, TransaccionDTO, ComprobanteDTO } from './pago';
+export type {
+  EstadoPago,
+  TipoOrigenTransaccion,
+  TransaccionDTO,
+  ComprobanteDTO,
+  TipoComprobante,
+  TipoItemPago,
+  DetalleItemPago,
+  ProcesarPagoPayload,
+  ResultadoPagoDTO,
+} from './pago';
 
