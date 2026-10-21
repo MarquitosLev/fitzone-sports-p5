@@ -1,6 +1,8 @@
 package com.fitzone.modulo.usuarios.controller;
 
 import com.fitzone.core.domain.enums.TipoUsuario;
+import com.fitzone.modulo.canchas.models.ReservaCancha;
+import com.fitzone.modulo.canchas.service.CanchaService;
 import com.fitzone.modulo.usuarios.models.Membresia;
 import com.fitzone.modulo.usuarios.models.Usuario;
 import com.fitzone.modulo.usuarios.service.MembresiaService;
@@ -32,6 +34,7 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
     private final MembresiaService membresiaService;
+    private final CanchaService canchaService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -53,6 +56,12 @@ public class UsuarioController {
     @Operation(summary = "Obtiene la membresía vigente (activa o suspendida) de un usuario")
     public Membresia obtenerMembresiaVigente(@PathVariable @Positive Long id) {
         return membresiaService.obtenerVigentePorUsuario(id);
+    }
+
+    @GetMapping("/{id}/reservas-cancha")
+    @Operation(summary = "Obtiene el listado de reservas de cancha realizadas por el usuario")
+    public List<ReservaCancha> listarReservasCancha(@PathVariable @Positive Long id) {
+        return canchaService.listarReservasPorUsuario(id);
     }
 
     @GetMapping
