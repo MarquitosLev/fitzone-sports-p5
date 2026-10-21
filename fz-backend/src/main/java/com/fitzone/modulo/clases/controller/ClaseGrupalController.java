@@ -31,6 +31,7 @@ import java.util.List;
 public class ClaseGrupalController {
 
     private final ClaseGrupalService claseGrupalService;
+    private final com.fitzone.modulo.clases.service.ReservaClaseService reservaClaseService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -65,5 +66,20 @@ public class ClaseGrupalController {
     @Operation(summary = "Detalle de una clase grupal con cupo disponible calculado")
     public ClaseGrupal obtenerPorId(@PathVariable @Positive Long id) {
         return claseGrupalService.obtenerPorId(id);
+    }
+
+    @PostMapping("/{id}/reservas")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Reserva de cupo en una clase grupal para un socio")
+    public com.fitzone.modulo.clases.models.ReservaClase reservar(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody com.fitzone.modulo.clases.models.ReservaClaseRequest request) {
+        return reservaClaseService.reservar(id, request.getIdUsuario());
+    }
+
+    @GetMapping("/{id}/reservas")
+    @Operation(summary = "Lista de socios inscriptos con reserva confirmada en una clase grupal")
+    public List<com.fitzone.modulo.clases.models.ReservaClase> listarInscriptos(@PathVariable @Positive Long id) {
+        return reservaClaseService.listarInscriptos(id);
     }
 }

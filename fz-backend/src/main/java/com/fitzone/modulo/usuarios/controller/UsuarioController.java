@@ -32,6 +32,7 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
     private final MembresiaService membresiaService;
+    private final com.fitzone.modulo.clases.service.ReservaClaseService reservaClaseService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -53,6 +54,12 @@ public class UsuarioController {
     @Operation(summary = "Obtiene la membresía vigente (activa o suspendida) de un usuario")
     public Membresia obtenerMembresiaVigente(@PathVariable @Positive Long id) {
         return membresiaService.obtenerVigentePorUsuario(id);
+    }
+
+    @GetMapping("/{id}/reservas-clase")
+    @Operation(summary = "Obtiene las reservas de clases grupales de un socio")
+    public List<com.fitzone.modulo.clases.models.ReservaClase> obtenerMisReservas(@PathVariable @Positive Long id) {
+        return reservaClaseService.listarPorUsuario(id);
     }
 
     @GetMapping

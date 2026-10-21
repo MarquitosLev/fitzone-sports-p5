@@ -1,0 +1,17 @@
+meta {
+  name: 06 - Reservar Clase
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/v1/clases/1/reservas
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idUsuario": 1
+  }
+}

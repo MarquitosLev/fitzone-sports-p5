@@ -20,5 +20,9 @@ public enum CodigoError {
     /** 500: error no controlado. */
     ERROR_INTERNO,
     /** 502: un servicio externo (ej: Supabase Auth) falló o no respondió. */
-    SERVICIO_EXTERNO
+    SERVICIO_EXTERNO,
+    /** 409: la clase no dispone de cupo disponible. */
+    CLASE_COMPLETA,
+    /** 422: el socio no posee membresía ACTIVA y vigente. */
+    MEMBRESIA_INACTIVA
 }
