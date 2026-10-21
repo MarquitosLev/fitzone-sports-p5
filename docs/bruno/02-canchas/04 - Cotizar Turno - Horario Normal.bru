@@ -1,0 +1,16 @@
+meta {
+  name: 04 - Cotizar Turno - Horario Normal
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/v1/canchas/1/cotizacion?inicio=2026-10-25T10:00:00&fin=2026-10-25T12:00:00
+  body: none
+  auth: none
+}
+
+params:query {
+  inicio: 2026-10-25T10:00:00
+  fin: 2026-10-25T12:00:00
+}
