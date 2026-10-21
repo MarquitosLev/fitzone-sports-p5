@@ -18,4 +18,10 @@ public interface ReservaClaseRepository extends JpaRepository<ReservaClase, Long
 
     // Reservas de un usuario
     List<ReservaClase> findByUsuario_IdUsuario(Long idUsuario);
+
+    // Inscriptos de una clase por estado (ej: CONFIRMADA)
+    List<ReservaClase> findByClase_IdClaseAndEstado(Long idClase, EstadoReservaClase estado);
+
+    // Valida si un socio ya posee una reserva en un estado específico
+    boolean existsByClase_IdClaseAndUsuario_IdUsuarioAndEstado(Long idClase, Long idUsuario, EstadoReservaClase estado);
 }
