@@ -125,7 +125,7 @@ public class MembresiaService {
 
     @Transactional
     public Membresia cambiarEstado(Long idMembresia, EstadoMembresia nuevoEstado) {
-        Membresia membresia = membresiaRepository.findById(idMembresia)
+        Membresia membresia = membresiaRepository.findByIdWithLock(idMembresia)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Membresia", idMembresia));
 
         EstadoMembresia actual = membresia.getEstado();

@@ -1,6 +1,8 @@
 package com.fitzone.modulo.usuarios.controller;
 
 import com.fitzone.core.domain.enums.TipoUsuario;
+import com.fitzone.modulo.gimnasio.models.QrTokenResponse;
+import com.fitzone.modulo.gimnasio.service.AccesoService;
 import com.fitzone.modulo.usuarios.models.Membresia;
 import com.fitzone.modulo.usuarios.models.Usuario;
 import com.fitzone.modulo.usuarios.service.MembresiaService;
@@ -32,6 +34,7 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
     private final MembresiaService membresiaService;
+    private final AccesoService accesoService;
     private final com.fitzone.modulo.clases.service.ReservaClaseService reservaClaseService;
 
     @PostMapping
@@ -54,6 +57,12 @@ public class UsuarioController {
     @Operation(summary = "Obtiene la membresía vigente (activa o suspendida) de un usuario")
     public Membresia obtenerMembresiaVigente(@PathVariable @Positive Long id) {
         return membresiaService.obtenerVigentePorUsuario(id);
+    }
+
+    @GetMapping("/{id}/qr")
+    @Operation(summary = "Genera y obtiene el token QR dinámico vigente de un socio con los segundos restantes")
+    public QrTokenResponse obtenerQr(@PathVariable @Positive Long id) {
+        return accesoService.generarQr(id);
     }
 
     @GetMapping("/{id}/reservas-clase")
