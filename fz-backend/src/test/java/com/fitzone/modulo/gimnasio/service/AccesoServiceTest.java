@@ -10,6 +10,7 @@ import com.fitzone.modulo.gimnasio.models.QrTokenResponse;
 import com.fitzone.modulo.gimnasio.models.Sede;
 import com.fitzone.modulo.gimnasio.repository.AccesoRepository;
 import com.fitzone.modulo.gimnasio.repository.SedeRepository;
+import com.fitzone.modulo.usuarios.models.Membresia;
 import com.fitzone.modulo.usuarios.models.Usuario;
 import com.fitzone.modulo.usuarios.repository.MembresiaRepository;
 import com.fitzone.modulo.usuarios.repository.UsuarioRepository;
@@ -23,7 +24,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,6 +58,7 @@ class AccesoServiceTest {
     private Usuario socio;
     private Usuario externo;
     private Sede sedeCentral;
+    private Membresia membresiaActiva;
 
     @BeforeEach
     void setUp() {
@@ -82,6 +83,14 @@ class AccesoServiceTest {
                 .nombre("Sede Central")
                 .aforoMaximo(50)
                 .build();
+
+        membresiaActiva = Membresia.builder()
+                .idMembresia(1L)
+                .usuario(socio)
+                .estado(EstadoMembresia.ACTIVO)
+                .fechaInicio(LocalDate.now().minusDays(5))
+                .fechaVencimiento(LocalDate.now().plusMonths(1))
+                .build();
     }
 
     @Test
@@ -93,8 +102,8 @@ class AccesoServiceTest {
                 .build();
 
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(socio));
-        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
-                eq(1L), eq(List.of(EstadoMembresia.ACTIVO)), any(LocalDate.class)))
+        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoAndFechaInicioLessThanEqualAndFechaVencimientoGreaterThanEqual(
+                eq(1L), eq(EstadoMembresia.ACTIVO), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(true);
         when(qrTokenService.generarToken(1L)).thenReturn(tokenMock);
 
@@ -118,8 +127,8 @@ class AccesoServiceTest {
     @DisplayName("generarQr para socio sin membresía activa lanza MEMBRESIA_INACTIVA")
     void generarQr_socioSinMembresia_lanzaMembresiaInactiva() {
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(socio));
-        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
-                eq(1L), eq(List.of(EstadoMembresia.ACTIVO)), any(LocalDate.class)))
+        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoAndFechaInicioLessThanEqualAndFechaVencimientoGreaterThanEqual(
+                eq(1L), eq(EstadoMembresia.ACTIVO), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(false);
 
         assertThatThrownBy(() -> accesoService.generarQr(1L))
@@ -131,12 +140,12 @@ class AccesoServiceTest {
     @DisplayName("registrarIngreso con condiciones válidas registra y guarda el acceso")
     void registrarIngreso_valido_guardaAcceso() {
         when(qrTokenService.validarYObtenerUsuario("token-ok")).thenReturn(1L);
-        when(sedeRepository.findById(1L)).thenReturn(Optional.of(sedeCentral));
+        when(accesoRepository.findByTokenQr("token-ok")).thenReturn(Optional.empty());
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(socio));
-        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
-                eq(1L), eq(List.of(EstadoMembresia.ACTIVO)), any(LocalDate.class)))
-                .thenReturn(true);
+        when(membresiaRepository.findMembresiaActivaParaIngreso(eq(1L), eq(EstadoMembresia.ACTIVO), any(LocalDate.class)))
+                .thenReturn(Optional.of(membresiaActiva));
         when(accesoRepository.findByUsuario_IdUsuarioAndFechaHoraEgresoIsNull(1L)).thenReturn(Optional.empty());
+        when(sedeRepository.findByIdWithLock(1L)).thenReturn(Optional.of(sedeCentral));
         when(accesoRepository.countBySede_IdSedeAndFechaHoraEgresoIsNull(1L)).thenReturn(10L);
         when(accesoRepository.save(any(Acceso.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -144,19 +153,63 @@ class AccesoServiceTest {
 
         assertThat(acceso.getUsuario()).isEqualTo(socio);
         assertThat(acceso.getSede()).isEqualTo(sedeCentral);
+        assertThat(acceso.getTokenQr()).isEqualTo("token-ok");
         assertThat(acceso.getFechaHoraIngreso()).isNotNull();
         assertThat(acceso.getFechaHoraEgreso()).isNull();
+        verify(accesoRepository).save(any(Acceso.class));
+    }
+
+    @Test
+    @DisplayName("registrarIngreso idempotente devuelve el acceso abierto existente ante reintento con mismo QR")
+    void registrarIngreso_reintentoMismoTokenAbierto_esIdempotente() {
+        Acceso accesoPrevio = Acceso.builder()
+                .idAcceso(100L)
+                .usuario(socio)
+                .sede(sedeCentral)
+                .tokenQr("token-ok")
+                .fechaHoraIngreso(LocalDateTime.now().minusMinutes(2))
+                .fechaHoraEgreso(null)
+                .build();
+
+        when(qrTokenService.validarYObtenerUsuario("token-ok")).thenReturn(1L);
+        when(accesoRepository.findByTokenQr("token-ok")).thenReturn(Optional.of(accesoPrevio));
+
+        Acceso resultado = accesoService.registrarIngreso("token-ok", 1L);
+
+        assertThat(resultado.getIdAcceso()).isEqualTo(100L);
+        verify(accesoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("registrarIngreso rechaza token QR reutilizado cuando el acceso anterior ya egresó")
+    void registrarIngreso_reintentoTokenCerrado_lanzaQrVencido() {
+        Acceso accesoCerrado = Acceso.builder()
+                .idAcceso(100L)
+                .usuario(socio)
+                .sede(sedeCentral)
+                .tokenQr("token-ok")
+                .fechaHoraIngreso(LocalDateTime.now().minusMinutes(30))
+                .fechaHoraEgreso(LocalDateTime.now().minusMinutes(5))
+                .build();
+
+        when(qrTokenService.validarYObtenerUsuario("token-ok")).thenReturn(1L);
+        when(accesoRepository.findByTokenQr("token-ok")).thenReturn(Optional.of(accesoCerrado));
+
+        assertThatThrownBy(() -> accesoService.registrarIngreso("token-ok", 1L))
+                .isInstanceOf(AccesoException.class)
+                .satisfies(ex -> assertThat(((AccesoException) ex).getCodigo()).isEqualTo(CodigoError.QR_VENCIDO));
+
+        verify(accesoRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("registrarIngreso cuando socio no tiene membresía activa lanza MEMBRESIA_INACTIVA")
     void registrarIngreso_membresiaInactiva_lanzaMembresiaInactiva() {
         when(qrTokenService.validarYObtenerUsuario("token-ok")).thenReturn(1L);
-        when(sedeRepository.findById(1L)).thenReturn(Optional.of(sedeCentral));
+        when(accesoRepository.findByTokenQr("token-ok")).thenReturn(Optional.empty());
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(socio));
-        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
-                eq(1L), eq(List.of(EstadoMembresia.ACTIVO)), any(LocalDate.class)))
-                .thenReturn(false);
+        when(membresiaRepository.findMembresiaActivaParaIngreso(eq(1L), eq(EstadoMembresia.ACTIVO), any(LocalDate.class)))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> accesoService.registrarIngreso("token-ok", 1L))
                 .isInstanceOf(AccesoException.class)
@@ -171,11 +224,10 @@ class AccesoServiceTest {
         Acceso accesoAbierto = Acceso.builder().idAcceso(5L).usuario(socio).build();
 
         when(qrTokenService.validarYObtenerUsuario("token-ok")).thenReturn(1L);
-        when(sedeRepository.findById(1L)).thenReturn(Optional.of(sedeCentral));
+        when(accesoRepository.findByTokenQr("token-ok")).thenReturn(Optional.empty());
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(socio));
-        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
-                eq(1L), eq(List.of(EstadoMembresia.ACTIVO)), any(LocalDate.class)))
-                .thenReturn(true);
+        when(membresiaRepository.findMembresiaActivaParaIngreso(eq(1L), eq(EstadoMembresia.ACTIVO), any(LocalDate.class)))
+                .thenReturn(Optional.of(membresiaActiva));
         when(accesoRepository.findByUsuario_IdUsuarioAndFechaHoraEgresoIsNull(1L)).thenReturn(Optional.of(accesoAbierto));
 
         assertThatThrownBy(() -> accesoService.registrarIngreso("token-ok", 1L))
@@ -189,13 +241,13 @@ class AccesoServiceTest {
     @DisplayName("registrarIngreso cuando la sede llegó a su aforo máximo lanza AFORO_COMPLETO (409)")
     void registrarIngreso_aforoCompleto_lanzaAforoCompleto() {
         when(qrTokenService.validarYObtenerUsuario("token-ok")).thenReturn(1L);
-        when(sedeRepository.findById(1L)).thenReturn(Optional.of(sedeCentral));
+        when(accesoRepository.findByTokenQr("token-ok")).thenReturn(Optional.empty());
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(socio));
-        when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
-                eq(1L), eq(List.of(EstadoMembresia.ACTIVO)), any(LocalDate.class)))
-                .thenReturn(true);
+        when(membresiaRepository.findMembresiaActivaParaIngreso(eq(1L), eq(EstadoMembresia.ACTIVO), any(LocalDate.class)))
+                .thenReturn(Optional.of(membresiaActiva));
         when(accesoRepository.findByUsuario_IdUsuarioAndFechaHoraEgresoIsNull(1L)).thenReturn(Optional.empty());
-        when(accesoRepository.countBySede_IdSedeAndFechaHoraEgresoIsNull(1L)).thenReturn(50L); // Capacidad max = 50
+        when(sedeRepository.findByIdWithLock(1L)).thenReturn(Optional.of(sedeCentral));
+        when(accesoRepository.countBySede_IdSedeAndFechaHoraEgresoIsNull(1L)).thenReturn(50L);
 
         assertThatThrownBy(() -> accesoService.registrarIngreso("token-ok", 1L))
                 .isInstanceOf(AccesoException.class)
@@ -213,7 +265,7 @@ class AccesoServiceTest {
                 .fechaHoraEgreso(null)
                 .build();
 
-        when(accesoRepository.findById(10L)).thenReturn(Optional.of(accesoAbierto));
+        when(accesoRepository.findByIdWithLock(10L)).thenReturn(Optional.of(accesoAbierto));
         when(accesoRepository.save(any(Acceso.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Acceso egresado = accesoService.registrarEgreso(10L);
@@ -230,7 +282,7 @@ class AccesoServiceTest {
                 .fechaHoraEgreso(LocalDateTime.now().minusHours(1))
                 .build();
 
-        when(accesoRepository.findById(10L)).thenReturn(Optional.of(accesoCerrado));
+        when(accesoRepository.findByIdWithLock(10L)).thenReturn(Optional.of(accesoCerrado));
 
         assertThatThrownBy(() -> accesoService.registrarEgreso(10L))
                 .isInstanceOf(ReglaNegocioException.class)

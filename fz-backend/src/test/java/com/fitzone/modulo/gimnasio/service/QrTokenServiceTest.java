@@ -88,10 +88,46 @@ class QrTokenServiceTest {
     }
 
     @Test
+    @DisplayName("validarYObtenerUsuario acepta token de la ventana siguiente (reloj del emisor adelantado)")
+    void validarYObtenerUsuario_ventanaSiguiente_exito() {
+        // Emisor genera token 60 segundos en el futuro (reloj adelantado)
+        Instant tMas60 = T0.plusSeconds(60);
+        QrTokenService serviceEmisorAdelantado = new QrTokenService(SECRET_KEY, Clock.fixed(tMas60, ZoneId.of("UTC")));
+        QrTokenResponse responseAdelantado = serviceEmisorAdelantado.generarToken(15L);
+
+        // Validador con reloj T0 debe aceptarlo dentro del margen de skew (+1 ventana)
+        Long idUsuario = qrTokenService.validarYObtenerUsuario(responseAdelantado.getTokenQr());
+
+        assertThat(idUsuario).isEqualTo(15L);
+    }
+
+    @Test
     @DisplayName("validarYObtenerUsuario rechaza token nulo o vacío con QR_VENCIDO")
     void validarYObtenerUsuario_vacio_lanzaQrVencido() {
         assertThatThrownBy(() -> qrTokenService.validarYObtenerUsuario(""))
                 .isInstanceOf(AccesoException.class)
                 .satisfies(ex -> assertThat(((AccesoException) ex).getCodigo()).isEqualTo(CodigoError.QR_VENCIDO));
+    }
+
+    @Test
+    @DisplayName("validarYObtenerUsuario rechaza token mayor a 256 caracteres antes de decodificar")
+    void validarYObtenerUsuario_tokenDemasiadoLargo_lanzaQrVencido() {
+        String tokenGigante = "A".repeat(300);
+
+        assertThatThrownBy(() -> qrTokenService.validarYObtenerUsuario(tokenGigante))
+                .isInstanceOf(AccesoException.class)
+                .satisfies(ex -> assertThat(((AccesoException) ex).getCodigo()).isEqualTo(CodigoError.QR_VENCIDO));
+    }
+
+    @Test
+    @DisplayName("constructor rechaza secreto nulo o en blanco con IllegalArgumentException")
+    void constructor_secretoVacio_lanzaIllegalArgumentException() {
+        assertThatThrownBy(() -> new QrTokenService("", Clock.systemUTC()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("fitzone.qr.secret");
+
+        assertThatThrownBy(() -> new QrTokenService("   ", Clock.systemUTC()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("fitzone.qr.secret");
     }
 }

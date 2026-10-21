@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -44,9 +44,10 @@ public class AccesoService {
             throw new ReglaNegocioException("Solo los socios pueden generar un código QR de acceso");
         }
 
-        // Verifica membresía activa y no vencida
-        boolean tieneMembresiaActiva = membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
-                idUsuario, List.of(EstadoMembresia.ACTIVO), LocalDate.now());
+        LocalDate hoy = LocalDate.now();
+        boolean tieneMembresiaActiva = membresiaRepository
+                .existsByUsuario_IdUsuarioAndEstadoAndFechaInicioLessThanEqualAndFechaVencimientoGreaterThanEqual(
+                        idUsuario, EstadoMembresia.ACTIVO, hoy, hoy);
         if (!tieneMembresiaActiva) {
             throw new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.MEMBRESIA_INACTIVA,
                     "El socio no posee una membresía activa y vigente");
@@ -57,30 +58,37 @@ public class AccesoService {
 
     @Transactional
     public Acceso registrarIngreso(String tokenQr, Long idSede) {
-        // Valida token HMAC y ventana temporal (lanza QR_VENCIDO si expiró o es inválido)
         Long idUsuario = qrTokenService.validarYObtenerUsuario(tokenQr);
 
-        Sede sede = sedeRepository.findById(idSede)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Sede", idSede));
+        // Control de un solo uso e idempotencia ante reintentos de red
+        Optional<Acceso> accesoExistente = accesoRepository.findByTokenQr(tokenQr);
+        if (accesoExistente.isPresent()) {
+            Acceso previo = accesoExistente.get();
+            if (previo.getFechaHoraEgreso() == null) {
+                return previo;
+            }
+            throw new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.QR_VENCIDO,
+                    "El código QR ya fue utilizado");
+        }
 
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario", idUsuario));
 
-        // Valida que la membresía esté activa y no vencida
-        boolean tieneMembresiaActiva = membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
-                idUsuario, List.of(EstadoMembresia.ACTIVO), LocalDate.now());
-        if (!tieneMembresiaActiva) {
-            throw new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.MEMBRESIA_INACTIVA,
-                    "El socio no posee una membresía activa y vigente para ingresar");
-        }
+        LocalDate hoy = LocalDate.now();
+        // Bloqueo pesimista sobre la membresía para coordinar con cancelaciones y sincronizar ingresos del socio
+        membresiaRepository.findMembresiaActivaParaIngreso(idUsuario, EstadoMembresia.ACTIVO, hoy)
+                .orElseThrow(() -> new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.MEMBRESIA_INACTIVA,
+                        "El socio no posee una membresía activa y vigente para ingresar"));
 
-        // Acceso único simultáneo: no puede ingresar si ya tiene un acceso abierto
         if (accesoRepository.findByUsuario_IdUsuarioAndFechaHoraEgresoIsNull(idUsuario).isPresent()) {
             throw new AccesoException(HttpStatus.CONFLICT, CodigoError.YA_INGRESADO,
                     "El socio ya cuenta con un ingreso activo sin egreso registrado");
         }
 
-        // Control de aforo en tiempo real: verificar que la sede no esté completa
+        // Bloqueo pesimista sobre la sede para coordinar cálculo de aforo con cambios concurrentes de capacidad
+        Sede sede = sedeRepository.findByIdWithLock(idSede)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Sede", idSede));
+
         long aforoActual = accesoRepository.countBySede_IdSedeAndFechaHoraEgresoIsNull(idSede);
         if (aforoActual >= sede.getAforoMaximo()) {
             throw new AccesoException(HttpStatus.CONFLICT, CodigoError.AFORO_COMPLETO,
@@ -90,6 +98,7 @@ public class AccesoService {
         Acceso nuevoAcceso = Acceso.builder()
                 .usuario(usuario)
                 .sede(sede)
+                .tokenQr(tokenQr)
                 .fechaHoraIngreso(LocalDateTime.now())
                 .fechaHoraEgreso(null)
                 .build();
@@ -99,7 +108,8 @@ public class AccesoService {
 
     @Transactional
     public Acceso registrarEgreso(Long idAcceso) {
-        Acceso acceso = accesoRepository.findById(idAcceso)
+        // Bloqueo pesimista para hacer atómica la verificación de egreso y su registro
+        Acceso acceso = accesoRepository.findByIdWithLock(idAcceso)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Acceso", idAcceso));
 
         if (acceso.getFechaHoraEgreso() != null) {

@@ -4,6 +4,7 @@ import com.fitzone.core.exception.AccesoException;
 import com.fitzone.core.exception.CodigoError;
 import com.fitzone.modulo.gimnasio.models.QrTokenResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -16,20 +17,26 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.UUID;
 
 @Slf4j
 @Service
 public class QrTokenService {
 
+    private static final int MAX_TOKEN_LENGTH = 256;
+
     private final String secretKey;
     private final Clock clock;
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public QrTokenService(@Value("${fitzone.qr.secret:fitzone-sports-qr-secret-key-32bytes-secure!}") String secretKey) {
         this(secretKey, Clock.systemUTC());
     }
 
     public QrTokenService(String secretKey, Clock clock) {
+        if (secretKey == null || secretKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("La clave secreta para QR (fitzone.qr.secret) no puede estar vacía");
+        }
         this.secretKey = secretKey;
         this.clock = clock;
     }
@@ -40,7 +47,8 @@ public class QrTokenService {
         long ventana = epochSecond / 60;
         long segundosRestantes = 60 - (epochSecond % 60);
 
-        String data = idUsuario + ":" + ventana;
+        String nonce = UUID.randomUUID().toString().replace("-", "");
+        String data = idUsuario + ":" + ventana + ":" + nonce;
         String hmac = calcularHmac(data);
         String rawToken = data + ":" + hmac;
         String tokenQr = Base64.getUrlEncoder().withoutPadding().encodeToString(rawToken.getBytes(StandardCharsets.UTF_8));
@@ -52,9 +60,9 @@ public class QrTokenService {
     }
 
     public Long validarYObtenerUsuario(String tokenQr) {
-        if (tokenQr == null || tokenQr.trim().isEmpty()) {
+        if (tokenQr == null || tokenQr.trim().isEmpty() || tokenQr.length() > MAX_TOKEN_LENGTH) {
             throw new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.QR_VENCIDO,
-                    "El token QR es obligatorio");
+                    "El token QR es obligatorio y no debe superar " + MAX_TOKEN_LENGTH + " caracteres");
         }
 
         String rawToken;
@@ -66,14 +74,15 @@ public class QrTokenService {
         }
 
         String[] parts = rawToken.split(":");
-        if (parts.length != 3) {
+        if (parts.length != 4) {
             throw new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.QR_VENCIDO,
                     "Estructura del token QR inválida");
         }
 
         Long idUsuario;
         long ventanaToken;
-        String hmacRecibido = parts[2];
+        String nonce = parts[2];
+        String hmacRecibido = parts[3];
         try {
             idUsuario = Long.parseLong(parts[0]);
             ventanaToken = Long.parseLong(parts[1]);
@@ -82,18 +91,17 @@ public class QrTokenService {
                     "Valores del token QR mal formados");
         }
 
-        // Ventana actual y anterior (tolerancia de reloj de 60s)
+        // Tolerancia de reloj en ambas direcciones (ventana anterior, actual y siguiente)
         long epochSecond = clock.instant().getEpochSecond();
         long ventanaActual = epochSecond / 60;
-        long ventanaAnterior = ventanaActual - 1;
 
-        if (ventanaToken != ventanaActual && ventanaToken != ventanaAnterior) {
+        if (ventanaToken < ventanaActual - 1 || ventanaToken > ventanaActual + 1) {
             throw new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.QR_VENCIDO,
                     "El código QR ha expirado");
         }
 
         // Recalcular HMAC para validar autenticidad
-        String expectedHmac = calcularHmac(idUsuario + ":" + ventanaToken);
+        String expectedHmac = calcularHmac(idUsuario + ":" + ventanaToken + ":" + nonce);
         if (!MessageDigest.isEqual(expectedHmac.getBytes(StandardCharsets.UTF_8), hmacRecibido.getBytes(StandardCharsets.UTF_8))) {
             throw new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.QR_VENCIDO,
                     "Firma del código QR inválida");
@@ -101,7 +109,6 @@ public class QrTokenService {
 
         return idUsuario;
     }
-
 
     private String calcularHmac(String data) {
         try {
