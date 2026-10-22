@@ -66,6 +66,9 @@ class PagoServiceTest {
     @Mock
     private PasarelaPago pasarelaPago;
 
+    @Mock
+    private ComprobanteService comprobanteService;
+
     @InjectMocks
     private PagoService pagoService;
 
@@ -111,6 +114,7 @@ class PagoServiceTest {
         assertThat(resultado.getFechaHoraConfirmacion()).isNotNull();
         verify(membresiaService, never()).renovar(any());
         verify(transaccionRepository).save(any(Transaccion.class));
+        verify(comprobanteService).generarComprobante(any(Transaccion.class));
     }
 
     @Test
@@ -139,6 +143,7 @@ class PagoServiceTest {
         assertThat(resultado.getTokenTransaccionPasarela()).isEqualTo("tok_rechazo_999");
         assertThat(resultado.getFechaHoraConfirmacion()).isNull();
         verify(transaccionRepository).save(any(Transaccion.class));
+        verify(comprobanteService, never()).generarComprobante(any());
     }
 
     @Test
@@ -188,6 +193,7 @@ class PagoServiceTest {
         assertThat(resultado.getMonto()).isEqualByComparingTo("30000.00");
         verify(membresiaService).renovar(20L);
         verify(transaccionRepository).save(any(Transaccion.class));
+        verify(comprobanteService).generarComprobante(any(Transaccion.class));
     }
 
     @Test

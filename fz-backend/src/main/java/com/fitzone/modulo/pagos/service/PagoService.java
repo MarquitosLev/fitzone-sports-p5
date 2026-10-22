@@ -41,6 +41,7 @@ public class PagoService {
     private final ReservaCanchaRepository reservaCanchaRepository;
     private final MembresiaService membresiaService;
     private final PasarelaPago pasarelaPago;
+    private final ComprobanteService comprobanteService;
 
     @Transactional
     public Transaccion procesarPago(PagoRequest request) {
@@ -132,7 +133,13 @@ public class PagoService {
                 .fechaHoraConfirmacion(fechaConfirmacion)
                 .build();
 
-        return transaccionRepository.save(transaccion);
+        Transaccion guardada = transaccionRepository.save(transaccion);
+
+        if (estadoFinal == EstadoPago.CONFIRMADO) {
+            comprobanteService.generarComprobante(guardada);
+        }
+
+        return guardada;
     }
 
     @Transactional(readOnly = true)

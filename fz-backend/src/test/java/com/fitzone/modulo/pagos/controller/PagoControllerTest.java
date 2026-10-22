@@ -45,6 +45,9 @@ class PagoControllerTest {
     @MockitoBean
     private PagoService pagoService;
 
+    @MockitoBean
+    private com.fitzone.modulo.pagos.service.ComprobanteService comprobanteService;
+
     @Test
     @DisplayName("POST /v1/pagos retorna 201 Created cuando los datos son válidos")
     void procesarPago_retorna201() throws Exception {
@@ -174,6 +177,33 @@ class PagoControllerTest {
                 .thenThrow(new RecursoNoEncontradoException("Transacción", 999L));
 
         mockMvc.perform(get("/v1/pagos/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.codigo", is("RECURSO_NO_ENCONTRADO")));
+    }
+
+    @Test
+    @DisplayName("GET /v1/pagos/{id}/comprobante responde 200 con los datos del comprobante")
+    void obtenerComprobantePorPago_retorna200() throws Exception {
+        com.fitzone.modulo.pagos.models.Comprobante comprobante = com.fitzone.modulo.pagos.models.Comprobante.builder()
+                .idComprobante(1L)
+                .numeroFactura("0001-00000001")
+                .build();
+
+        when(comprobanteService.obtenerPorIdTransaccion(50L)).thenReturn(comprobante);
+
+        mockMvc.perform(get("/v1/pagos/50/comprobante"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.idComprobante", is(1)))
+                .andExpect(jsonPath("$.numeroFactura", is("0001-00000001")));
+    }
+
+    @Test
+    @DisplayName("GET /v1/pagos/{id}/comprobante de pago inexistente responde 404")
+    void obtenerComprobantePorPago_inexistente_responde404() throws Exception {
+        when(comprobanteService.obtenerPorIdTransaccion(999L))
+                .thenThrow(new RecursoNoEncontradoException("Comprobante para la transacción", 999L));
+
+        mockMvc.perform(get("/v1/pagos/999/comprobante"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.codigo", is("RECURSO_NO_ENCONTRADO")));
     }

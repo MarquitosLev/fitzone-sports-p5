@@ -1,7 +1,9 @@
 package com.fitzone.modulo.pagos.controller;
 
+import com.fitzone.modulo.pagos.models.Comprobante;
 import com.fitzone.modulo.pagos.models.PagoRequest;
 import com.fitzone.modulo.pagos.models.Transaccion;
+import com.fitzone.modulo.pagos.service.ComprobanteService;
 import com.fitzone.modulo.pagos.service.PagoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PagoController {
 
     private final PagoService pagoService;
+    private final ComprobanteService comprobanteService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -36,5 +39,11 @@ public class PagoController {
     @Operation(summary = "Consulta del estado y detalle de una transacción por su ID")
     public Transaccion obtenerPorId(@PathVariable @Positive Long id) {
         return pagoService.obtenerPorId(id);
+    }
+
+    @GetMapping("/{id}/comprobante")
+    @Operation(summary = "Obtiene los datos del comprobante emitido para una transacción confirmada")
+    public Comprobante obtenerComprobantePorPago(@PathVariable @Positive Long id) {
+        return comprobanteService.obtenerPorIdTransaccion(id);
     }
 }
