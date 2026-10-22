@@ -17,4 +17,7 @@ public interface ListaEsperaRepository extends JpaRepository<ListaEspera, Long> 
 
     // Permite al servicio verificar rápidamente si ya está encolado antes de agregarlo
     boolean existsByClase_IdClaseAndUsuario_IdUsuario(Long idClase, Long idUsuario);
+
+    // Encuentra la inscripción en lista de espera de un usuario para una clase específica
+    java.util.Optional<ListaEspera> findByClase_IdClaseAndUsuario_IdUsuario(Long idClase, Long idUsuario);
 }

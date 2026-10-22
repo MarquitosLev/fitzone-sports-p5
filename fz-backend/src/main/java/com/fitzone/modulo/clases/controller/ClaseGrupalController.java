@@ -32,6 +32,7 @@ public class ClaseGrupalController {
 
     private final ClaseGrupalService claseGrupalService;
     private final com.fitzone.modulo.clases.service.ReservaClaseService reservaClaseService;
+    private final com.fitzone.modulo.clases.service.ListaEsperaService listaEsperaService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -81,5 +82,20 @@ public class ClaseGrupalController {
     @Operation(summary = "Lista de socios inscriptos con reserva confirmada en una clase grupal")
     public List<com.fitzone.modulo.clases.models.ReservaClase> listarInscriptos(@PathVariable @Positive Long id) {
         return reservaClaseService.listarInscriptos(id);
+    }
+
+    @PostMapping("/{id}/lista-espera")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Anotarse en la lista de espera de una clase completa")
+    public com.fitzone.modulo.clases.models.ListaEspera anotarseEnListaEspera(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody com.fitzone.modulo.clases.models.ReservaClaseRequest request) {
+        return listaEsperaService.anotarse(id, request.getIdUsuario());
+    }
+
+    @GetMapping("/{id}/lista-espera")
+    @Operation(summary = "Obtiene la cola de espera ordenada por turno (FIFO) de una clase grupal")
+    public List<com.fitzone.modulo.clases.models.ListaEspera> listarListaEspera(@PathVariable @Positive Long id) {
+        return listaEsperaService.listarPorClase(id);
     }
 }
