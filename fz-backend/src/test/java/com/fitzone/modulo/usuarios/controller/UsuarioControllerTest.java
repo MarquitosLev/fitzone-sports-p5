@@ -57,6 +57,9 @@ class UsuarioControllerTest {
     @MockitoBean
     private com.fitzone.modulo.canchas.service.CanchaService canchaService;
 
+    @MockitoBean
+    private com.fitzone.modulo.pagos.service.PagoService pagoService;
+
 
     @Test
     @DisplayName("POST /v1/usuarios responde 201 Created cuando los datos son válidos")
@@ -304,5 +307,24 @@ class UsuarioControllerTest {
         mockMvc.perform(get("/v1/usuarios/1/reservas-cancha"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].idReservaCancha", is(10)));
+    }
+
+    @Test
+    @DisplayName("GET /v1/usuarios/{id}/pagos retorna 200 con la lista de transacciones del usuario")
+    void listarPagos_retorna200() throws Exception {
+        com.fitzone.modulo.pagos.models.Transaccion transaccion = com.fitzone.modulo.pagos.models.Transaccion.builder()
+                .idTransaccion(100L)
+                .concepto(com.fitzone.core.domain.enums.TipoOrigenTransaccion.MEMBRESIA)
+                .monto(new java.math.BigDecimal("25000.00"))
+                .estadoPago(com.fitzone.core.domain.enums.EstadoPago.CONFIRMADO)
+                .build();
+
+        when(pagoService.listarPorUsuario(1L)).thenReturn(java.util.List.of(transaccion));
+
+        mockMvc.perform(get("/v1/usuarios/1/pagos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].idTransaccion", is(100)))
+                .andExpect(jsonPath("$[0].concepto", is("MEMBRESIA")))
+                .andExpect(jsonPath("$[0].estadoPago", is("CONFIRMADO")));
     }
 }

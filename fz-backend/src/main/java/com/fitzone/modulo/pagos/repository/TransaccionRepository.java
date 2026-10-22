@@ -26,4 +26,10 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
 
     // Buscar transaccion por token de la pasarela de pagos
     Optional<Transaccion> findByTokenTransaccionPasarela(String tokenTransaccionPasarela);
+
+    // Verificar si una reserva de cancha ya fue pagada con éxito
+    boolean existsByReservaCancha_IdReservaCanchaAndEstadoPago(Long idReservaCancha, EstadoPago estadoPago);
+
+    // Historial cronológico de transacciones de un usuario
+    List<Transaccion> findByUsuario_IdUsuarioOrderByFechaHoraCreacionDesc(Long idUsuario);
 }
