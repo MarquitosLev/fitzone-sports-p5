@@ -42,8 +42,9 @@ public class DataInitializer implements CommandLineRunner {
             log.info("[DEV SEED] Creada Sede inicial (id: {})", sede.getIdSede());
         }
 
-        if (usuarioRepository.count() == 0) {
-            Long idSede = sedeRepository.findAll().getFirst().getIdSede();
+        Long idSede = sedeRepository.findAll().getFirst().getIdSede();
+
+        if (usuarioRepository.findByEmail("gerente@fitzone.com").isEmpty()) {
             Usuario gerente = Usuario.builder()
                     .dni("00000001")
                     .nombre("Admin")
@@ -55,7 +56,52 @@ public class DataInitializer implements CommandLineRunner {
                     .authId(UUID.randomUUID())
                     .build();
             usuarioRepository.save(gerente);
-            log.info("[DEV SEED] Creado Gerente operador inicial para pruebas (id: 1, idOperador: 1)");
+            log.info("[DEV SEED] Creado Gerente inicial (gerente@fitzone.com)");
+        }
+
+        if (usuarioRepository.findByEmail("recepcionista@fitzone.com").isEmpty()) {
+            Usuario recepcionista = Usuario.builder()
+                    .dni("00000002")
+                    .nombre("Lucía")
+                    .apellido("Recepcionista")
+                    .email("recepcionista@fitzone.com")
+                    .telefono("+5491100000001")
+                    .tipoUsuario(TipoUsuario.RECEPCIONISTA)
+                    .idSede(idSede)
+                    .authId(UUID.randomUUID())
+                    .build();
+            usuarioRepository.save(recepcionista);
+            log.info("[DEV SEED] Creada Recepcionista inicial (recepcionista@fitzone.com)");
+        }
+
+        if (usuarioRepository.findByEmail("socio@fitzone.com").isEmpty()) {
+            Usuario socio = Usuario.builder()
+                    .dni("00000003")
+                    .nombre("Martín")
+                    .apellido("Socio")
+                    .email("socio@fitzone.com")
+                    .telefono("+5491100000002")
+                    .tipoUsuario(TipoUsuario.SOCIO)
+                    .idSede(null)
+                    .authId(UUID.randomUUID())
+                    .build();
+            usuarioRepository.save(socio);
+            log.info("[DEV SEED] Creado Socio inicial (socio@fitzone.com)");
+        }
+
+        if (usuarioRepository.findByEmail("externo@fitzone.com").isEmpty()) {
+            Usuario externo = Usuario.builder()
+                    .dni("00000004")
+                    .nombre("Laura")
+                    .apellido("Externo")
+                    .email("externo@fitzone.com")
+                    .telefono("+5491100000003")
+                    .tipoUsuario(TipoUsuario.EXTERNO)
+                    .idSede(null)
+                    .authId(null)
+                    .build();
+            usuarioRepository.save(externo);
+            log.info("[DEV SEED] Creado Externo inicial (externo@fitzone.com)");
         }
 
         if (planRepository.count() == 0) {

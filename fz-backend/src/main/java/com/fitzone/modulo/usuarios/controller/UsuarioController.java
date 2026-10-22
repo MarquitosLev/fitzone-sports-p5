@@ -28,7 +28,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -42,6 +46,13 @@ public class UsuarioController {
     private final CanchaService canchaService;
     private final com.fitzone.modulo.clases.service.ReservaClaseService reservaClaseService;
     private final PagoService pagoService;
+
+    @GetMapping("/me")
+    @Operation(summary = "Obtiene el perfil del usuario autenticado a partir del token JWT")
+    public Usuario obtenerMiPerfil(@AuthenticationPrincipal Jwt jwt) {
+        UUID authId = UUID.fromString(jwt.getSubject());
+        return usuarioService.obtenerPorAuthId(authId);
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

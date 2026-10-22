@@ -206,7 +206,7 @@ export async function obtenerMembresiaPorUsuario(idUsuario: number): Promise<Mem
     return { ...membresiasUsuario[membresiasUsuario.length - 1] };
   }
   try {
-    return await httpClient.get<MembresiaDTO>(`/v1/membresias/usuario/${idUsuario}`);
+    return await httpClient.get<MembresiaDTO>(`/v1/usuarios/${idUsuario}/membresia`);
   } catch (err: unknown) {
     if (err instanceof AppError && err.status === 404) {
       return null;
