@@ -21,4 +21,9 @@ public interface ClaseGrupalRepository extends JpaRepository<ClaseGrupal, Long> 
 
     // Agenda de clases hasta una fecha determinada
     List<ClaseGrupal> findBySede_IdSedeAndFechaHoraInicioLessThanEqual(Long idSede, LocalDateTime hasta);
+
+    // Búsqueda con bloqueo pesimista para concurrencia en reserva de cupo
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT c FROM ClaseGrupal c WHERE c.idClase = :id")
+    java.util.Optional<ClaseGrupal> findByIdWithLock(@org.springframework.data.repository.query.Param("id") Long id);
 }

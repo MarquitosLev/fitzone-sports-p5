@@ -28,13 +28,14 @@ public enum CodigoError {
     ERROR_INTERNO,
     /** 502: un servicio externo (ej: Supabase Auth) falló o no respondió. */
     SERVICIO_EXTERNO,
-    /** 422: el código QR presentado venció o es inválido . */
+    /** 422: el código QR presentado venció o es inválido. */
     QR_VENCIDO,
-    /** 422: el socio no posee membresía ACTIVA y vigente . */
+    /** 422: el socio no posee membresía ACTIVA y vigente. */
     MEMBRESIA_INACTIVA,
-    /** 409: el socio ya posee un ingreso activo sin egreso registrado . */
+    /** 409: el socio ya posee un ingreso activo sin egreso registrado. */
     YA_INGRESADO,
-    /** 409: la sede ha alcanzado su aforo máximo permitido . */
-    AFORO_COMPLETO
-
+    /** 409: la sede ha alcanzado su aforo máximo permitido. */
+    AFORO_COMPLETO,
+    /** 409: la clase no dispone de cupo disponible. */
+    CLASE_COMPLETA
 }

@@ -49,6 +49,9 @@ class UsuarioControllerTest {
     private com.fitzone.modulo.usuarios.service.MembresiaService membresiaService;
 
     @MockitoBean
+    private com.fitzone.modulo.clases.service.ReservaClaseService reservaClaseService;
+
+    @MockitoBean
     private com.fitzone.modulo.gimnasio.service.AccesoService accesoService;
 
     @MockitoBean
@@ -254,6 +257,23 @@ class UsuarioControllerTest {
                 .andExpect(jsonPath("$.idMembresia", is(10)))
                 .andExpect(jsonPath("$.estado", is("ACTIVO")));
     }
+    @Test
+    @DisplayName("GET /v1/usuarios/{id}/reservas-clase retorna 200 con la lista de reservas del socio")
+    void obtenerMisReservas_retorna200() throws Exception {
+        com.fitzone.modulo.clases.models.ReservaClase reserva = com.fitzone.modulo.clases.models.ReservaClase.builder()
+                .idReservaClase(5L)
+                .estado(com.fitzone.core.domain.enums.EstadoReservaClase.CONFIRMADA)
+                .build();
+
+        when(reservaClaseService.listarPorUsuario(1L)).thenReturn(List.of(reserva));
+
+        mockMvc.perform(get("/v1/usuarios/1/reservas-clase"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].idReservaClase", is(5)))
+                .andExpect(jsonPath("$[0].estado", is("CONFIRMADA")));
+    }
+
 
     @Test
     @DisplayName("GET /v1/usuarios/{id}/qr retorna 200 con el token QR y segundos restantes")
