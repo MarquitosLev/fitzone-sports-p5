@@ -6,8 +6,10 @@
  */
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MapPin, ChevronDown, User, LogOut, Menu, X } from 'lucide-react';
 import { useSede } from '../../context/SedeContext';
+import { useAuth } from '../../context/AuthContext';
 
 export interface HeaderProps {
   onToggleMobileMenu?: () => void;
@@ -15,9 +17,17 @@ export interface HeaderProps {
 }
 
 export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderProps) {
+  const navigate = useNavigate();
+  const { usuario, logout } = useAuth();
   const { sedeActiva, sedes, setSedeActiva } = useSede();
   const [sedeDropdownOpen, setSedeDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
+  const handleLogout = () => {
+    setProfileDropdownOpen(false);
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <header className="h-16 bg-fitzone-navy border-b border-white/10 sticky top-0 z-30 shadow-md flex items-center shrink-0">
@@ -127,10 +137,10 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
             </div>
             <div className="hidden sm:flex flex-col text-left">
               <span className="text-xs font-extrabold text-white leading-tight">
-                Usuario
+                {usuario ? `${usuario.nombre} ${usuario.apellido}` : 'Usuario'}
               </span>
               <span className="text-[10px] text-fitzone-gold font-bold">
-                Recepcionista
+                {usuario ? usuario.tipoUsuario : 'Invitado'}
               </span>
             </div>
           </button>
@@ -146,19 +156,19 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
                 role="menu"
                 className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-modal border border-slate-100 py-2 z-50 animate-slide-up"
               >
+                <div className="px-4 py-2 border-b border-slate-100">
+                  <p className="text-xs font-bold text-fitzone-navy truncate">
+                    {usuario ? `${usuario.nombre} ${usuario.apellido}` : 'Invitado'}
+                  </p>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {usuario?.email ?? 'Sin sesión activa'}
+                  </p>
+                </div>
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={() => setProfileDropdownOpen(false)}
-                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
-                >
-                  <User className="w-4 h-4 text-slate-400" />
-                  Mi perfil
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-fitzone-red hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-fitzone-red hover:bg-rose-50 flex items-center gap-2 cursor-pointer transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
                   Cerrar sesión

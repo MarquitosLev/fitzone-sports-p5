@@ -36,4 +36,10 @@ export type {
   ProcesarPagoPayload,
   ResultadoPagoDTO,
 } from './pago';
+export type {
+  LoginCredentialsDTO,
+  RegistroUsuarioDTO,
+  AuthResponseDTO,
+  AuthState,
+} from './auth';
 

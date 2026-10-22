@@ -77,7 +77,7 @@ describe('ClaseForm Component — Modo Alta', () => {
     render(<ClaseForm modo="alta" onSubmit={handleSubmit} />);
 
     fireEvent.change(screen.getByLabelText(/nombre de actividad/i), { target: { value: 'CrossFit' } });
-    fireEvent.change(screen.getByLabelText(/fecha y hora de inicio/i), { target: { value: '2026-10-22T07:00' } });
+    fireEvent.change(screen.getByLabelText(/fecha y hora de inicio/i), { target: { value: '2026-10-23T07:00' } });
     fireEvent.change(screen.getByLabelText(/duración \(minutos\)/i), { target: { value: '50' } });
     fireEvent.change(screen.getByLabelText(/cupo máximo/i), { target: { value: '15' } });
 
@@ -87,7 +87,7 @@ describe('ClaseForm Component — Modo Alta', () => {
       expect(handleSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
           nombreActividad: 'CrossFit',
-          fechaHoraInicio: '2026-10-22T07:00',
+          fechaHoraInicio: '2026-10-23T07:00',
           duracionMinutos: 50,
           cupoMaximo: 15,
         })

@@ -73,6 +73,7 @@ import {
   PagoItem,
   BotonDescargaPdf,
 } from '../components/pagos';
+import { LoginForm, RegistroForm } from '../components/auth';
 import type {
   TransaccionDTO,
   ComprobanteDTO,
@@ -270,6 +271,7 @@ export function PlaygroundPage() {
     { id: 'acceso', label: 'Acceso y Aforo (SCRUM-82/85)' },
     { id: 'canchas', label: 'Canchas (RF-10/11)' },
     { id: 'pagos', label: 'Pagos y Comprobantes (RF-13/14)' },
+    { id: 'auth', label: 'Autenticación (SCRUM-89)' },
   ];
 
   // ── RF-06 Clases state ──────────────────────────────────────────────────────
@@ -3345,6 +3347,81 @@ export function PlaygroundPage() {
               </div>
             </Card>
           )}
+        </section>
+      )}
+
+      {/* 15. AUTENTICACIÓN (SCRUM-89) */}
+      {shouldShow('auth') && (
+        <section className="space-y-6">
+          <div>
+            <h2 className="text-xl font-black text-[#1B2A55] font-outfit">
+              15. Módulo de Autenticación y Registro (SCRUM-89)
+            </h2>
+            <p className="text-xs text-slate-500">
+              Formularios desacoplados sin llamadas directas de red. Integran validaciones en cliente,
+              barra de autocompletado rápido por rol y asignación estricta de EXTERNO en el registro público.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            {/* 15.1 LoginForm */}
+            <Card
+              title="15.1 LoginForm — Inicio de Sesión y Acceso Rápido"
+              subtitle="Incluye autocompletado para SOCIO, EXTERNO, RECEPCIONISTA y GERENTE."
+            >
+              <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                <LoginForm
+                  onSubmit={(creds) => {
+                    addToast(
+                      'Inicio de Sesión Simulado',
+                      `Email: ${creds.email} · Clave enviada con éxito.`,
+                      'success'
+                    );
+                  }}
+                  onForgotPassword={() => {
+                    addToast(
+                      'Recuperación de Clave',
+                      'Callback de olvido de contraseña disparado correctamente.',
+                      'info'
+                    );
+                  }}
+                  onNavigateToRegister={() => {
+                    addToast(
+                      'Navegación',
+                      'Callback onNavigateToRegister disparado.',
+                      'info'
+                    );
+                  }}
+                  showQuickRoles={true}
+                />
+              </div>
+            </Card>
+
+            {/* 15.2 RegistroForm */}
+            <Card
+              title="15.2 RegistroForm — Registro Público"
+              subtitle="Valida formato de DNI, teléfono, email y contraseñas. Asigna rol EXTERNO."
+            >
+              <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                <RegistroForm
+                  onSubmit={(datos) => {
+                    addToast(
+                      'Registro Simulado Exitoso',
+                      `Usuario: ${datos.nombre} ${datos.apellido} (DNI: ${datos.dni}) registrado como ${datos.tipoUsuario}.`,
+                      'success'
+                    );
+                  }}
+                  onNavigateToLogin={() => {
+                    addToast(
+                      'Navegación',
+                      'Callback onNavigateToLogin disparado.',
+                      'info'
+                    );
+                  }}
+                />
+              </div>
+            </Card>
+          </div>
         </section>
       )}
     </div>

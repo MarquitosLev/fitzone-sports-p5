@@ -99,6 +99,24 @@ export function registerHttpErrorHandler(handler: (message: string) => void): vo
   _onError = handler;
 }
 
+// Token de autenticación JWT vigente en la sesión.
+let _authToken: string | null = null;
+
+/**
+ * Asigna el token JWT para ser inyectado como 'Authorization: Bearer <token>'
+ * en todas las peticiones subsiguientes. Si se pasa null, se elimina.
+ */
+export function setAuthToken(token: string | null): void {
+  _authToken = token;
+}
+
+/**
+ * Retorna el token JWT actual almacenado en el cliente HTTP.
+ */
+export function getAuthToken(): string | null {
+  return _authToken;
+}
+
 /**
  * Función principal que realiza la petición HTTP.
  * Es genérica: `httpRequest<UsuarioDTO[]>('/v1/usuarios')` devuelve `Promise<UsuarioDTO[]>`.
@@ -109,10 +127,15 @@ async function httpRequest<T>(
 ): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
 
-  // Headers por defecto: JSON en request y response
+  // Headers por defecto: JSON en request y response + Authorization si hay token
+  const authHeaders: Record<string, string> = _authToken
+    ? { Authorization: `Bearer ${_authToken}` }
+    : {};
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    ...authHeaders,
     ...((options.headers as Record<string, string>) ?? {}),
   };
 
