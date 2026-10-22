@@ -1,0 +1,21 @@
+meta {
+  name: 09 - Procesar Pago Rechazo Forzado
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/v1/pagos
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idUsuario": 2,
+    "idSede": 1,
+    "concepto": "RESERVA_CANCHA",
+    "idReservaCancha": 1,
+    "forzarRechazo": true
+  }
+}

@@ -1,0 +1,21 @@
+meta {
+  name: 12 - Procesar Pago Membresia Aprobado
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/v1/pagos
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idUsuario": 2,
+    "idSede": 1,
+    "concepto": "MEMBRESIA",
+    "idMembresia": 1,
+    "forzarRechazo": false
+  }
+}

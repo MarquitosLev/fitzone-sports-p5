@@ -1,0 +1,21 @@
+meta {
+  name: 08 - Procesar Pago Aprobado
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/v1/pagos
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idUsuario": 2,
+    "idSede": 1,
+    "concepto": "RESERVA_CANCHA",
+    "idReservaCancha": 1,
+    "forzarRechazo": false
+  }
+}

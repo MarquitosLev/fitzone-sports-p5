@@ -9,6 +9,8 @@ import com.fitzone.modulo.usuarios.models.Membresia;
 import com.fitzone.modulo.usuarios.models.Usuario;
 import com.fitzone.modulo.usuarios.service.MembresiaService;
 import com.fitzone.modulo.usuarios.service.UsuarioService;
+import com.fitzone.modulo.pagos.models.Transaccion;
+import com.fitzone.modulo.pagos.service.PagoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,6 +41,7 @@ public class UsuarioController {
     private final AccesoService accesoService;
     private final CanchaService canchaService;
     private final com.fitzone.modulo.clases.service.ReservaClaseService reservaClaseService;
+    private final PagoService pagoService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -77,6 +80,12 @@ public class UsuarioController {
     @Operation(summary = "Obtiene el listado de reservas de cancha realizadas por el usuario")
     public List<ReservaCancha> listarReservasCancha(@PathVariable @Positive Long id) {
         return canchaService.listarReservasPorUsuario(id);
+    }
+
+    @GetMapping("/{id}/pagos")
+    @Operation(summary = "Obtiene el historial de transacciones de pago de un usuario")
+    public List<Transaccion> listarPagos(@PathVariable @Positive Long id) {
+        return pagoService.listarPorUsuario(id);
     }
     @GetMapping
     @Operation(summary = "Búsqueda y listado de usuarios con filtros opcionales por DNI, tipo y/o sede")
