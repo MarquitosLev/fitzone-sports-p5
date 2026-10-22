@@ -73,11 +73,23 @@ describe('ClaseForm Component — Modo Alta', () => {
   });
 
   it('calls onSubmit with correct payload when all fields are valid', async () => {
+    // se genera una fecha siempre futura (48 h desde ahora) para que la
+    // validación de "no puede ser en el pasado" de ClaseForm nunca la rechace,
+    // sin importar cuándo se ejecute la prueba.
+    const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    // Formato requerido por el input datetime-local: "YYYY-MM-DDTHH:MM"
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fechaHoraInicio = [
+      futureDate.getFullYear(),
+      pad(futureDate.getMonth() + 1),
+      pad(futureDate.getDate()),
+    ].join('-') + 'T' + [pad(futureDate.getHours()), pad(futureDate.getMinutes())].join(':');
+
     const handleSubmit = vi.fn().mockResolvedValue(undefined);
     render(<ClaseForm modo="alta" onSubmit={handleSubmit} />);
 
     fireEvent.change(screen.getByLabelText(/nombre de actividad/i), { target: { value: 'CrossFit' } });
-    fireEvent.change(screen.getByLabelText(/fecha y hora de inicio/i), { target: { value: '2026-10-23T07:00' } });
+    fireEvent.change(screen.getByLabelText(/fecha y hora de inicio/i), { target: { value: fechaHoraInicio } });
     fireEvent.change(screen.getByLabelText(/duración \(minutos\)/i), { target: { value: '50' } });
     fireEvent.change(screen.getByLabelText(/cupo máximo/i), { target: { value: '15' } });
 
@@ -87,7 +99,7 @@ describe('ClaseForm Component — Modo Alta', () => {
       expect(handleSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
           nombreActividad: 'CrossFit',
-          fechaHoraInicio: '2026-10-23T07:00',
+          fechaHoraInicio,
           duracionMinutos: 50,
           cupoMaximo: 15,
         })
