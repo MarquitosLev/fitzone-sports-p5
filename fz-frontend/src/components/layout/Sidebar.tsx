@@ -6,7 +6,7 @@
  * `NavLink` agrega automáticamente la clase "active" al enlace de la ruta actual.
  */
 
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Users,
   CreditCard,
@@ -18,6 +18,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useSede } from '../../context/SedeContext';
+import { useAuth } from '../../context/AuthContext';
 
 // Definición de las rutas del panel de gestión (recepcionista/gerente)
 const NAV_ITEMS = [
@@ -35,7 +36,15 @@ export interface SidebarProps {
 }
 
 export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const { sedeActiva } = useSede();
+
+  const handleLogout = () => {
+    if (onCloseMobile) onCloseMobile();
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   // Contenido de navegación reutilizable tanto para desktop como para mobile drawer
   const renderNavContent = () => (
@@ -97,6 +106,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
       <div className="pt-4 border-t border-slate-100 space-y-2">
         <button
           type="button"
+          onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-fitzone-red hover:bg-rose-50 transition-colors cursor-pointer"
         >
           <LogOut className="w-4 h-4" />

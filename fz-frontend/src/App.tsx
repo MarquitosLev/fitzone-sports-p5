@@ -26,6 +26,15 @@ import { AccesoPage } from './pages/AccesoPage';
 import { ClasesPage } from './pages/ClasesPage';
 import { CanchasPage } from './pages/CanchasPage';
 import { PagosPage } from './pages/PagosPage';
+import { LoginPage } from './pages/LoginPage';
+import { RegistroPage } from './pages/RegistroPage';
+import {
+  SocioRolPage,
+  ExternoRolPage,
+  RecepcionistaRolPage,
+  GerenteRolPage,
+} from './pages/roles';
+import { AuthProvider } from './context/AuthContext';
 import { httpClient, registerHttpErrorHandler } from './services/httpClient';
 import { Spinner } from './components/ui';
 import { USE_MOCK } from './config';
@@ -104,36 +113,50 @@ export default function App() {
       {/* ToastProvider: las notificaciones están disponibles en toda la app */}
       <ToastProvider>
         <HttpErrorConnector>
-          {/* SedeProvider: la sede activa está disponible en toda la app */}
-          <SedeProvider sedes={USE_MOCK ? SEDES_MOCK : (sedes ?? [])}>
-            <Routes>
-              {/* 
-                AppLayout actúa como "layout raíz":
-                todas las rutas dentro de él comparten Header + Sidebar.
-                Las rutas hijas se renderizan en el <Outlet /> de AppLayout.
-              */}
-              <Route path="/" element={<AppLayout />}>
-                {/* Ruta índice: redirige / → /usuarios automáticamente */}
-                <Route index element={<Navigate to="/usuarios" replace />} />
-                <Route path="usuarios" element={<UsuariosPage />} />
-                <Route path="membresias" element={<MembresiasPage />} />
-                <Route path="acceso" element={<AccesoPage />} />
-                <Route path="clases" element={<ClasesPage />} />
-                <Route path="canchas" element={<CanchasPage />} />
-                <Route path="pagos" element={<PagosPage />} />
-              </Route>
+          {/* AuthProvider: mantiene la sesión del usuario en toda la app (SCRUM-89) */}
+          <AuthProvider>
+            {/* SedeProvider: la sede activa está disponible en toda la app */}
+            <SedeProvider sedes={USE_MOCK ? SEDES_MOCK : (sedes ?? [])}>
+              <Routes>
+                {/* Rutas de autenticación a pantalla completa (fuera de AppLayout) */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/registro" element={<RegistroPage />} />
 
-              {/* Playground fuera del AppLayout (sin Sidebar ni Header) */}
-              <Route
-                path="/playground"
-                element={
-                  <AppProvider>
-                    <PlaygroundPage />
-                  </AppProvider>
-                }
-              />
-            </Routes>
-          </SedeProvider>
+                {/* 
+                  AppLayout actúa como "layout raíz":
+                  todas las rutas dentro de él comparten Header + Sidebar.
+                  Las rutas hijas se renderizan en el <Outlet /> de AppLayout.
+                */}
+                <Route path="/" element={<AppLayout />}>
+                  {/* Ruta índice: redirige / → /usuarios automáticamente */}
+                  <Route index element={<Navigate to="/usuarios" replace />} />
+                  <Route path="usuarios" element={<UsuariosPage />} />
+                  <Route path="membresias" element={<MembresiasPage />} />
+                  <Route path="acceso" element={<AccesoPage />} />
+                  <Route path="clases" element={<ClasesPage />} />
+                  <Route path="canchas" element={<CanchasPage />} />
+                  <Route path="pagos" element={<PagosPage />} />
+
+                  {/* Rutas base por rol (SCRUM-90) */}
+                  <Route path="rol" element={<Navigate to="/rol/socio" replace />} />
+                  <Route path="rol/socio" element={<SocioRolPage />} />
+                  <Route path="rol/externo" element={<ExternoRolPage />} />
+                  <Route path="rol/recepcionista" element={<RecepcionistaRolPage />} />
+                  <Route path="rol/gerente" element={<GerenteRolPage />} />
+                </Route>
+
+                {/* Playground fuera del AppLayout (sin Sidebar ni Header) */}
+                <Route
+                  path="/playground"
+                  element={
+                    <AppProvider>
+                      <PlaygroundPage />
+                    </AppProvider>
+                  }
+                />
+              </Routes>
+            </SedeProvider>
+          </AuthProvider>
         </HttpErrorConnector>
       </ToastProvider>
     </BrowserRouter>

@@ -27,4 +27,9 @@ describe('TipoUsuarioBadge Component', () => {
     render(<TipoUsuarioBadge tipoUsuario="SOCIO" label="Socio VIP" />);
     expect(screen.getByText('Socio VIP')).toBeInTheDocument();
   });
+
+  it('supports tipo prop as alias for tipoUsuario', () => {
+    render(<TipoUsuarioBadge tipo="GERENTE" />);
+    expect(screen.getByText('Gerente')).toBeInTheDocument();
+  });
 });
