@@ -26,6 +26,12 @@ import { AccesoPage } from './pages/AccesoPage';
 import { ClasesPage } from './pages/ClasesPage';
 import { CanchasPage } from './pages/CanchasPage';
 import { PagosPage } from './pages/PagosPage';
+import {
+  SocioRolPage,
+  ExternoRolPage,
+  RecepcionistaRolPage,
+  GerenteRolPage,
+} from './pages/roles';
 import { httpClient, registerHttpErrorHandler } from './services/httpClient';
 import { Spinner } from './components/ui';
 import { USE_MOCK } from './config';
@@ -121,6 +127,13 @@ export default function App() {
                 <Route path="clases" element={<ClasesPage />} />
                 <Route path="canchas" element={<CanchasPage />} />
                 <Route path="pagos" element={<PagosPage />} />
+
+                {/* Rutas base (placeholders) por rol para integración con backend (SCRUM-90) */}
+                <Route path="rol" element={<Navigate to="/rol/socio" replace />} />
+                <Route path="rol/socio" element={<SocioRolPage />} />
+                <Route path="rol/externo" element={<ExternoRolPage />} />
+                <Route path="rol/recepcionista" element={<RecepcionistaRolPage />} />
+                <Route path="rol/gerente" element={<GerenteRolPage />} />
               </Route>
 
               {/* Playground fuera del AppLayout (sin Sidebar ni Header) */}

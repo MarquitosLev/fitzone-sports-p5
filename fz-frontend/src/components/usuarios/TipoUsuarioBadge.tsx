@@ -4,6 +4,7 @@ import type { BadgeSize, BadgeVariant } from '../ui/Badge';
 import type { TipoUsuario } from '../../types';
 
 export interface TipoUsuarioBadgeProps {
+  tipo?: TipoUsuario | string | null;
   tipoUsuario?: TipoUsuario | string | null;
   size?: BadgeSize;
   showDot?: boolean;
@@ -36,16 +37,18 @@ const TIPO_CONFIG: Record<TipoUsuario, { variant: BadgeVariant; label: string }>
  * Envuelve a Badge con estilos normalizados para SOCIO, EXTERNO, RECEPCIONISTA y GERENTE.
  */
 export function TipoUsuarioBadge({
+  tipo,
   tipoUsuario,
   size = 'sm',
   showDot = false,
   className = '',
   label,
 }: TipoUsuarioBadgeProps) {
-  const normalized = (tipoUsuario?.toUpperCase() as TipoUsuario) || 'EXTERNO';
+  const rawTipo = tipoUsuario ?? tipo;
+  const normalized = (rawTipo?.toUpperCase() as TipoUsuario) || 'EXTERNO';
   const config = TIPO_CONFIG[normalized] || {
     variant: 'default' as BadgeVariant,
-    label: tipoUsuario ? String(tipoUsuario) : 'Desconocido',
+    label: rawTipo ? String(rawTipo) : 'Desconocido',
   };
 
   return (
