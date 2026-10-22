@@ -54,6 +54,8 @@ class UsuarioControllerTest {
     @MockitoBean
     private com.fitzone.modulo.gimnasio.service.AccesoService accesoService;
 
+    @MockitoBean
+    private com.fitzone.modulo.canchas.service.CanchaService canchaService;
 
 
     @Test
@@ -287,5 +289,20 @@ class UsuarioControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tokenQr", is("mock-qr-token-base64")))
                 .andExpect(jsonPath("$.segundosRestantes", is(45)));
+    }
+    @Test
+    @DisplayName("GET /v1/usuarios/{id}/reservas-cancha retorna 200 con la lista de reservas")
+    void listarReservasCancha_retorna200() throws Exception {
+        com.fitzone.modulo.canchas.models.ReservaCancha reserva = com.fitzone.modulo.canchas.models.ReservaCancha.builder()
+                .idReservaCancha(10L)
+                .fechaHoraInicio(java.time.LocalDateTime.now().plusDays(1))
+                .fechaHoraFin(java.time.LocalDateTime.now().plusDays(1).plusHours(1))
+                .build();
+
+        when(canchaService.listarReservasPorUsuario(1L)).thenReturn(java.util.List.of(reserva));
+
+        mockMvc.perform(get("/v1/usuarios/1/reservas-cancha"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].idReservaCancha", is(10)));
     }
 }

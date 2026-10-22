@@ -3,6 +3,8 @@ package com.fitzone.modulo.usuarios.controller;
 import com.fitzone.core.domain.enums.TipoUsuario;
 import com.fitzone.modulo.gimnasio.models.QrTokenResponse;
 import com.fitzone.modulo.gimnasio.service.AccesoService;
+import com.fitzone.modulo.canchas.models.ReservaCancha;
+import com.fitzone.modulo.canchas.service.CanchaService;
 import com.fitzone.modulo.usuarios.models.Membresia;
 import com.fitzone.modulo.usuarios.models.Usuario;
 import com.fitzone.modulo.usuarios.service.MembresiaService;
@@ -35,6 +37,7 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
     private final MembresiaService membresiaService;
     private final AccesoService accesoService;
+    private final CanchaService canchaService;
     private final com.fitzone.modulo.clases.service.ReservaClaseService reservaClaseService;
 
     @PostMapping
@@ -42,8 +45,7 @@ public class UsuarioController {
     @Operation(summary = "Alta de un nuevo usuario (socio, externo, recepcionista o gerente)")
     public Usuario crear(
             @Valid @RequestBody Usuario usuario,
-            @Parameter(description = "ID del usuario que realiza el alta (opcional en fase inicial, por defecto operador sistema)")
-            @RequestParam(required = false) @Positive Long idOperador) {
+            @Parameter(description = "ID del usuario que realiza el alta (opcional en fase inicial, por defecto operador sistema)") @RequestParam(required = false) @Positive Long idOperador) {
         return usuarioService.crear(usuario, idOperador);
     }
 
@@ -71,15 +73,17 @@ public class UsuarioController {
         return reservaClaseService.listarPorUsuario(id);
     }
 
+    @GetMapping("/{id}/reservas-cancha")
+    @Operation(summary = "Obtiene el listado de reservas de cancha realizadas por el usuario")
+    public List<ReservaCancha> listarReservasCancha(@PathVariable @Positive Long id) {
+        return canchaService.listarReservasPorUsuario(id);
+    }
     @GetMapping
     @Operation(summary = "Búsqueda y listado de usuarios con filtros opcionales por DNI, tipo y/o sede")
     public List<Usuario> buscar(
-            @Parameter(description = "DNI para filtrar usuarios de forma exacta")
-            @RequestParam(required = false) String dni,
-            @Parameter(description = "Tipo de usuario (SOCIO, EXTERNO, RECEPCIONISTA, GERENTE)")
-            @RequestParam(required = false) TipoUsuario tipo,
-            @Parameter(description = "ID de sede para filtrar usuarios")
-            @RequestParam(required = false) @Positive Long idSede) {
+            @Parameter(description = "DNI para filtrar usuarios de forma exacta") @RequestParam(required = false) String dni,
+            @Parameter(description = "Tipo de usuario (SOCIO, EXTERNO, RECEPCIONISTA, GERENTE)") @RequestParam(required = false) TipoUsuario tipo,
+            @Parameter(description = "ID de sede para filtrar usuarios") @RequestParam(required = false) @Positive Long idSede) {
         return usuarioService.buscar(dni, tipo, idSede);
     }
 
@@ -88,9 +92,7 @@ public class UsuarioController {
     public Usuario actualizar(
             @PathVariable @Positive Long id,
             @Valid @RequestBody Usuario usuario,
-            @Parameter(description = "ID del usuario que realiza la modificación (opcional en fase inicial, por defecto operador sistema)")
-            @RequestParam(required = false) @Positive Long idOperador) {
+            @Parameter(description = "ID del usuario que realiza la modificación (opcional en fase inicial, por defecto operador sistema)") @RequestParam(required = false) @Positive Long idOperador) {
         return usuarioService.actualizar(id, usuario, idOperador);
     }
 }
-

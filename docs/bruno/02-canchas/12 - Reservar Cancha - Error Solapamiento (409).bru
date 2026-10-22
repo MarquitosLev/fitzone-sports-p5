@@ -1,0 +1,19 @@
+meta {
+  name: 12 - Reservar Cancha - Error Solapamiento (409)
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/v1/canchas/1/reservas
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idUsuario": 2,
+    "fechaHoraInicio": "2026-10-25T10:00:00",
+    "fechaHoraFin": "2026-10-25T11:00:00"
+  }
+}

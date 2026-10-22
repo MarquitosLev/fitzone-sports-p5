@@ -7,12 +7,12 @@ import com.fitzone.core.exception.ReglaNegocioException;
 import com.fitzone.modulo.canchas.dto.CotizacionDTO;
 import com.fitzone.modulo.canchas.models.Cancha;
 import com.fitzone.modulo.canchas.repository.CanchaRepository;
+import com.fitzone.modulo.canchas.repository.ReservaCanchaRepository;
 import com.fitzone.modulo.canchas.strategy.CalculadorPrecioCancha;
 import com.fitzone.modulo.canchas.strategy.DescuentoSocioEstrategia;
 import com.fitzone.modulo.canchas.strategy.PrecioBaseEstrategia;
 import com.fitzone.modulo.canchas.strategy.RecargoHorarioPicoEstrategia;
 import com.fitzone.modulo.gimnasio.repository.SedeRepository;
-import com.fitzone.modulo.usuarios.models.Membresia;
 import com.fitzone.modulo.usuarios.models.Usuario;
 import com.fitzone.modulo.usuarios.repository.MembresiaRepository;
 import com.fitzone.modulo.usuarios.repository.UsuarioRepository;
@@ -40,6 +40,9 @@ class CanchaServiceCotizacionTest {
     private CanchaRepository canchaRepository;
 
     @Mock
+    private ReservaCanchaRepository reservaCanchaRepository;
+
+    @Mock
     private SedeRepository sedeRepository;
 
     @Mock
@@ -63,6 +66,7 @@ class CanchaServiceCotizacionTest {
 
         canchaService = new CanchaService(
                 canchaRepository,
+                reservaCanchaRepository,
                 sedeRepository,
                 usuarioRepository,
                 membresiaRepository,
@@ -107,11 +111,6 @@ class CanchaServiceCotizacionTest {
         Usuario usuario = Usuario.builder()
                 .idUsuario(10L)
                 .tipoUsuario(TipoUsuario.SOCIO)
-                .build();
-        Membresia membresiaActiva = Membresia.builder()
-                .idMembresia(100L)
-                .estado(EstadoMembresia.ACTIVO)
-                .fechaVencimiento(LocalDate.now().plusMonths(1))
                 .build();
 
         when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));

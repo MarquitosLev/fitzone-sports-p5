@@ -2,6 +2,8 @@ package com.fitzone.modulo.canchas.controller;
 
 import com.fitzone.modulo.canchas.dto.CotizacionDTO;
 import com.fitzone.modulo.canchas.models.Cancha;
+import com.fitzone.modulo.canchas.models.FranjaDisponibilidad;
+import com.fitzone.modulo.canchas.models.ReservaCancha;
 import com.fitzone.modulo.canchas.service.CanchaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -76,5 +79,22 @@ public class CanchaController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fin) {
         return canchaService.cotizar(id, idUsuario, inicio, fin);
+    }
+
+    @GetMapping("/{id}/disponibilidad")
+    @Operation(summary = "Grilla de disponibilidad horaria de una cancha para una fecha dada")
+    public List<FranjaDisponibilidad> obtenerDisponibilidad(
+            @PathVariable @Positive Long id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        return canchaService.obtenerDisponibilidad(id, fecha);
+    }
+
+    @PostMapping("/{id}/reservas")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Reserva de un turno en una cancha")
+    public ReservaCancha reservar(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody ReservaCancha reserva) {
+        return canchaService.reservar(id, reserva);
     }
 }
