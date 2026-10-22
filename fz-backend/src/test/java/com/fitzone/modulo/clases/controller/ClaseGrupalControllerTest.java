@@ -50,6 +50,9 @@ class ClaseGrupalControllerTest {
     @MockitoBean
     private ReservaClaseService reservaClaseService;
 
+    @MockitoBean
+    private com.fitzone.modulo.clases.service.ListaEsperaService listaEsperaService;
+
     @Test
     @DisplayName("POST /v1/clases/{id}/reservas responde 201 Created cuando la reserva es exitosa")
     void reservar_retorna201() throws Exception {
@@ -125,5 +128,41 @@ class ClaseGrupalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].idReservaClase", is(5)));
+    }
+
+    @Test
+    @DisplayName("POST /v1/clases/{id}/lista-espera responde 201 Created cuando se anota exitosamente")
+    void anotarseEnListaEspera_retorna201() throws Exception {
+        ReservaClaseRequest request = new ReservaClaseRequest(1L);
+        com.fitzone.modulo.clases.models.ListaEspera espera = com.fitzone.modulo.clases.models.ListaEspera.builder()
+                .idEspera(8L)
+                .ordenPosicion(1)
+                .build();
+
+        when(listaEsperaService.anotarse(eq(10L), eq(1L))).thenReturn(espera);
+
+        mockMvc.perform(post("/v1/clases/10/lista-espera")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.idEspera", is(8)))
+                .andExpect(jsonPath("$.ordenPosicion", is(1)));
+    }
+
+    @Test
+    @DisplayName("GET /v1/clases/{id}/lista-espera responde 200 OK con la cola ordenada")
+    void listarListaEspera_retorna200() throws Exception {
+        com.fitzone.modulo.clases.models.ListaEspera espera = com.fitzone.modulo.clases.models.ListaEspera.builder()
+                .idEspera(8L)
+                .ordenPosicion(1)
+                .build();
+
+        when(listaEsperaService.listarPorClase(10L)).thenReturn(List.of(espera));
+
+        mockMvc.perform(get("/v1/clases/10/lista-espera"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].idEspera", is(8)))
+                .andExpect(jsonPath("$[0].ordenPosicion", is(1)));
     }
 }

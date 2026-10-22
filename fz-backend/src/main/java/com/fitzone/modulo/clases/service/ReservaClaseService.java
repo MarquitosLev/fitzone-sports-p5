@@ -10,10 +10,8 @@ import com.fitzone.core.exception.RecursoNoEncontradoException;
 import com.fitzone.core.exception.ReglaNegocioException;
 import com.fitzone.modulo.clases.event.CupoLiberadoEvent;
 import com.fitzone.modulo.clases.models.ClaseGrupal;
-import com.fitzone.modulo.clases.models.ListaEspera;
 import com.fitzone.modulo.clases.models.ReservaClase;
 import com.fitzone.modulo.clases.repository.ClaseGrupalRepository;
-import com.fitzone.modulo.clases.repository.ListaEsperaRepository;
 import com.fitzone.modulo.clases.repository.ReservaClaseRepository;
 import com.fitzone.modulo.usuarios.models.Usuario;
 import com.fitzone.modulo.usuarios.repository.MembresiaRepository;
@@ -23,8 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,7 +35,7 @@ public class ReservaClaseService {
     private final ClaseGrupalRepository claseGrupalRepository;
     private final UsuarioRepository usuarioRepository;
     private final MembresiaRepository membresiaRepository;
-    private final ListaEsperaRepository listaEsperaRepository;
+    private final ListaEsperaService listaEsperaService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -88,6 +84,8 @@ public class ReservaClaseService {
         clase.setCupoDisponible(Math.max(0, (int) (clase.getCupoMaximo() - (reservasConfirmadas + 1))));
         claseGrupalRepository.save(clase);
 
+        listaEsperaService.removerSocioSiEstaEnEspera(idClase, idUsuario);
+
         return guardada;
     }
 
@@ -109,44 +107,13 @@ public class ReservaClaseService {
         reserva.setEstado(EstadoReservaClase.CANCELADA);
         ReservaClase cancelada = reservaClaseRepository.save(reserva);
 
+        long confirmadas = reservaClaseRepository.countByClase_IdClaseAndEstado(clase.getIdClase(), EstadoReservaClase.CONFIRMADA);
+        clase.setCupoDisponible(Math.max(0, (int) (clase.getCupoMaximo() - confirmadas)));
+        claseGrupalRepository.save(clase);
+
         eventPublisher.publishEvent(new CupoLiberadoEvent(clase.getIdClase()));
 
         return cancelada;
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
-    public void onCupoLiberado(CupoLiberadoEvent event) {
-        procesarCupoLiberado(event.idClase());
-    }
-
-    @Transactional
-    public void procesarCupoLiberado(Long idClase) {
-        ClaseGrupal clase = claseGrupalRepository.findByIdWithLock(idClase).orElse(null);
-        if (clase == null) {
-            return;
-        }
-
-        List<ListaEspera> listaEspera = listaEsperaRepository.findByClase_IdClaseOrderByOrdenPosicionAsc(idClase);
-        if (!listaEspera.isEmpty()) {
-            ListaEspera primerEspera = listaEspera.get(0);
-            ReservaClase promocionada = ReservaClase.builder()
-                    .clase(clase)
-                    .usuario(primerEspera.getUsuario())
-                    .estado(EstadoReservaClase.CONFIRMADA)
-                    .build();
-            reservaClaseRepository.save(promocionada);
-            listaEsperaRepository.delete(primerEspera);
-
-            for (int i = 1; i < listaEspera.size(); i++) {
-                ListaEspera espera = listaEspera.get(i);
-                espera.setOrdenPosicion(i);
-                listaEsperaRepository.save(espera);
-            }
-        } else {
-            long confirmadas = reservaClaseRepository.countByClase_IdClaseAndEstado(idClase, EstadoReservaClase.CONFIRMADA);
-            clase.setCupoDisponible(Math.max(0, (int) (clase.getCupoMaximo() - confirmadas)));
-            claseGrupalRepository.save(clase);
-        }
     }
 
     @Transactional(readOnly = true)

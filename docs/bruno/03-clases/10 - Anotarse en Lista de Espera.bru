@@ -1,0 +1,17 @@
+meta {
+  name: 10 - Anotarse en Lista de Espera
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/v1/clases/1/lista-espera
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idUsuario": 1
+  }
+}

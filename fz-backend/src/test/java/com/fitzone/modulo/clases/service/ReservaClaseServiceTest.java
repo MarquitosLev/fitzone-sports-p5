@@ -6,14 +6,11 @@ import com.fitzone.core.domain.enums.TipoUsuario;
 import com.fitzone.core.exception.ClaseCompletaException;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.MembresiaInactivaException;
-import com.fitzone.core.exception.RecursoNoEncontradoException;
 import com.fitzone.core.exception.ReglaNegocioException;
 import com.fitzone.modulo.clases.event.CupoLiberadoEvent;
 import com.fitzone.modulo.clases.models.ClaseGrupal;
-import com.fitzone.modulo.clases.models.ListaEspera;
 import com.fitzone.modulo.clases.models.ReservaClase;
 import com.fitzone.modulo.clases.repository.ClaseGrupalRepository;
-import com.fitzone.modulo.clases.repository.ListaEsperaRepository;
 import com.fitzone.modulo.clases.repository.ReservaClaseRepository;
 import com.fitzone.modulo.usuarios.models.Usuario;
 import com.fitzone.modulo.usuarios.repository.MembresiaRepository;
@@ -22,7 +19,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,7 +26,6 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,7 +52,7 @@ class ReservaClaseServiceTest {
     private MembresiaRepository membresiaRepository;
 
     @Mock
-    private ListaEsperaRepository listaEsperaRepository;
+    private ListaEsperaService listaEsperaService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -113,6 +108,7 @@ class ReservaClaseServiceTest {
         assertThat(resultado.getClase()).isEqualTo(clase);
         assertThat(clase.getCupoDisponible()).isEqualTo(14);
         verify(claseGrupalRepository).save(clase);
+        verify(listaEsperaService).removerSocioSiEstaEnEspera(10L, 1L);
     }
 
     @Test
@@ -212,10 +208,13 @@ class ReservaClaseServiceTest {
 
         when(reservaClaseRepository.findById(100L)).thenReturn(Optional.of(reserva));
         when(reservaClaseRepository.save(any(ReservaClase.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(reservaClaseRepository.countByClase_IdClaseAndEstado(10L, EstadoReservaClase.CONFIRMADA)).thenReturn(4L);
 
         ReservaClase cancelada = reservaClaseService.cancelar(100L);
 
         assertThat(cancelada.getEstado()).isEqualTo(EstadoReservaClase.CANCELADA);
+        assertThat(clase.getCupoDisponible()).isEqualTo(16);
+        verify(claseGrupalRepository).save(clase);
         verify(eventPublisher).publishEvent(any(CupoLiberadoEvent.class));
     }
 
@@ -235,44 +234,5 @@ class ReservaClaseServiceTest {
         assertThatThrownBy(() -> reservaClaseService.cancelar(100L))
                 .isInstanceOf(ReglaNegocioException.class)
                 .hasMessageContaining("hasta 2 horas antes del inicio");
-    }
-
-    @Test
-    @DisplayName("procesarCupoLiberado con personas en lista de espera promociona al primero (FIFO)")
-    void procesarCupoLiberado_conListaEspera_promocionaPrimero() {
-        Usuario esperando1 = Usuario.builder().idUsuario(3L).nombre("Lucas").build();
-        Usuario esperando2 = Usuario.builder().idUsuario(4L).nombre("Matias").build();
-
-        ListaEspera espera1 = ListaEspera.builder().idEspera(1L).clase(clase).usuario(esperando1).ordenPosicion(1).build();
-        ListaEspera espera2 = ListaEspera.builder().idEspera(2L).clase(clase).usuario(esperando2).ordenPosicion(2).build();
-
-        List<ListaEspera> lista = new ArrayList<>(List.of(espera1, espera2));
-
-        when(claseGrupalRepository.findByIdWithLock(10L)).thenReturn(Optional.of(clase));
-        when(listaEsperaRepository.findByClase_IdClaseOrderByOrdenPosicionAsc(10L)).thenReturn(lista);
-
-        reservaClaseService.procesarCupoLiberado(10L);
-
-        ArgumentCaptor<ReservaClase> reservaCaptor = ArgumentCaptor.forClass(ReservaClase.class);
-        verify(reservaClaseRepository).save(reservaCaptor.capture());
-
-        assertThat(reservaCaptor.getValue().getUsuario()).isEqualTo(esperando1);
-        assertThat(reservaCaptor.getValue().getEstado()).isEqualTo(EstadoReservaClase.CONFIRMADA);
-        verify(listaEsperaRepository).delete(espera1);
-        verify(listaEsperaRepository).save(espera2);
-        assertThat(espera2.getOrdenPosicion()).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("procesarCupoLiberado sin lista de espera recalcula cupo disponible")
-    void procesarCupoLiberado_sinListaEspera_actualizaCupoDisponible() {
-        when(claseGrupalRepository.findByIdWithLock(10L)).thenReturn(Optional.of(clase));
-        when(listaEsperaRepository.findByClase_IdClaseOrderByOrdenPosicionAsc(10L)).thenReturn(List.of());
-        when(reservaClaseRepository.countByClase_IdClaseAndEstado(10L, EstadoReservaClase.CONFIRMADA)).thenReturn(10L);
-
-        reservaClaseService.procesarCupoLiberado(10L);
-
-        assertThat(clase.getCupoDisponible()).isEqualTo(10);
-        verify(claseGrupalRepository).save(clase);
     }
 }
