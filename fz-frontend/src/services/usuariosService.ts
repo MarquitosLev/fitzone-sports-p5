@@ -118,6 +118,8 @@ let MOCK_USUARIOS: UsuarioDTO[] = [
 
 /**
  * Lista todos los usuarios de una sede específica (o todos si no se especifica sede).
+ * En API real, los SOCIO y EXTERNO tienen idSede = null (pertenecen a toda la cadena),
+ * por lo que se incluyen siempre y el filtro de sede se aplica al personal.
  * @param idSede - ID de la sede activa (del SedeContext)
  */
 export async function listarUsuarios(idSede?: number | null): Promise<UsuarioDTO[]> {
@@ -129,8 +131,9 @@ export async function listarUsuarios(idSede?: number | null): Promise<UsuarioDTO
     return MOCK_USUARIOS.filter((u) => u.idSede === idSede);
   }
 
-  const query = idSede ? `?idSede=${idSede}` : '';
-  return httpClient.get<UsuarioDTO[]>(`/v1/usuarios${query}`);
+  const todos = await httpClient.get<UsuarioDTO[]>('/v1/usuarios');
+  if (!idSede) return todos;
+  return todos.filter((u) => !u.idSede || u.idSede === idSede);
 }
 
 /**
@@ -303,4 +306,3 @@ export async function buscarUsuariosPorDni(
   if (!termino) return todos;
   return todos.filter((u) => u.dni.toLowerCase().includes(termino));
 }
-

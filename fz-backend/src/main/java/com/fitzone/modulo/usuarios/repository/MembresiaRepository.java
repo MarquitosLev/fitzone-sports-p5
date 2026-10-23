@@ -14,6 +14,14 @@ import java.util.Optional;
 @Repository
 public interface MembresiaRepository extends JpaRepository<Membresia, Long> {
 
+    @Override
+    @EntityGraph(attributePaths = {"usuario", "plan"})
+    List<Membresia> findAll();
+
+    @Override
+    @EntityGraph(attributePaths = {"usuario", "plan"})
+    Optional<Membresia> findById(Long id);
+
     @EntityGraph(attributePaths = {"usuario", "plan"})
     List<Membresia> findByUsuario(Usuario usuario);
 
@@ -58,4 +66,4 @@ public interface MembresiaRepository extends JpaRepository<Membresia, Long> {
             @org.springframework.data.repository.query.Param("idUsuario") Long idUsuario,
             @org.springframework.data.repository.query.Param("estado") EstadoMembresia estado,
             @org.springframework.data.repository.query.Param("hoy") LocalDate hoy);
-}
+}

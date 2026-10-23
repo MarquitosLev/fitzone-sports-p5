@@ -1,6 +1,7 @@
 package com.fitzone.modulo.usuarios.controller;
 
 import com.fitzone.core.exception.AccesoNoAutorizadoException;
+import com.fitzone.core.security.SupabaseAuthClient;
 import com.fitzone.modulo.usuarios.models.AuthResponse;
 import com.fitzone.modulo.usuarios.models.LoginRequest;
 import com.fitzone.modulo.usuarios.models.Usuario;
@@ -23,18 +24,25 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final UsuarioRepository usuarioRepository;
+    private final SupabaseAuthClient supabaseAuthClient;
 
     @PostMapping("/login")
     @Operation(summary = "Inicio de sesión de usuarios con correo y contraseña")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         String emailNormalizado = request.getEmail().trim().toLowerCase();
-        Usuario usuario = usuarioRepository.findByEmail(emailNormalizado)
+        SupabaseAuthClient.SesionSupabase sesion = supabaseAuthClient.iniciarSesion(emailNormalizado, request.getPassword());
+
+        Usuario usuario = usuarioRepository.findByAuthId(sesion.authId())
+                .or(() -> usuarioRepository.findByEmail(emailNormalizado))
                 .orElseThrow(() -> new AccesoNoAutorizadoException("Credenciales inválidas. Verifique su correo y contraseña."));
 
-        String token = "tok_" + usuario.getTipoUsuario().name().toLowerCase() + "_" + usuario.getIdUsuario() + "_" + System.currentTimeMillis();
+        if (!sesion.authId().equals(usuario.getAuthId())) {
+            usuario.setAuthId(sesion.authId());
+            usuario = usuarioRepository.save(usuario);
+        }
 
         return AuthResponse.builder()
-                .token(token)
+                .token(sesion.accessToken())
                 .usuario(usuario)
                 .build();
     }

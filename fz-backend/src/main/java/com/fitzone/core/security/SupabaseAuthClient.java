@@ -2,6 +2,7 @@ package com.fitzone.core.security;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fitzone.core.exception.AccesoNoAutorizadoException;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.NegocioException;
 import com.fitzone.core.exception.ReglaNegocioException;
@@ -35,6 +36,8 @@ import java.util.function.Supplier;
 @Slf4j
 @Component
 public class SupabaseAuthClient {
+
+    public record SesionSupabase(String accessToken, UUID authId) {}
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -79,6 +82,26 @@ public class SupabaseAuthClient {
                 .defaultHeader("apikey", serviceRoleKey)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + serviceRoleKey)
                 .build();
+    }
+
+    /** Autentica un usuario con email y contraseña contra Supabase Auth (/token?grant_type=password) y devuelve su JWT y UID. */
+    public SesionSupabase iniciarSesion(String email, String password) {
+        Map<String, Object> body = Map.of("email", email, "password", password);
+        JsonNode respuesta = ejecutar(() -> restClient.post()
+                .uri("/token?grant_type=password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, (request, response) -> {
+                    throw traducirError(response);
+                })
+                .body(JsonNode.class));
+        String accessToken = respuesta != null && respuesta.hasNonNull("access_token")
+                ? respuesta.get("access_token").asText() : null;
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new ServicioExternoException("Supabase Auth no devolvió access_token al iniciar sesión");
+        }
+        return new SesionSupabase(accessToken, leerId(respuesta));
     }
 
     /** Alta por mail: Supabase crea la cuenta y envía la invitación para que el usuario defina su contraseña. */
@@ -195,6 +218,8 @@ public class SupabaseAuthClient {
         }
 
         return switch (codigo) {
+            case "invalid_credentials", "invalid_grant" ->
+                    new AccesoNoAutorizadoException("Credenciales inválidas. Verifique su correo y contraseña.");
             case "email_exists", "user_already_exists" ->
                     new ConflictoException("Ya existe una cuenta registrada con ese email");
             case "weak_password" ->

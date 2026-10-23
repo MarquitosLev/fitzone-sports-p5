@@ -81,7 +81,7 @@ class MembresiaControllerTest {
                 .fechaVencimiento(LocalDate.now().plusMonths(2))
                 .build();
 
-        when(membresiaService.renovar(1L)).thenReturn(renovada);
+        when(membresiaService.renovar(1L, null)).thenReturn(renovada);
 
         mockMvc.perform(post("/v1/membresias/1/renovar"))
                 .andExpect(status().isOk())
