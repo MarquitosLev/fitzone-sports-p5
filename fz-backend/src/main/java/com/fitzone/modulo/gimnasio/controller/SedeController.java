@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,12 +44,14 @@ public class SedeController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('GERENTE')")
     @Operation(summary = "Alta de una nueva sede")
     public Sede crear(@Valid @RequestBody Sede sede) {
         return sedeService.crear(sede);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('GERENTE')")
     @Operation(summary = "Edición de una sede (nombre y aforo máximo)")
     public Sede actualizar(@PathVariable @Positive Long id, @Valid @RequestBody Sede sede) {
         return sedeService.actualizar(id, sede);
@@ -61,6 +64,7 @@ public class SedeController {
     }
 
     @GetMapping("/{id}/accesos/activos")
+    @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")
     @Operation(summary = "Listado de personas que están adentro de la sede ahora (accesos activos)")
     public List<Acceso> listarAccesosActivos(@PathVariable @Positive Long id) {
         return sedeService.listarAccesosActivos(id);

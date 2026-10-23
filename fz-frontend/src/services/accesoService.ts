@@ -1,9 +1,10 @@
-import { httpClient } from './httpClient';
+import { httpClient, AppError } from './httpClient';
 import type {
   AccesoDTO,
   AforoSedeDTO,
   ValidacionIngresoRequestDTO,
   ResultadoValidacionDTO,
+  MotivoRechazoAcceso,
   UsuarioDTO,
   SedeDTO,
   QrTokenDTO,
@@ -17,8 +18,9 @@ export const ACCESO_ENDPOINTS = {
   AFORO: (idSede: number) => `/v1/sedes/${idSede}/aforo`,
   ACCESOS_ACTIVOS: (idSede: number) => `/v1/sedes/${idSede}/accesos/activos`,
   LISTAR: (idSede: number) => `/v1/accesos?idSede=${idSede}`,
-  VALIDAR_INGRESO: '/v1/accesos/validar',
+  VALIDAR_INGRESO: '/v1/accesos/ingreso',
   REGISTRAR_EGRESO: (idAcceso: number) => `/v1/accesos/${idAcceso}/egreso`,
+  QR_SOCIO: (idUsuario: number) => `/v1/usuarios/${idUsuario}/qr`,
 } as const;
 
 // ─── MOCK DATA Y ESTADO EN MEMORIA (BUG-09, RN-01, RN-04, RF-04, RF-05) ──────
@@ -300,10 +302,38 @@ export async function validarIngreso(
     };
   }
 
-  return httpClient.post<ResultadoValidacionDTO>(
-    ACCESO_ENDPOINTS.VALIDAR_INGRESO,
-    { body: JSON.stringify(request) }
-  );
+  const MOTIVOS_RECHAZO: MotivoRechazoAcceso[] = [
+    'QR_VENCIDO',
+    'MEMBRESIA_INACTIVA',
+    'YA_INGRESADO',
+    'AFORO_COMPLETO',
+  ];
+
+  try {
+    const acceso = await httpClient.post<AccesoDTO>(
+      ACCESO_ENDPOINTS.VALIDAR_INGRESO,
+      { body: JSON.stringify({ tokenQr: request.token, idSede: request.idSede }) }
+    );
+    return {
+      aprobado: true,
+      mensaje: 'Acceso autorizado · Molinete habilitado',
+      usuario: acceso.usuario,
+      acceso,
+    };
+  } catch (err: unknown) {
+    if (
+      err instanceof AppError &&
+      typeof err.backendResponse?.codigo === 'string' &&
+      MOTIVOS_RECHAZO.includes(err.backendResponse.codigo as MotivoRechazoAcceso)
+    ) {
+      return {
+        aprobado: false,
+        motivoRechazo: err.backendResponse.codigo as MotivoRechazoAcceso,
+        mensaje: err.backendResponse.mensaje,
+      };
+    }
+    throw err;
+  }
 }
 
 /**
@@ -322,7 +352,7 @@ export async function registrarEgreso(idAcceso: number): Promise<AccesoDTO> {
     return { ...acceso };
   }
 
-  return httpClient.put<AccesoDTO>(ACCESO_ENDPOINTS.REGISTRAR_EGRESO(idAcceso));
+  return httpClient.post<AccesoDTO>(ACCESO_ENDPOINTS.REGISTRAR_EGRESO(idAcceso));
 }
 
 /**
@@ -341,6 +371,12 @@ export async function obtenerQrSocio(idUsuario: number): Promise<QrTokenDTO> {
     };
   }
 
-  return httpClient.get<QrTokenDTO>(`/v1/accesos/qr/${idUsuario}`);
+  const resp = await httpClient.get<{ tokenQr: string; segundosRestantes: number }>(
+    ACCESO_ENDPOINTS.QR_SOCIO(idUsuario)
+  );
+  return {
+    token: resp.tokenQr,
+    expiraEnSegundos: resp.segundosRestantes,
+    generadoEn: new Date().toISOString(),
+  };
 }
-

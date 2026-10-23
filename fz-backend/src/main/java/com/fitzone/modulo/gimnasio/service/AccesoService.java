@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -118,5 +119,13 @@ public class AccesoService {
 
         acceso.setFechaHoraEgreso(LocalDateTime.now());
         return accesoRepository.save(acceso);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Acceso> listarPorSede(Long idSede) {
+        if (!sedeRepository.existsById(idSede)) {
+            throw new RecursoNoEncontradoException("Sede", idSede);
+        }
+        return accesoRepository.findBySede_IdSedeOrderByFechaHoraIngresoDesc(idSede);
     }
 }

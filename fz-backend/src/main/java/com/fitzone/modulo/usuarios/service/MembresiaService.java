@@ -93,6 +93,7 @@ public class MembresiaService {
         LocalDate hoy = LocalDate.now();
         return membresiaRepository.findFirstByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqualOrderByFechaVencimientoDesc(
                         idUsuario, List.of(EstadoMembresia.ACTIVO, EstadoMembresia.SUSPENDIDO), hoy)
+                .or(() -> membresiaRepository.findFirstByUsuario_IdUsuarioOrderByFechaVencimientoDesc(idUsuario))
                 .orElseThrow(() -> new RecursoNoEncontradoException("El usuario no posee una membresía activa o suspendida"));
     }
 
@@ -116,7 +117,7 @@ public class MembresiaService {
         } else {
             // Si está VENCIDO o SUSPENDIDO, la renovación parte desde hoy y reactiva a ACTIVO
             membresia.setFechaInicio(LocalDate.now());
-            membresia.setFechaVencimiento(LocalDate.now().plusMonths(duracionMeses));
+            membresia.setFechaVencimiento(LocalDate.now().plusMonths(1 * duracionMeses));
             membresia.setEstado(EstadoMembresia.ACTIVO);
         }
 

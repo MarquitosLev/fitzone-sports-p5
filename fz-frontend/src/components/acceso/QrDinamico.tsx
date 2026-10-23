@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { ShieldCheck, RefreshCw, AlertCircle } from 'lucide-react';
+import { ShieldCheck, RefreshCw, AlertCircle, Copy, Check } from 'lucide-react';
 import { CuentaRegresiva } from './CuentaRegresiva';
 import { Button, Spinner } from '../ui';
 
@@ -40,6 +40,7 @@ export function QrDinamico({
   className = '',
 }: QrDinamicoProps) {
   const [segundosRestantes, setSegundosRestantes] = useState<number>(duracionSegundos);
+  const [copiado, setCopiado] = useState<boolean>(false);
 
   // Referencia al callback para evitar recrear el intervalo si la función cambia
   const onSolicitarRef = useRef(onSolicitarNuevoToken);
@@ -50,6 +51,7 @@ export function QrDinamico({
   // Cada vez que cambia el token entrante, reseteamos el contador al valor inicial
   useEffect(() => {
     setSegundosRestantes(duracionSegundos);
+    setCopiado(false);
   }, [token, duracionSegundos]);
 
   // Intervalo de cuenta regresiva por segundo
@@ -157,8 +159,26 @@ export function QrDinamico({
         </div>
       )}
 
-      {/* Botón de actualización manual opcional */}
-      <div className="mt-5 flex items-center justify-center gap-3">
+      {/* Botón de actualización manual y copia de token */}
+      <div className="mt-5 flex items-center justify-center gap-3 flex-wrap">
+        {token && !error && (
+          <Button
+            type="button"
+            size="xs"
+            variant="ghost"
+            onClick={() => {
+              void navigator.clipboard.writeText(token);
+              setCopiado(true);
+              setTimeout(() => setCopiado(false), 2000);
+            }}
+            disabled={cargando}
+            leftIcon={copiado ? Check : Copy}
+            data-testid="btn-copiar-qr"
+            className="text-xs"
+          >
+            {copiado ? 'Token copiado' : 'Copiar token'}
+          </Button>
+        )}
         <Button
           type="button"
           size="xs"

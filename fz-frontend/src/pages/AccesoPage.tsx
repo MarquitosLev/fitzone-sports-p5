@@ -43,8 +43,10 @@ import {
   registrarEgreso,
 } from '../services/accesoService';
 import { obtenerMembresiaPorUsuario } from '../services/membresiasService';
+import { httpClient } from '../services/httpClient';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { USE_MOCK } from '../config';
 import type {
   MembresiaDTO,
@@ -55,6 +57,14 @@ import type {
   ResultadoValidacionDTO,
 } from '../types';
 import { formatearFechaHora } from '../utils/formatters';
+
+function useOptionalUsuarioAuth(): UsuarioDTO | null {
+  try {
+    return useAuth().usuario;
+  } catch {
+    return null;
+  }
+}
 
 // Lista de socios para selección rápida en modo socio/demostración
 const SOCIOS_EJEMPLO: UsuarioDTO[] = [
@@ -142,12 +152,21 @@ export function AccesoPage() {
   const navigate = useNavigate();
   const { sedeActiva } = useSede();
   const { addToast } = useToast();
+  const usuarioAuth = useOptionalUsuarioAuth();
+  const esSocio = usuarioAuth?.tipoUsuario === 'SOCIO';
+  const esPersonal =
+    !usuarioAuth ||
+    usuarioAuth.tipoUsuario === 'RECEPCIONISTA' ||
+    usuarioAuth.tipoUsuario === 'GERENTE';
 
   // Pestaña activa: 'mi-qr' (Socio), 'control-aforo' (Recepción SCRUM-82), o 'historial'
   const [vistaActiva, setVistaActiva] = useState<VistaAcceso>('mi-qr');
 
   // ── Estado Vista 1: Pase QR Socio (SCRUM-85) ────────────────────────────────
-  const [socioSeleccionado, setSocioSeleccionado] = useState<UsuarioDTO>(SOCIOS_EJEMPLO[0]);
+  const [sociosDisponibles, setSociosDisponibles] = useState<UsuarioDTO[]>(SOCIOS_EJEMPLO);
+  const [socioSeleccionado, setSocioSeleccionado] = useState<UsuarioDTO>(
+    esSocio && usuarioAuth ? usuarioAuth : SOCIOS_EJEMPLO[0]
+  );
   const [membresia, setMembresia] = useState<MembresiaDTO | null>(null);
   const [cargandoMembresia, setCargandoMembresia] = useState<boolean>(true);
 
@@ -168,6 +187,33 @@ export function AccesoPage() {
   // ── Estado Vista 3: Historial de Accesos ─────────────────────────────────────
   const [accesosSede, setAccesosSede] = useState<AccesoDTO[]>([]);
   const [cargandoAccesos, setCargandoAccesos] = useState<boolean>(false);
+
+  // Cargar socios reales desde el backend cuando USE_MOCK === false
+  useEffect(() => {
+    if (esSocio && usuarioAuth) {
+      setSocioSeleccionado(usuarioAuth);
+      return;
+    }
+    if (USE_MOCK) return;
+
+    let cancelado = false;
+    httpClient
+      .get<UsuarioDTO[]>('/v1/usuarios?tipo=SOCIO')
+      .then((lista) => {
+        if (cancelado || !Array.isArray(lista) || lista.length === 0) return;
+        setSociosDisponibles(lista);
+        setSocioSeleccionado((prev) =>
+          lista.some((u) => u.idUsuario === prev.idUsuario) ? prev : lista[0]
+        );
+      })
+      .catch(() => {
+        // Fallback silencioso si no hay sesión o permisos para listar
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [esSocio, usuarioAuth]);
 
   // ── Lógica Socio: Solicitar Token QR Dinámico ────────────────────────────────
   const solicitarNuevoToken = useCallback(
@@ -451,76 +497,82 @@ export function AccesoPage() {
             <Smartphone className="w-3.5 h-3.5" />
             <span>Mi QR (Socio)</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setVistaActiva('control-aforo')}
-            data-testid="tab-control-aforo"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              vistaActiva === 'control-aforo'
-                ? 'bg-white text-fitzone-navy shadow-xs'
-                : 'text-slate-500 hover:text-fitzone-navy'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-fitzone-coral" />
-            <span>Control y Aforo (Recepción)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setVistaActiva('historial')}
-            data-testid="tab-historial"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              vistaActiva === 'historial'
-                ? 'bg-white text-fitzone-navy shadow-xs'
-                : 'text-slate-500 hover:text-fitzone-navy'
-            }`}
-          >
-            <ListFilter className="w-3.5 h-3.5" />
-            <span>Molinete Recepción</span>
-          </button>
+          {esPersonal && (
+            <>
+              <button
+                type="button"
+                onClick={() => setVistaActiva('control-aforo')}
+                data-testid="tab-control-aforo"
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  vistaActiva === 'control-aforo'
+                    ? 'bg-white text-fitzone-navy shadow-xs'
+                    : 'text-slate-500 hover:text-fitzone-navy'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-fitzone-coral" />
+                <span>Control y Aforo (Recepción)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVistaActiva('historial')}
+                data-testid="tab-historial"
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  vistaActiva === 'historial'
+                    ? 'bg-white text-fitzone-navy shadow-xs'
+                    : 'text-slate-500 hover:text-fitzone-navy'
+                }`}
+              >
+                <ListFilter className="w-3.5 h-3.5" />
+                <span>Molinete Recepción</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* ─── VISTA 1: MI CÓDIGO QR (SOCIO - SCRUM-85) ─────────────────────────── */}
       {vistaActiva === 'mi-qr' && (
         <div className="space-y-6">
-          {/* Selector de Socio de Prueba / Simulación de Estado */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 max-w-xl mx-auto">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <UserCheck className="w-3.5 h-3.5 text-fitzone-coral" />
-                Simular Socio / Caso de Negocio:
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium">
-                Cambia el socio para evaluar las reglas
-              </span>
-            </div>
+          {/* Selector de Socio de Prueba / Simulación de Estado (oculto para un SOCIO real) */}
+          {(!esSocio || USE_MOCK) && (
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 max-w-xl mx-auto">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <UserCheck className="w-3.5 h-3.5 text-fitzone-coral" />
+                  Simular Socio / Caso de Negocio:
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  Cambia el socio para evaluar las reglas
+                </span>
+              </div>
 
-            <div className="flex flex-wrap gap-2">
-              {SOCIOS_EJEMPLO.map((s) => {
-                const esSeleccionado = socioSeleccionado.idUsuario === s.idUsuario;
-                return (
-                  <button
-                    key={s.idUsuario}
-                    type="button"
-                    onClick={() => setSocioSeleccionado(s)}
-                    data-testid={`btn-socio-${s.idUsuario}`}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      esSeleccionado
-                        ? 'bg-fitzone-navy text-white shadow-xs'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {s.nombre} {s.apellido}
-                    {s.idUsuario === 2 && ' (Activo)'}
-                    {s.idUsuario === 6 && ' (Por vencer)'}
-                    {s.idUsuario === 1 && ' (Vencido)'}
-                    {s.idUsuario === 7 && ' (Suspendido)'}
-                    {s.idUsuario === 3 && ' (Sin Membresía)'}
-                  </button>
-                );
-              })}
+              <div className="flex flex-wrap gap-2">
+                {sociosDisponibles.map((s) => {
+                  const esSeleccionado = socioSeleccionado.idUsuario === s.idUsuario;
+                  return (
+                    <button
+                      key={s.idUsuario}
+                      type="button"
+                      onClick={() => setSocioSeleccionado(s)}
+                      data-testid={`btn-socio-${s.idUsuario}`}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        esSeleccionado
+                          ? 'bg-fitzone-navy text-white shadow-xs'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {s.nombre} {s.apellido}
+                      {USE_MOCK && s.idUsuario === 2 && ' (Activo)'}
+                      {USE_MOCK && s.idUsuario === 6 && ' (Por vencer)'}
+                      {USE_MOCK && s.idUsuario === 1 && ' (Vencido)'}
+                      {USE_MOCK && s.idUsuario === 7 && ' (Suspendido)'}
+                      {USE_MOCK && s.idUsuario === 3 && ' (Sin Membresía)'}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Contenedor principal responsive y centrado optimizado para mobile */}
           <div className="max-w-md mx-auto space-y-5 animate-in fade-in duration-300">
