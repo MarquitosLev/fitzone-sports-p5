@@ -3,6 +3,7 @@ import { User, Mail, Phone, Hash, Image, Shield, Building2, UserPlus, Save, Lock
 import { TextField, Select, Button, Alert } from '../ui';
 import type { SelectOption } from '../ui';
 import { useSede } from '../../context/SedeContext';
+import { useAuth } from '../../context/AuthContext';
 import type { UsuarioDTO, UsuarioFormData, TipoUsuario, SedeDTO } from '../../types';
 import { AppError } from '../../services/httpClient';
 
@@ -38,7 +39,12 @@ export function UsuarioForm({
   className = '',
 }: UsuarioFormProps) {
   const { sedeActiva, sedes: sedesContexto } = useSede();
+  const { usuario: operador } = useAuth();
   const sedesList = sedesDisponibles || sedesContexto || [];
+  const esGerente = !operador || operador.tipoUsuario === 'GERENTE';
+  const rolesDisponibles = esGerente
+    ? ROLES_OPTIONS
+    : ROLES_OPTIONS.filter((r) => r.value === 'SOCIO' || r.value === 'EXTERNO');
 
   // Estado del formulario
   const [formData, setFormData] = useState<UsuarioFormData>({
@@ -254,7 +260,7 @@ export function UsuarioForm({
           error={errors.dni}
           leftIcon={Hash}
           required
-          disabled={loading}
+          disabled={loading || modo === 'edicion'}
           helperText="Sólo números sin puntos ni guiones"
         />
 
@@ -289,7 +295,7 @@ export function UsuarioForm({
         <Select
           id="usuario-tipo"
           label="Rol en el Sistema"
-          options={ROLES_OPTIONS}
+          options={rolesDisponibles}
           value={formData.tipoUsuario}
           onChange={(e) => handleChange('tipoUsuario', e.target.value as TipoUsuario)}
           error={errors.tipoUsuario}

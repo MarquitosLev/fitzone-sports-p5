@@ -22,6 +22,7 @@ import {
 import { useUsuarios } from '../hooks/useUsuarios';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { crearUsuario, actualizarUsuario } from '../services/usuariosService';
 import type { UsuarioDTO, TipoUsuario, UsuarioFormData } from '../types';
 
@@ -37,7 +38,10 @@ const FILTRO_TIPO_OPTIONS = [
 export function UsuariosPage() {
   const { sedeActiva, sedes } = useSede();
   const { addToast } = useToast();
+  const { usuario: operador } = useAuth();
   const { data: usuarios, loading, error, refetch } = useUsuarios(sedeActiva?.idSede ?? null);
+  const puedeEditarUsuario = (u: UsuarioDTO) =>
+    !operador || operador.tipoUsuario === 'GERENTE' || (u.tipoUsuario !== 'GERENTE' && u.tipoUsuario !== 'RECEPCIONISTA');
 
   // Estados de filtrado
   const [filtroDni, setFiltroDni] = useState<string>('');
@@ -212,15 +216,17 @@ export function UsuariosPage() {
           >
             Ver
           </Button>
-          <Button
-            size="xs"
-            variant="secondary"
-            leftIcon={Pencil}
-            onClick={() => setUsuarioParaEditar(row)}
-            aria-label={`Editar ${row.nombre}`}
-          >
-            Editar
-          </Button>
+          {puedeEditarUsuario(row) && (
+            <Button
+              size="xs"
+              variant="secondary"
+              leftIcon={Pencil}
+              onClick={() => setUsuarioParaEditar(row)}
+              aria-label={`Editar ${row.nombre}`}
+            >
+              Editar
+            </Button>
+          )}
         </div>
       ),
     },
@@ -400,18 +406,20 @@ export function UsuariosPage() {
                 sedeActiva?.nombre
               }
               actions={
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  leftIcon={Pencil}
-                  onClick={() => {
-                    const usuario = usuarioParaDetalle;
-                    setUsuarioParaDetalle(null);
-                    setUsuarioParaEditar(usuario);
-                  }}
-                >
-                  Editar Datos
-                </Button>
+                puedeEditarUsuario(usuarioParaDetalle) ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    leftIcon={Pencil}
+                    onClick={() => {
+                      const usuario = usuarioParaDetalle;
+                      setUsuarioParaDetalle(null);
+                      setUsuarioParaEditar(usuario);
+                    }}
+                  >
+                    Editar Datos
+                  </Button>
+                ) : undefined
               }
             />
 

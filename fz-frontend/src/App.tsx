@@ -143,15 +143,19 @@ export default function App() {
                 <Route element={<RoleMiddleware />}>
                   <Route path="/" element={<AppLayout />}>
                     <Route index element={<IndexRedirect />} />
-                    <Route path="clases" element={<ClasesPage />} />
                     <Route path="canchas" element={<CanchasPage />} />
+
+                    {/* Rutas accesibles por Socios y Personal (cada página adapta sus pestañas según el rol) */}
+                    <Route element={<RoleMiddleware allowedRoles={['GERENTE', 'RECEPCIONISTA', 'SOCIO']} />}>
+                      <Route path="acceso" element={<AccesoPage />} />
+                      <Route path="clases" element={<ClasesPage />} />
+                      <Route path="pagos" element={<PagosPage />} />
+                    </Route>
 
                     {/* Subárbol protegido para personal administrativo */}
                     <Route element={<RoleMiddleware allowedRoles={['GERENTE', 'RECEPCIONISTA']} />}>
                       <Route path="usuarios" element={<UsuariosPage />} />
                       <Route path="membresias" element={<MembresiasPage />} />
-                      <Route path="acceso" element={<AccesoPage />} />
-                      <Route path="pagos" element={<PagosPage />} />
                     </Route>
 
                     {/* Subárboles dedicados por rol */}

@@ -19,16 +19,17 @@ import {
 } from 'lucide-react';
 import { useSede } from '../../context/SedeContext';
 import { useAuth } from '../../context/AuthContext';
+import type { TipoUsuario } from '../../types';
 
-// Definición de las rutas del panel de gestión (recepcionista/gerente)
-const NAV_ITEMS = [
-  { id: 'usuarios',    label: 'Usuarios',     icon: Users,      to: '/usuarios' },
-  { id: 'membresias',  label: 'Membresías',   icon: CreditCard, to: '/membresias' },
-  { id: 'acceso',      label: 'Control Acceso', icon: DoorOpen, to: '/acceso' },
-  { id: 'clases',      label: 'Clases Grupales', icon: Dumbbell, to: '/clases' },
-  { id: 'canchas',     label: 'Canchas',      icon: Layers,     to: '/canchas' },
-  { id: 'pagos',       label: 'Pagos',        icon: DollarSign, to: '/pagos' },
-] as const;
+// Definición de las rutas del panel de gestión, con los roles que pueden verlas
+const NAV_ITEMS: ReadonlyArray<{ id: string; label: string; icon: typeof Users; to: string; roles: TipoUsuario[] }> = [
+  { id: 'usuarios',    label: 'Usuarios',        icon: Users,      to: '/usuarios',   roles: ['GERENTE', 'RECEPCIONISTA'] },
+  { id: 'membresias',  label: 'Membresías',      icon: CreditCard, to: '/membresias', roles: ['GERENTE', 'RECEPCIONISTA'] },
+  { id: 'acceso',      label: 'Control Acceso',  icon: DoorOpen,   to: '/acceso',     roles: ['GERENTE', 'RECEPCIONISTA', 'SOCIO'] },
+  { id: 'clases',      label: 'Clases Grupales', icon: Dumbbell,   to: '/clases',     roles: ['GERENTE', 'RECEPCIONISTA', 'SOCIO'] },
+  { id: 'canchas',     label: 'Canchas',         icon: Layers,     to: '/canchas',    roles: ['GERENTE', 'RECEPCIONISTA', 'SOCIO', 'EXTERNO'] },
+  { id: 'pagos',       label: 'Pagos',           icon: DollarSign, to: '/pagos',      roles: ['GERENTE', 'RECEPCIONISTA', 'SOCIO'] },
+];
 
 export interface SidebarProps {
   mobileOpen?: boolean;
@@ -37,8 +38,11 @@ export interface SidebarProps {
 
 export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { usuario, logout } = useAuth();
   const { sedeActiva } = useSede();
+  const itemsVisibles = NAV_ITEMS.filter(
+    (item) => !usuario || item.roles.includes(usuario.tipoUsuario)
+  );
 
   const handleLogout = () => {
     if (onCloseMobile) onCloseMobile();
@@ -66,7 +70,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
 
         {/* Lista de navegación */}
         <nav className="space-y-1" aria-label="Navegación principal">
-          {NAV_ITEMS.map((item) => {
+          {itemsVisibles.map((item) => {
             const Icon = item.icon;
 
             return (
