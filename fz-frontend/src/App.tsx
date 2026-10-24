@@ -28,13 +28,15 @@ import { CanchasPage } from './pages/CanchasPage';
 import { PagosPage } from './pages/PagosPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegistroPage } from './pages/RegistroPage';
+import { RolesPage } from './pages/RolesPage';
 import {
   SocioRolPage,
   ExternoRolPage,
   RecepcionistaRolPage,
   GerenteRolPage,
 } from './pages/roles';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { RoleMiddleware } from './components/auth';
 import { httpClient, registerHttpErrorHandler } from './services/httpClient';
 import { Spinner } from './components/ui';
 import { USE_MOCK } from './config';
@@ -64,6 +66,17 @@ function HttpErrorConnector({ children }: { children: React.ReactNode }) {
   }, [addToast]);
 
   return <>{children}</>;
+}
+
+function IndexRedirect() {
+  const { usuario } = useAuth();
+  if (usuario?.tipoUsuario === 'SOCIO') {
+    return <Navigate to="/rol/socio" replace />;
+  }
+  if (usuario?.tipoUsuario === 'EXTERNO') {
+    return <Navigate to="/rol/externo" replace />;
+  }
+  return <Navigate to="/usuarios" replace />;
 }
 
 export default function App() {
@@ -127,22 +140,45 @@ export default function App() {
                   todas las rutas dentro de él comparten Header + Sidebar.
                   Las rutas hijas se renderizan en el <Outlet /> de AppLayout.
                 */}
-                <Route path="/" element={<AppLayout />}>
-                  {/* Ruta índice: redirige / → /usuarios automáticamente */}
-                  <Route index element={<Navigate to="/usuarios" replace />} />
-                  <Route path="usuarios" element={<UsuariosPage />} />
-                  <Route path="membresias" element={<MembresiasPage />} />
-                  <Route path="acceso" element={<AccesoPage />} />
-                  <Route path="clases" element={<ClasesPage />} />
-                  <Route path="canchas" element={<CanchasPage />} />
-                  <Route path="pagos" element={<PagosPage />} />
+                {/* Rutas protegidas bajo el middleware de autenticación */}
+                <Route element={<RoleMiddleware />}>
+                  <Route path="/" element={<AppLayout />}>
+                    <Route index element={<IndexRedirect />} />
+                    <Route path="canchas" element={<CanchasPage />} />
 
-                  {/* Rutas base por rol (SCRUM-90) */}
-                  <Route path="rol" element={<Navigate to="/rol/socio" replace />} />
-                  <Route path="rol/socio" element={<SocioRolPage />} />
-                  <Route path="rol/externo" element={<ExternoRolPage />} />
-                  <Route path="rol/recepcionista" element={<RecepcionistaRolPage />} />
-                  <Route path="rol/gerente" element={<GerenteRolPage />} />
+                    {/* Rutas accesibles por Socios y Personal (cada página adapta sus pestañas según el rol) */}
+                    <Route element={<RoleMiddleware allowedRoles={['GERENTE', 'RECEPCIONISTA', 'SOCIO']} />}>
+                      <Route path="acceso" element={<AccesoPage />} />
+                      <Route path="clases" element={<ClasesPage />} />
+                      <Route path="pagos" element={<PagosPage />} />
+                    </Route>
+
+                    {/* Subárbol protegido para personal administrativo */}
+                    <Route element={<RoleMiddleware allowedRoles={['GERENTE', 'RECEPCIONISTA']} />}>
+                      <Route path="usuarios" element={<UsuariosPage />} />
+                      <Route path="membresias" element={<MembresiasPage />} />
+                    </Route>
+
+                    {/* Panel exclusivo de Gerencia para control de roles y accesos (SCRUM-107) */}
+                    <Route element={<RoleMiddleware prestacionRequerida="ROLES_GESTIONAR" />}>
+                      <Route path="admin/roles" element={<RolesPage />} />
+                    </Route>
+
+                    {/* Subárboles dedicados por rol */}
+                    <Route element={<RoleMiddleware allowedRoles={['SOCIO']} />}>
+                      <Route path="rol/socio" element={<SocioRolPage />} />
+                    </Route>
+                    <Route element={<RoleMiddleware allowedRoles={['EXTERNO']} />}>
+                      <Route path="rol/externo" element={<ExternoRolPage />} />
+                    </Route>
+                    <Route element={<RoleMiddleware allowedRoles={['RECEPCIONISTA']} />}>
+                      <Route path="rol/recepcionista" element={<RecepcionistaRolPage />} />
+                    </Route>
+                    <Route element={<RoleMiddleware allowedRoles={['GERENTE']} />}>
+                      <Route path="rol/gerente" element={<GerenteRolPage />} />
+                    </Route>
+                    <Route path="rol" element={<IndexRedirect />} />
+                  </Route>
                 </Route>
 
                 {/* Playground fuera del AppLayout (sin Sidebar ni Header) */}

@@ -27,6 +27,7 @@ import {
 } from '../services/clasesService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import type { ClaseGrupalDTO, ReservaClaseDTO, ListaEsperaDTO } from '../types';
 import { formatearFechaHora } from '../utils/formatters';
 import { AgendaSemanal } from '../components/clases/AgendaSemanal';
@@ -40,7 +41,6 @@ import { USE_MOCK } from '../config';
 // Flag centralizado: si es true, opera con datos en memoria y socio demo.
 // En producción (false), no se usa ningún mock y se requiere sesión real.
 const SOCIO_MOCK_ID = 2; // Valentina García (membresía ACTIVO) para modo mock
-const socioIdActual: number | null = USE_MOCK ? SOCIO_MOCK_ID : null;
 
 // Column definition kept for reference (not rendered, but exported for type safety)
 export const CLASES_COLUMNS: Column<ClaseGrupalDTO>[] = [
@@ -74,7 +74,16 @@ export function ClasesPage() {
   const { addToast } = useToast();
 
   // ── Tab activo ────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<TabClases>('disponibles');
+  const { usuario } = useAuth();
+  const esPersonal = !usuario || usuario.tipoUsuario === 'RECEPCIONISTA' || usuario.tipoUsuario === 'GERENTE';
+  const socioIdActual: number | null = USE_MOCK
+    ? SOCIO_MOCK_ID
+    : usuario?.tipoUsuario === 'SOCIO'
+      ? usuario.idUsuario
+      : null;
+  const [activeTab, setActiveTab] = useState<TabClases>(
+    usuario && (usuario.tipoUsuario === 'RECEPCIONISTA' || usuario.tipoUsuario === 'GERENTE') ? 'agenda-admin' : 'disponibles'
+  );
 
   // ── Data: clases, reservas del socio y lista de espera ───────────────────
   const [clases, setClases] = useState<ClaseGrupalDTO[]>([]);
@@ -122,7 +131,7 @@ export function ClasesPage() {
       if (!cancelled) setLoading(false);
     }
     return () => { cancelled = true; };
-  }, [sedeActiva]);
+  }, [sedeActiva, socioIdActual]);
 
   useEffect(() => {
     void cargarDatos();
@@ -351,6 +360,7 @@ export function ClasesPage() {
           </span>
         </button>
 
+        {esPersonal && (
         <button
           id="tab-agenda-admin"
           onClick={() => setActiveTab('agenda-admin')}
@@ -361,6 +371,7 @@ export function ClasesPage() {
           <Dumbbell className="w-3.5 h-3.5" />
           Agenda (Admin)
         </button>
+        )}
       </div>
 
       {/* ── Error banner ───────────────────────────────────────────────────── */}

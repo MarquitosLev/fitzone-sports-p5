@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, Hash, Image, Shield, Building2, UserPlus, Save } from 'lucide-react';
+import { User, Mail, Phone, Hash, Image, Shield, Building2, UserPlus, Save, Lock } from 'lucide-react';
 import { TextField, Select, Button, Alert } from '../ui';
 import type { SelectOption } from '../ui';
 import { useSede } from '../../context/SedeContext';
+import { useAuth } from '../../context/AuthContext';
 import type { UsuarioDTO, UsuarioFormData, TipoUsuario, SedeDTO } from '../../types';
 import { AppError } from '../../services/httpClient';
+import { listarRoles } from '../../services/rolesService';
 
 export interface UsuarioFormProps {
   modo: 'alta' | 'edicion';
@@ -16,12 +18,6 @@ export interface UsuarioFormProps {
   className?: string;
 }
 
-const ROLES_OPTIONS: SelectOption[] = [
-  { value: 'SOCIO', label: 'Socio (Cliente con membresía)' },
-  { value: 'EXTERNO', label: 'Externo (Invitado / Reserva de canchas)' },
-  { value: 'RECEPCIONISTA', label: 'Recepcionista (Operador de sede)' },
-  { value: 'GERENTE', label: 'Gerente (Administrador general)' },
-];
 
 /**
  * Formulario unificado de alta y edición de usuarios (RF-01).
@@ -38,7 +34,16 @@ export function UsuarioForm({
   className = '',
 }: UsuarioFormProps) {
   const { sedeActiva, sedes: sedesContexto } = useSede();
+  const { usuario: operador } = useAuth();
   const sedesList = sedesDisponibles || sedesContexto || [];
+  const esGerente = !operador || operador.tipoUsuario === 'GERENTE';
+  const rolesDelCatalogo: SelectOption[] = listarRoles().map((r) => ({
+    value: r.codigo,
+    label: `${r.nombre} (${r.codigo})`,
+  }));
+  const rolesDisponibles = esGerente
+    ? rolesDelCatalogo
+    : rolesDelCatalogo.filter((r) => r.value === 'SOCIO' || r.value === 'EXTERNO');
 
   // Estado del formulario
   const [formData, setFormData] = useState<UsuarioFormData>({
@@ -50,6 +55,7 @@ export function UsuarioForm({
     fotoUrl: '',
     tipoUsuario: 'SOCIO',
     idSede: sedeActiva?.idSede ?? 1,
+    password: '',
   });
 
   // Errores por campo
@@ -69,6 +75,7 @@ export function UsuarioForm({
         fotoUrl: valoresIniciales.fotoUrl || '',
         tipoUsuario: valoresIniciales.tipoUsuario || 'SOCIO',
         idSede: valoresIniciales.idSede ?? (sedeActiva?.idSede || 1),
+        password: '',
       });
     } else {
       setFormData({
@@ -80,6 +87,7 @@ export function UsuarioForm({
         fotoUrl: '',
         tipoUsuario: 'SOCIO',
         idSede: sedeActiva?.idSede || 1,
+        password: '',
       });
     }
     setErrors({});
@@ -165,6 +173,10 @@ export function UsuarioForm({
           : Number(formData.idSede || sedeActiva?.idSede || 1),
       };
 
+      if (!payload.password?.trim()) {
+        delete payload.password;
+      }
+
       await onSubmit(payload);
     } catch (err: unknown) {
       if (err instanceof AppError) {
@@ -247,7 +259,7 @@ export function UsuarioForm({
           error={errors.dni}
           leftIcon={Hash}
           required
-          disabled={loading}
+          disabled={loading || modo === 'edicion'}
           helperText="Sólo números sin puntos ni guiones"
         />
 
@@ -282,7 +294,7 @@ export function UsuarioForm({
         <Select
           id="usuario-tipo"
           label="Rol en el Sistema"
-          options={ROLES_OPTIONS}
+          options={rolesDisponibles}
           value={formData.tipoUsuario}
           onChange={(e) => handleChange('tipoUsuario', e.target.value as TipoUsuario)}
           error={errors.tipoUsuario}
@@ -291,6 +303,24 @@ export function UsuarioForm({
           disabled={loading}
         />
 
+        {/* Contraseña inicial opcional (cuando alta-por-email=false en backend) */}
+        {modo === 'alta' && formData.tipoUsuario !== 'EXTERNO' && (
+          <div className="sm:col-span-2">
+            <TextField
+              id="usuario-password"
+              label="Contraseña Inicial (Opcional si se usa invitación por email)"
+              type="password"
+              placeholder="Mínimo 6 caracteres"
+              value={formData.password || ''}
+              onChange={(e) => handleChange('password', e.target.value)}
+              error={errors.password}
+              leftIcon={Lock}
+              disabled={loading}
+              helperText="Requerida únicamente cuando el servidor está configurado sin envío de correo (alta-por-email=false)."
+            />
+          </div>
+        )}
+
         {/* Campo de Selector de Sede: SOLO visible si el rol es RECEPCIONISTA o GERENTE */}
         {requiereAsignacionSede ? (
           <div className="sm:col-span-2 bg-slate-50/70 p-4 rounded-2xl border border-slate-200 animate-fade-in">
@@ -298,7 +328,7 @@ export function UsuarioForm({
               id="usuario-sede"
               label="Asignación de Sede Operativa"
               options={sedesOptions}
-              value={formData.idSede}
+              value={formData.idSede ?? ''}
               onChange={(e) => handleChange('idSede', Number(e.target.value))}
               error={errors.idSede}
               leftIcon={Building2}

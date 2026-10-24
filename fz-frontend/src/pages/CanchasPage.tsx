@@ -36,6 +36,7 @@ import {
 } from '../services/canchasService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import type { CanchaDTO, CanchaFormData } from '../types';
 import { formatearMonto } from '../utils/formatters';
 
@@ -49,6 +50,10 @@ export interface CanchasPageProps {
 export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPageProps) {
   const { sedeActiva } = useSede();
   const { addToast } = useToast();
+
+  const { usuario } = useAuth();
+  const esPersonal = !usuario || usuario.tipoUsuario === 'RECEPCIONISTA' || usuario.tipoUsuario === 'GERENTE';
+  const esGerente = !usuario || usuario.tipoUsuario === 'GERENTE';
 
   const [seccionActiva, setSeccionActiva] = useState<CanchasTab>(initialTab);
 
@@ -270,6 +275,7 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
           <span>Mis Reservas</span>
         </button>
 
+        {esPersonal && (
         <button
           type="button"
           role="tab"
@@ -284,6 +290,7 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
           <Layers className="w-4 h-4" />
           <span>Gestión de Canchas</span>
         </button>
+        )}
       </div>
 
       {/* SECCIÓN 1: RESERVA DE CANCHA */}
@@ -323,6 +330,7 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
               </div>
             </div>
 
+            {esGerente && (
             <div className="flex items-center gap-2.5 self-start sm:self-auto">
               <Button
                 type="button"
@@ -333,6 +341,7 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
                 Nueva Cancha
               </Button>
             </div>
+            )}
           </div>
 
           {/* Tarjetas de Métricas Rápidas */}
