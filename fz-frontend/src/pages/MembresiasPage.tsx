@@ -222,11 +222,18 @@ export function MembresiasPage() {
 
     setIsSubmittingModal(true);
     try {
-      const nueva = await crearMembresia({
-        idUsuario: modalSocio.idUsuario,
-        idPlan: modalIdPlan,
-        fechaInicio: modalFechaInicio,
-      });
+      const tieneMembresiaRenovable =
+        membresiaSocio &&
+        membresiaSocio.usuario.idUsuario === modalSocio.idUsuario &&
+        membresiaSocio.estado !== 'CANCELADO';
+
+      const nueva = tieneMembresiaRenovable
+        ? await renovarMembresia(membresiaSocio.idMembresia, modalIdPlan)
+        : await crearMembresia({
+            idUsuario: modalSocio.idUsuario,
+            idPlan: modalIdPlan,
+            fechaInicio: modalFechaInicio,
+          });
 
       setIsModalAltaOpen(false);
       setSocioSeleccionado(modalSocio);
@@ -432,7 +439,7 @@ export function MembresiasPage() {
             <MembresiaEstadoCard
               membresia={membresiaSocio}
               socio={socioSeleccionado}
-              onRenovarClick={handleRenovar}
+              onRenovarClick={membresiaSocio ? handleRenovar : () => handleAbrirModalAlta()}
             />
 
             {/* Barra de acciones si posee membresía */}
