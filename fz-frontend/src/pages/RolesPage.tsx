@@ -13,21 +13,13 @@ export function RolesPage() {
   const [modalAbierto, setModalAbierto] = useState(false);
 
   const handleCrear = (datos: CrearRolDTO) => {
-    try {
-      const nuevo = crearRolPersonalizado(datos);
-      setRoles(listarRoles());
-      addToast({
-        type: 'success',
-        title: 'Rol Creado',
-        message: `El perfil ${nuevo.nombre} (${nuevo.codigo}) fue registrado con éxito.`,
-      });
-    } catch (err: unknown) {
-      addToast({
-        type: 'error',
-        title: 'Error al crear rol',
-        message: err instanceof Error ? err.message : 'No se pudo guardar el rol.',
-      });
-    }
+    const nuevo = crearRolPersonalizado(datos);
+    setRoles(listarRoles());
+    addToast({
+      type: 'success',
+      title: 'Rol Creado',
+      message: `El perfil ${nuevo.nombre} (${nuevo.codigo}) fue registrado con éxito.`,
+    });
   };
 
   const handleEliminar = (codigo: string) => {

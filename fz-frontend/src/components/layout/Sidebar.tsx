@@ -35,7 +35,7 @@ const NAV_ITEMS: ReadonlyArray<{
   { id: 'usuarios',    label: 'Usuarios',        icon: Users,      to: '/usuarios',    prestacion: 'USUARIOS_ADMIN' },
   { id: 'membresias',  label: 'Membresías',      icon: CreditCard, to: '/membresias',  prestacion: 'USUARIOS_ADMIN' },
   { id: 'acceso',      label: 'Control Acceso',  icon: DoorOpen,   to: '/acceso',      prestacion: 'ACCESO_AFORO_VIEW' },
-  { id: 'mi-qr',       label: 'Mi Pase QR',      icon: QrCode,     to: '/acceso',      prestacion: 'ACCESO_MI_QR' },
+  { id: 'mi-qr',       label: 'Mi Pase QR',      icon: QrCode,     to: '/mi-qr',       prestacion: 'ACCESO_MI_QR' },
   { id: 'clases',      label: 'Clases Grupales', icon: Dumbbell,   to: '/clases',      prestacion: 'CLASES_VER' },
   { id: 'canchas',     label: 'Canchas',         icon: Layers,     to: '/canchas',     prestacion: 'CANCHAS_VER' },
   { id: 'pagos',       label: 'Pagos',           icon: DollarSign, to: '/pagos',       prestacion: 'PAGOS_VER_HISTORIAL' },

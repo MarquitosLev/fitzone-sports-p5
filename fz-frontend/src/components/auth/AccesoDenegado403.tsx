@@ -16,7 +16,7 @@ export function AccesoDenegado403({ mensaje }: AccesoDenegado403Props) {
       navigate('/login', { replace: true });
       return;
     }
-    navigate(`/rol/${usuario.tipoUsuario.toLowerCase()}`, { replace: true });
+    navigate('/', { replace: true });
   };
 
   return (
