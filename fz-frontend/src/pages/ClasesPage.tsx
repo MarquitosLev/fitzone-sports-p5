@@ -28,6 +28,7 @@ import {
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { useTienePrestacion } from '../hooks/usePrestaciones';
 import type { ClaseGrupalDTO, ReservaClaseDTO, ListaEsperaDTO } from '../types';
 import { formatearFechaHora } from '../utils/formatters';
 import { AgendaSemanal } from '../components/clases/AgendaSemanal';
@@ -75,14 +76,14 @@ export function ClasesPage() {
 
   // ── Tab activo ────────────────────────────────────────────────────────────
   const { usuario } = useAuth();
-  const esPersonal = !usuario || usuario.tipoUsuario === 'RECEPCIONISTA' || usuario.tipoUsuario === 'GERENTE';
+  const puedeAdminClases = useTienePrestacion('CLASES_ADMIN');
   const socioIdActual: number | null = USE_MOCK
     ? SOCIO_MOCK_ID
     : usuario?.tipoUsuario === 'SOCIO'
       ? usuario.idUsuario
       : null;
   const [activeTab, setActiveTab] = useState<TabClases>(
-    usuario && (usuario.tipoUsuario === 'RECEPCIONISTA' || usuario.tipoUsuario === 'GERENTE') ? 'agenda-admin' : 'disponibles'
+    puedeAdminClases ? 'agenda-admin' : 'disponibles'
   );
 
   // ── Data: clases, reservas del socio y lista de espera ───────────────────
@@ -303,7 +304,7 @@ export function ClasesPage() {
         </div>
 
         {/* Botón "Nueva clase" solo visible en el tab Admin */}
-        {activeTab === 'agenda-admin' && (
+        {activeTab === 'agenda-admin' && puedeAdminClases && (
           <Button id="btn-programar-nueva-clase" variant="coral" onClick={handleOpenNew}>
             Programar Nueva Clase
           </Button>
@@ -360,7 +361,7 @@ export function ClasesPage() {
           </span>
         </button>
 
-        {esPersonal && (
+        {puedeAdminClases && (
         <button
           id="tab-agenda-admin"
           onClick={() => setActiveTab('agenda-admin')}

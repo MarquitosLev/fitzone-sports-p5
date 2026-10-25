@@ -28,6 +28,7 @@ import { CanchasPage } from './pages/CanchasPage';
 import { PagosPage } from './pages/PagosPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegistroPage } from './pages/RegistroPage';
+import { RolesPage } from './pages/RolesPage';
 import {
   SocioRolPage,
   ExternoRolPage,
@@ -69,13 +70,22 @@ function HttpErrorConnector({ children }: { children: React.ReactNode }) {
 
 function IndexRedirect() {
   const { usuario } = useAuth();
+  if (!usuario) {
+    return <Navigate to="/canchas" replace />;
+  }
   if (usuario?.tipoUsuario === 'SOCIO') {
     return <Navigate to="/rol/socio" replace />;
   }
   if (usuario?.tipoUsuario === 'EXTERNO') {
     return <Navigate to="/rol/externo" replace />;
   }
-  return <Navigate to="/usuarios" replace />;
+  if (usuario?.tipoUsuario === 'RECEPCIONISTA') {
+    return <Navigate to="/rol/recepcionista" replace />;
+  }
+  if (usuario?.tipoUsuario === 'GERENTE') {
+    return <Navigate to="/rol/gerente" replace />;
+  }
+  return <Navigate to="/canchas" replace />;
 }
 
 export default function App() {
@@ -139,40 +149,52 @@ export default function App() {
                   todas las rutas dentro de él comparten Header + Sidebar.
                   Las rutas hijas se renderizan en el <Outlet /> de AppLayout.
                 */}
-                {/* Rutas protegidas bajo el middleware de autenticación */}
-                <Route element={<RoleMiddleware />}>
-                  <Route path="/" element={<AppLayout />}>
-                    <Route index element={<IndexRedirect />} />
-                    <Route path="canchas" element={<CanchasPage />} />
+                <Route path="/" element={<AppLayout />}>
+                  <Route index element={<IndexRedirect />} />
+                  {/* Catálogo público: /canchas y /clases son accesibles para visitantes anónimos */}
+                  <Route path="canchas" element={<CanchasPage />} />
+                  <Route path="clases" element={<ClasesPage />} />
 
-                    {/* Rutas accesibles por Socios y Personal (cada página adapta sus pestañas según el rol) */}
-                    <Route element={<RoleMiddleware allowedRoles={['GERENTE', 'RECEPCIONISTA', 'SOCIO']} />}>
-                      <Route path="acceso" element={<AccesoPage />} />
-                      <Route path="clases" element={<ClasesPage />} />
-                      <Route path="pagos" element={<PagosPage />} />
-                    </Route>
-
-                    {/* Subárbol protegido para personal administrativo */}
-                    <Route element={<RoleMiddleware allowedRoles={['GERENTE', 'RECEPCIONISTA']} />}>
-                      <Route path="usuarios" element={<UsuariosPage />} />
-                      <Route path="membresias" element={<MembresiasPage />} />
-                    </Route>
-
-                    {/* Subárboles dedicados por rol */}
-                    <Route element={<RoleMiddleware allowedRoles={['SOCIO']} />}>
-                      <Route path="rol/socio" element={<SocioRolPage />} />
-                    </Route>
-                    <Route element={<RoleMiddleware allowedRoles={['EXTERNO']} />}>
-                      <Route path="rol/externo" element={<ExternoRolPage />} />
-                    </Route>
-                    <Route element={<RoleMiddleware allowedRoles={['RECEPCIONISTA']} />}>
-                      <Route path="rol/recepcionista" element={<RecepcionistaRolPage />} />
-                    </Route>
-                    <Route element={<RoleMiddleware allowedRoles={['GERENTE']} />}>
-                      <Route path="rol/gerente" element={<GerenteRolPage />} />
-                    </Route>
-                    <Route path="rol" element={<IndexRedirect />} />
+                  {/* Mi Pase QR (Socio) */}
+                  <Route element={<RoleMiddleware prestacionRequerida="ACCESO_MI_QR" />}>
+                    <Route path="mi-qr" element={<AccesoPage />} />
                   </Route>
+
+                  {/* Control Acceso y Aforo (Recepción / Gerencia) */}
+                  <Route element={<RoleMiddleware prestacionRequerida="ACCESO_AFORO_VIEW" />}>
+                    <Route path="acceso" element={<AccesoPage />} />
+                  </Route>
+
+                  {/* Historial de Pagos */}
+                  <Route element={<RoleMiddleware prestacionRequerida="PAGOS_VER_HISTORIAL" />}>
+                    <Route path="pagos" element={<PagosPage />} />
+                  </Route>
+
+                  {/* Subárbol protegido para personal administrativo */}
+                  <Route element={<RoleMiddleware prestacionRequerida="USUARIOS_ADMIN" />}>
+                    <Route path="usuarios" element={<UsuariosPage />} />
+                    <Route path="membresias" element={<MembresiasPage />} />
+                  </Route>
+
+                  {/* Panel exclusivo de Gerencia para control de roles y accesos (SCRUM-107) */}
+                  <Route element={<RoleMiddleware prestacionRequerida="ROLES_GESTIONAR" />}>
+                    <Route path="admin/roles" element={<RolesPage />} />
+                  </Route>
+
+                  {/* Subárboles dedicados por rol */}
+                  <Route element={<RoleMiddleware allowedRoles={['SOCIO']} />}>
+                    <Route path="rol/socio" element={<SocioRolPage />} />
+                  </Route>
+                  <Route element={<RoleMiddleware allowedRoles={['EXTERNO']} />}>
+                    <Route path="rol/externo" element={<ExternoRolPage />} />
+                  </Route>
+                  <Route element={<RoleMiddleware allowedRoles={['RECEPCIONISTA']} />}>
+                    <Route path="rol/recepcionista" element={<RecepcionistaRolPage />} />
+                  </Route>
+                  <Route element={<RoleMiddleware allowedRoles={['GERENTE']} />}>
+                    <Route path="rol/gerente" element={<GerenteRolPage />} />
+                  </Route>
+                  <Route path="rol" element={<IndexRedirect />} />
                 </Route>
 
                 {/* Playground fuera del AppLayout (sin Sidebar ni Header) */}

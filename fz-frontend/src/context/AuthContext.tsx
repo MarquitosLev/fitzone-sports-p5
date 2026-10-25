@@ -22,7 +22,7 @@ export interface AuthContextType {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 export interface AuthProviderProps {
   children: React.ReactNode;

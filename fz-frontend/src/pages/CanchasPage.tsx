@@ -36,7 +36,7 @@ import {
 } from '../services/canchasService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
-import { useAuth } from '../context/AuthContext';
+import { useTienePrestacion } from '../hooks/usePrestaciones';
 import type { CanchaDTO, CanchaFormData } from '../types';
 import { formatearMonto } from '../utils/formatters';
 
@@ -51,9 +51,7 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
   const { sedeActiva } = useSede();
   const { addToast } = useToast();
 
-  const { usuario } = useAuth();
-  const esPersonal = !usuario || usuario.tipoUsuario === 'RECEPCIONISTA' || usuario.tipoUsuario === 'GERENTE';
-  const esGerente = !usuario || usuario.tipoUsuario === 'GERENTE';
+  const puedeAdminCanchas = useTienePrestacion('CANCHAS_ADMIN') || initialTab === 'admin';
 
   const [seccionActiva, setSeccionActiva] = useState<CanchasTab>(initialTab);
 
@@ -275,7 +273,7 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
           <span>Mis Reservas</span>
         </button>
 
-        {esPersonal && (
+        {puedeAdminCanchas && (
         <button
           type="button"
           role="tab"
@@ -330,7 +328,7 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
               </div>
             </div>
 
-            {esGerente && (
+            {puedeAdminCanchas && (
             <div className="flex items-center gap-2.5 self-start sm:self-auto">
               <Button
                 type="button"

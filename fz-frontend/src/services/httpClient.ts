@@ -158,7 +158,7 @@ async function httpRequest<T>(
   // Si el token expiró o es inválido (401) en una ruta autenticada, cerramos sesión y redirigimos a /login
   if (response.status === 401 && _authToken && !path.startsWith('/v1/auth/login')) {
     _authToken = null;
-    localStorage.removeItem('fz_auth_session');
+    localStorage.removeItem('fitzone_auth_session');
     if (window.location.pathname !== '/login') {
       window.location.href = '/login';
     }

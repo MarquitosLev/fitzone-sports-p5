@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   QrCode,
   ShieldAlert,
@@ -46,6 +46,7 @@ import { obtenerMembresiaPorUsuario } from '../services/membresiasService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { useTienePrestacion } from '../hooks/usePrestaciones';
 import { USE_MOCK } from '../config';
 import type {
   MembresiaDTO,
@@ -141,15 +142,19 @@ type VistaAcceso = 'mi-qr' | 'control-aforo' | 'historial';
 
 export function AccesoPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { sedeActiva } = useSede();
   const { addToast } = useToast();
   const { usuario: usuarioAuth } = useAuth();
   const esSocio = usuarioAuth?.tipoUsuario === 'SOCIO';
-  const esPersonal = !usuarioAuth || usuarioAuth.tipoUsuario === 'RECEPCIONISTA' || usuarioAuth.tipoUsuario === 'GERENTE';
+  const puedeVerAforo = !usuarioAuth || useTienePrestacion('ACCESO_AFORO_VIEW');
+  const puedeVerMiQr = !usuarioAuth || useTienePrestacion('ACCESO_MI_QR');
 
   // Pestaña activa: 'mi-qr' (Socio), 'control-aforo' (Recepción SCRUM-82), o 'historial'
   const [vistaActiva, setVistaActiva] = useState<VistaAcceso>(
-    usuarioAuth && (usuarioAuth.tipoUsuario === 'RECEPCIONISTA' || usuarioAuth.tipoUsuario === 'GERENTE')
+    !location.pathname.includes('/mi-qr') &&
+      usuarioAuth &&
+      (usuarioAuth.tipoUsuario === 'RECEPCIONISTA' || usuarioAuth.tipoUsuario === 'GERENTE')
       ? 'control-aforo'
       : 'mi-qr'
   );
@@ -448,54 +453,56 @@ export function AccesoPage() {
 
         {/* Switcher de vistas */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl self-start sm:self-auto flex-wrap">
-          <button
-            type="button"
-            onClick={() => setVistaActiva('mi-qr')}
-            data-testid="tab-mi-qr"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              vistaActiva === 'mi-qr'
-                ? 'bg-white text-fitzone-navy shadow-xs'
-                : 'text-slate-500 hover:text-fitzone-navy'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Mi QR (Socio)</span>
-          </button>
-          {esPersonal && (
-          <>
-          <button
-            type="button"
-            onClick={() => setVistaActiva('control-aforo')}
-            data-testid="tab-control-aforo"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              vistaActiva === 'control-aforo'
-                ? 'bg-white text-fitzone-navy shadow-xs'
-                : 'text-slate-500 hover:text-fitzone-navy'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-fitzone-coral" />
-            <span>Control y Aforo (Recepción)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setVistaActiva('historial')}
-            data-testid="tab-historial"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              vistaActiva === 'historial'
-                ? 'bg-white text-fitzone-navy shadow-xs'
-                : 'text-slate-500 hover:text-fitzone-navy'
-            }`}
-          >
-            <ListFilter className="w-3.5 h-3.5" />
-            <span>Molinete Recepción</span>
-          </button>
-          </>
+          {puedeVerMiQr && (
+            <button
+              type="button"
+              onClick={() => setVistaActiva('mi-qr')}
+              data-testid="tab-mi-qr"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                vistaActiva === 'mi-qr'
+                  ? 'bg-white text-fitzone-navy shadow-xs'
+                  : 'text-slate-500 hover:text-fitzone-navy'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Mi QR (Socio)</span>
+            </button>
+          )}
+          {puedeVerAforo && (
+            <>
+              <button
+                type="button"
+                onClick={() => setVistaActiva('control-aforo')}
+                data-testid="tab-control-aforo"
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  vistaActiva === 'control-aforo'
+                    ? 'bg-white text-fitzone-navy shadow-xs'
+                    : 'text-slate-500 hover:text-fitzone-navy'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-fitzone-coral" />
+                <span>Control y Aforo (Recepción)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVistaActiva('historial')}
+                data-testid="tab-historial"
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  vistaActiva === 'historial'
+                    ? 'bg-white text-fitzone-navy shadow-xs'
+                    : 'text-slate-500 hover:text-fitzone-navy'
+                }`}
+              >
+                <ListFilter className="w-3.5 h-3.5" />
+                <span>Molinete Recepción</span>
+              </button>
+            </>
           )}
         </div>
       </div>
 
       {/* ─── VISTA 1: MI CÓDIGO QR (SOCIO - SCRUM-85) ─────────────────────────── */}
-      {vistaActiva === 'mi-qr' && (
+      {vistaActiva === 'mi-qr' && puedeVerMiQr && (
         <div className="space-y-6">
           {/* Selector de Socio de Prueba / Simulación de Estado (oculto para un SOCIO real) */}
           {(!esSocio || USE_MOCK) && (

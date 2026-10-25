@@ -16,19 +16,30 @@ import {
   DollarSign,
   LogOut,
   ChevronRight,
+  Shield,
+  QrCode,
 } from 'lucide-react';
 import { useSede } from '../../context/SedeContext';
 import { useAuth } from '../../context/AuthContext';
-import type { TipoUsuario } from '../../types';
+import { usePrestacionesUsuario } from '../../hooks/usePrestaciones';
+import type { Prestacion } from '../../types';
 
-// Definición de las rutas del panel de gestión, con los roles que pueden verlas
-const NAV_ITEMS: ReadonlyArray<{ id: string; label: string; icon: typeof Users; to: string; roles: TipoUsuario[] }> = [
-  { id: 'usuarios',    label: 'Usuarios',        icon: Users,      to: '/usuarios',   roles: ['GERENTE', 'RECEPCIONISTA'] },
-  { id: 'membresias',  label: 'Membresías',      icon: CreditCard, to: '/membresias', roles: ['GERENTE', 'RECEPCIONISTA'] },
-  { id: 'acceso',      label: 'Control Acceso',  icon: DoorOpen,   to: '/acceso',     roles: ['GERENTE', 'RECEPCIONISTA', 'SOCIO'] },
-  { id: 'clases',      label: 'Clases Grupales', icon: Dumbbell,   to: '/clases',     roles: ['GERENTE', 'RECEPCIONISTA', 'SOCIO'] },
-  { id: 'canchas',     label: 'Canchas',         icon: Layers,     to: '/canchas',    roles: ['GERENTE', 'RECEPCIONISTA', 'SOCIO', 'EXTERNO'] },
-  { id: 'pagos',       label: 'Pagos',           icon: DollarSign, to: '/pagos',      roles: ['GERENTE', 'RECEPCIONISTA', 'SOCIO'] },
+// Definición de las rutas del panel de gestión con su prestación requerida
+const NAV_ITEMS: ReadonlyArray<{
+  id: string;
+  label: string;
+  icon: typeof Users;
+  to: string;
+  prestacion?: Prestacion;
+}> = [
+  { id: 'usuarios',    label: 'Usuarios',        icon: Users,      to: '/usuarios',    prestacion: 'USUARIOS_ADMIN' },
+  { id: 'membresias',  label: 'Membresías',      icon: CreditCard, to: '/membresias',  prestacion: 'USUARIOS_ADMIN' },
+  { id: 'acceso',      label: 'Control Acceso',  icon: DoorOpen,   to: '/acceso',      prestacion: 'ACCESO_AFORO_VIEW' },
+  { id: 'mi-qr',       label: 'Mi Pase QR',      icon: QrCode,     to: '/mi-qr',       prestacion: 'ACCESO_MI_QR' },
+  { id: 'clases',      label: 'Clases Grupales', icon: Dumbbell,   to: '/clases',      prestacion: 'CLASES_VER' },
+  { id: 'canchas',     label: 'Canchas',         icon: Layers,     to: '/canchas',     prestacion: 'CANCHAS_VER' },
+  { id: 'pagos',       label: 'Pagos',           icon: DollarSign, to: '/pagos',       prestacion: 'PAGOS_VER_HISTORIAL' },
+  { id: 'roles',       label: 'Roles y Accesos', icon: Shield,     to: '/admin/roles', prestacion: 'ROLES_GESTIONAR' },
 ];
 
 export interface SidebarProps {
@@ -40,9 +51,15 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
   const { sedeActiva } = useSede();
-  const itemsVisibles = NAV_ITEMS.filter(
-    (item) => !usuario || item.roles.includes(usuario.tipoUsuario)
-  );
+  const misPrestaciones = usePrestacionesUsuario();
+
+  // Visitante sin sesión ve catálogo público (/canchas y /clases); usuario con sesión ve según prestaciones
+  const itemsVisibles = NAV_ITEMS.filter((item) => {
+    if (!usuario) {
+      return item.to === '/canchas' || item.to === '/clases';
+    }
+    return !item.prestacion || misPrestaciones.includes(item.prestacion);
+  });
 
   const handleLogout = () => {
     if (onCloseMobile) onCloseMobile();

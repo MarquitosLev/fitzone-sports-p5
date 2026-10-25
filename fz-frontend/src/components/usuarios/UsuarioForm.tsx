@@ -6,6 +6,7 @@ import { useSede } from '../../context/SedeContext';
 import { useAuth } from '../../context/AuthContext';
 import type { UsuarioDTO, UsuarioFormData, TipoUsuario, SedeDTO } from '../../types';
 import { AppError } from '../../services/httpClient';
+import { listarRoles } from '../../services/rolesService';
 
 export interface UsuarioFormProps {
   modo: 'alta' | 'edicion';
@@ -17,12 +18,6 @@ export interface UsuarioFormProps {
   className?: string;
 }
 
-const ROLES_OPTIONS: SelectOption[] = [
-  { value: 'SOCIO', label: 'Socio (Cliente con membresía)' },
-  { value: 'EXTERNO', label: 'Externo (Invitado / Reserva de canchas)' },
-  { value: 'RECEPCIONISTA', label: 'Recepcionista (Operador de sede)' },
-  { value: 'GERENTE', label: 'Gerente (Administrador general)' },
-];
 
 /**
  * Formulario unificado de alta y edición de usuarios (RF-01).
@@ -42,9 +37,13 @@ export function UsuarioForm({
   const { usuario: operador } = useAuth();
   const sedesList = sedesDisponibles || sedesContexto || [];
   const esGerente = !operador || operador.tipoUsuario === 'GERENTE';
+  const rolesDelCatalogo: SelectOption[] = listarRoles().map((r) => ({
+    value: r.codigo,
+    label: `${r.nombre} (${r.codigo})`,
+  }));
   const rolesDisponibles = esGerente
-    ? ROLES_OPTIONS
-    : ROLES_OPTIONS.filter((r) => r.value === 'SOCIO' || r.value === 'EXTERNO');
+    ? rolesDelCatalogo
+    : rolesDelCatalogo.filter((r) => r.value === 'SOCIO' || r.value === 'EXTERNO');
 
   // Estado del formulario
   const [formData, setFormData] = useState<UsuarioFormData>({
