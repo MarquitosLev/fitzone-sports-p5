@@ -1,5 +1,5 @@
 /**
- * AccesoPage.tsx — Control de Acceso, Aforo en Tiempo Real y Pase Digital (SCRUM-82, SCRUM-85, RF-04, RF-05).
+ * AccesoPage.tsx — Control de Acceso, Aforo en Tiempo Real y Pase Digital (SCRUM-82, SCRUM-85, SCRUM-101, RF-04, RF-05).
  *
  * Integra en una sola pantalla:
  *   1. Vista Socio ('mi-qr'): Pase digital móvil con <QrDinamico /> (rotación de token de 60s),
@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   QrCode,
   ShieldAlert,
@@ -36,6 +36,7 @@ import {
 } from '../components/acceso';
 import {
   obtenerQrSocio,
+  obtenerMiQr,
   listarAccesos,
   obtenerAforo,
   listarAccesosActivos,
@@ -47,6 +48,7 @@ import { httpClient } from '../services/httpClient';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { useTienePrestacion } from '../hooks/usePrestaciones';
 import { USE_MOCK } from '../config';
 import type {
   MembresiaDTO,
@@ -57,14 +59,6 @@ import type {
   ResultadoValidacionDTO,
 } from '../types';
 import { formatearFechaHora } from '../utils/formatters';
-
-function useOptionalUsuarioAuth(): UsuarioDTO | null {
-  try {
-    return useAuth().usuario;
-  } catch {
-    return null;
-  }
-}
 
 // Lista de socios para selección rápida en modo socio/demostración
 const SOCIOS_EJEMPLO: UsuarioDTO[] = [
@@ -150,17 +144,43 @@ type VistaAcceso = 'mi-qr' | 'control-aforo' | 'historial';
 
 export function AccesoPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { sedeActiva } = useSede();
   const { addToast } = useToast();
-  const usuarioAuth = useOptionalUsuarioAuth();
+  const { usuario: usuarioAuth } = useAuth();
   const esSocio = usuarioAuth?.tipoUsuario === 'SOCIO';
-  const esPersonal =
-    !usuarioAuth ||
-    usuarioAuth.tipoUsuario === 'RECEPCIONISTA' ||
-    usuarioAuth.tipoUsuario === 'GERENTE';
+  const tienePrestacionAforo = useTienePrestacion('ACCESO_AFORO_VIEW');
+  const tienePrestacionEscanear = useTienePrestacion('ACCESO_ESCANEAR');
+  const tienePrestacionMiQr = useTienePrestacion('ACCESO_MI_QR');
+
+  const puedeVerAforo = !usuarioAuth || tienePrestacionAforo;
+  const puedeEscanear = !usuarioAuth || tienePrestacionEscanear;
+  const puedeVerMiQr = !usuarioAuth || tienePrestacionMiQr;
 
   // Pestaña activa: 'mi-qr' (Socio), 'control-aforo' (Recepción SCRUM-82), o 'historial'
-  const [vistaActiva, setVistaActiva] = useState<VistaAcceso>('mi-qr');
+  // Se basa en prestaciones atómicas (SCRUM-107) y en la ruta actual (/mi-qr vs /acceso).
+  const [vistaActiva, setVistaActiva] = useState<VistaAcceso>(() => {
+    if (location.pathname.includes('/mi-qr')) {
+      return 'mi-qr';
+    }
+    if (usuarioAuth && (tienePrestacionAforo || !tienePrestacionMiQr)) {
+      return 'control-aforo';
+    }
+    return 'mi-qr';
+  });
+
+  // Sincronizar pestaña activa cuando el usuario navega desde el Sidebar entre /mi-qr y /acceso
+  useEffect(() => {
+    if (location.pathname.includes('/mi-qr') && puedeVerMiQr) {
+      setVistaActiva('mi-qr');
+    } else if (
+      location.pathname.includes('/acceso') &&
+      usuarioAuth &&
+      (tienePrestacionAforo || !tienePrestacionMiQr)
+    ) {
+      setVistaActiva('control-aforo');
+    }
+  }, [location.pathname, usuarioAuth, puedeVerMiQr, tienePrestacionAforo, tienePrestacionMiQr]);
 
   // ── Estado Vista 1: Pase QR Socio (SCRUM-85) ────────────────────────────────
   const [sociosDisponibles, setSociosDisponibles] = useState<UsuarioDTO[]>(SOCIOS_EJEMPLO);
@@ -215,13 +235,19 @@ export function AccesoPage() {
     };
   }, [esSocio, usuarioAuth]);
 
-  // ── Lógica Socio: Solicitar Token QR Dinámico ────────────────────────────────
+  // ── Lógica Socio: Solicitar Token QR Dinámico (SCRUM-96, SCRUM-101) ──────────
   const solicitarNuevoToken = useCallback(
     async (idUsuario: number) => {
       setCargandoQr(true);
       setErrorQr(null);
       try {
-        const tokenResp = await obtenerQrSocio(idUsuario);
+        // Si el socio autenticado pide su propio QR, consume /v1/usuarios/me/qr (SCRUM-101)
+        const esPropioSocioAutenticado =
+          Boolean(usuarioAuth && usuarioAuth.tipoUsuario === 'SOCIO' && usuarioAuth.idUsuario === idUsuario);
+        const tokenResp = esPropioSocioAutenticado
+          ? await obtenerMiQr(idUsuario)
+          : await obtenerQrSocio(idUsuario);
+
         setSocioSeleccionado((current) => {
           if (current.idUsuario === idUsuario) {
             setQrTokenData(tokenResp);
@@ -240,7 +266,7 @@ export function AccesoPage() {
         setCargandoQr(false);
       }
     },
-    [addToast]
+    [addToast, usuarioAuth]
   );
 
   // Efecto cuando cambia el socio seleccionado
@@ -484,20 +510,22 @@ export function AccesoPage() {
 
         {/* Switcher de vistas */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl self-start sm:self-auto flex-wrap">
-          <button
-            type="button"
-            onClick={() => setVistaActiva('mi-qr')}
-            data-testid="tab-mi-qr"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              vistaActiva === 'mi-qr'
-                ? 'bg-white text-fitzone-navy shadow-xs'
-                : 'text-slate-500 hover:text-fitzone-navy'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Mi QR (Socio)</span>
-          </button>
-          {esPersonal && (
+          {puedeVerMiQr && (
+            <button
+              type="button"
+              onClick={() => setVistaActiva('mi-qr')}
+              data-testid="tab-mi-qr"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                vistaActiva === 'mi-qr'
+                  ? 'bg-white text-fitzone-navy shadow-xs'
+                  : 'text-slate-500 hover:text-fitzone-navy'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Mi QR (Socio)</span>
+            </button>
+          )}
+          {puedeVerAforo && (
             <>
               <button
                 type="button"
@@ -531,7 +559,7 @@ export function AccesoPage() {
       </div>
 
       {/* ─── VISTA 1: MI CÓDIGO QR (SOCIO - SCRUM-85) ─────────────────────────── */}
-      {vistaActiva === 'mi-qr' && (
+      {vistaActiva === 'mi-qr' && puedeVerMiQr && (
         <div className="space-y-6">
           {/* Selector de Socio de Prueba / Simulación de Estado (oculto para un SOCIO real) */}
           {(!esSocio || USE_MOCK) && (
@@ -679,7 +707,7 @@ export function AccesoPage() {
       )}
 
       {/* ─── VISTA 2: CONTROL DE ACCESO Y AFORO EN VIVO (RECEPCIÓN - SCRUM-82) ── */}
-      {vistaActiva === 'control-aforo' && (
+      {vistaActiva === 'control-aforo' && puedeVerAforo && (
         <div className="space-y-6">
           {/* Header Operativo */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -757,11 +785,13 @@ export function AccesoPage() {
                 nombreSede={sedeActiva?.nombre}
               />
 
-              <ValidadorIngreso
-                onValidar={handleValidarIngreso}
-                loading={validando}
-                disabled={!sedeActiva}
-              />
+              {puedeEscanear && (
+                <ValidadorIngreso
+                  onValidar={handleValidarIngreso}
+                  loading={validando}
+                  disabled={!sedeActiva}
+                />
+              )}
             </div>
 
             {/* Columna Derecha: Resultado de Validación + Personas Adentro (7 columnas en LG) */}
@@ -783,7 +813,7 @@ export function AccesoPage() {
       )}
 
       {/* ─── VISTA 3: HISTORIAL DE ENTRADAS / MOLINETE RECEPCIÓN ──────────────── */}
-      {vistaActiva === 'historial' && (
+      {vistaActiva === 'historial' && puedeVerAforo && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

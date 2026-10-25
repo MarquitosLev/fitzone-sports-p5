@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ChevronDown, User, LogOut, Menu, X } from 'lucide-react';
+import { MapPin, ChevronDown, User, LogOut, Menu, X, Lock } from 'lucide-react';
 import { useSede } from '../../context/SedeContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -22,6 +22,12 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
   const { sedeActiva, sedes, setSedeActiva } = useSede();
   const [sedeDropdownOpen, setSedeDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
+  const esPersonalConSedeFija = Boolean(
+    usuario &&
+    (usuario.tipoUsuario === 'RECEPCIONISTA' || usuario.tipoUsuario === 'GERENTE') &&
+    usuario.idSede
+  );
 
   const handleLogout = () => {
     setProfileDropdownOpen(false);
@@ -66,8 +72,10 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
           <button
             type="button"
             id="sede-selector-btn"
-            onClick={() => setSedeDropdownOpen((prev) => !prev)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 border border-white/15 hover:bg-white/15 hover:border-white/25 transition-all text-sm font-semibold text-white cursor-pointer"
+            onClick={() => !esPersonalConSedeFija && setSedeDropdownOpen((prev) => !prev)}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 border border-white/15 text-sm font-semibold text-white transition-all ${
+              esPersonalConSedeFija ? 'cursor-default opacity-90' : 'hover:bg-white/15 hover:border-white/25 cursor-pointer'
+            }`}
             aria-haspopup="listbox"
             aria-expanded={sedeDropdownOpen}
           >
@@ -75,11 +83,17 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
             <span className="max-w-[180px] truncate">
               {sedeActiva?.nombre ?? 'Seleccionar sede'}
             </span>
-            <ChevronDown className={`w-4 h-4 text-white/70 transition-transform ${sedeDropdownOpen ? 'rotate-180' : ''}`} />
+            {esPersonalConSedeFija ? (
+              <span title="Sede fija de operador asignada por sistema">
+                <Lock className="w-3.5 h-3.5 text-white/50 ml-1" />
+              </span>
+            ) : (
+              <ChevronDown className={`w-4 h-4 text-white/70 transition-transform ${sedeDropdownOpen ? 'rotate-180' : ''}`} />
+            )}
           </button>
 
           {/* Dropdown de sedes */}
-          {sedeDropdownOpen && (
+          {sedeDropdownOpen && !esPersonalConSedeFija && (
             <>
               {/* Backdrop para cerrar al hacer click fuera */}
               <div

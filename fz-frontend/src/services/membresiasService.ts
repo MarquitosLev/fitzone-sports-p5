@@ -164,7 +164,7 @@ export async function listarPlanes(): Promise<PlanDTO[]> {
 }
 
 /**
- * Lista todas las membresías de una sede específica (o todas si no se envía idSede).
+ * Lista todas las membresías registradas.
  */
 export async function listarMembresias(idSede?: number): Promise<MembresiaDTO[]> {
   if (USE_MOCK) {
@@ -175,8 +175,7 @@ export async function listarMembresias(idSede?: number): Promise<MembresiaDTO[]>
     return MOCK_MEMBRESIAS.filter((m) => m.usuario.idSede === idSede);
   }
 
-  const query = idSede ? `?idSede=${idSede}` : '';
-  return httpClient.get<MembresiaDTO[]>(`/v1/membresias${query}`);
+  return httpClient.get<MembresiaDTO[]>('/v1/membresias');
 }
 
 /**

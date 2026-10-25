@@ -21,6 +21,7 @@ export const ACCESO_ENDPOINTS = {
   VALIDAR_INGRESO: '/v1/accesos/ingreso',
   REGISTRAR_EGRESO: (idAcceso: number) => `/v1/accesos/${idAcceso}/egreso`,
   QR_SOCIO: (idUsuario: number) => `/v1/usuarios/${idUsuario}/qr`,
+  MI_QR: '/v1/usuarios/me/qr',
 } as const;
 
 // ─── MOCK DATA Y ESTADO EN MEMORIA (BUG-09, RN-01, RN-04, RF-04, RF-05) ──────
@@ -356,8 +357,7 @@ export async function registrarEgreso(idAcceso: number): Promise<AccesoDTO> {
 }
 
 /**
- * Genera o consulta el token dinámico de acceso QR para el socio (SCRUM-85).
- * Simula la emisión de un token con rotación automática cada 60 segundos.
+ * Genera o consulta el token dinámico de acceso QR para un socio por ID (SCRUM-85).
  */
 export async function obtenerQrSocio(idUsuario: number): Promise<QrTokenDTO> {
   if (USE_MOCK) {
@@ -373,6 +373,30 @@ export async function obtenerQrSocio(idUsuario: number): Promise<QrTokenDTO> {
 
   const resp = await httpClient.get<{ tokenQr: string; segundosRestantes: number }>(
     ACCESO_ENDPOINTS.QR_SOCIO(idUsuario)
+  );
+  return {
+    token: resp.tokenQr,
+    expiraEnSegundos: resp.segundosRestantes,
+    generadoEn: new Date().toISOString(),
+  };
+}
+
+/**
+ * Obtiene el token QR dinámico del socio autenticado en sesión desde `/v1/usuarios/me/qr` (SCRUM-96, SCRUM-101).
+ */
+export async function obtenerMiQr(idUsuarioFallback?: number): Promise<QrTokenDTO> {
+  if (USE_MOCK) {
+    return obtenerQrSocio(idUsuarioFallback ?? 2);
+  }
+
+  const headers: Record<string, string> = {};
+  if (idUsuarioFallback !== undefined) {
+    headers['X-Usuario-Id'] = String(idUsuarioFallback);
+  }
+
+  const resp = await httpClient.get<{ tokenQr: string; segundosRestantes: number }>(
+    ACCESO_ENDPOINTS.MI_QR,
+    { headers }
   );
   return {
     token: resp.tokenQr,

@@ -32,7 +32,7 @@ public class AccesoController {
     @GetMapping
     @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")
     @Operation(summary = "Historial de accesos físicos de una sede ordenado por fecha de ingreso descendente")
-    public List<Acceso> listarPorSede(@RequestParam @Positive Long idSede) {
+    public List<Acceso> listarPorSede(@RequestParam(required = false) @Positive Long idSede) {
         return accesoService.listarPorSede(idSede);
     }
 

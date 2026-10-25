@@ -22,7 +22,7 @@ export interface AuthContextType {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 export interface AuthProviderProps {
   children: React.ReactNode;
@@ -96,10 +96,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
 /**
  * Hook para acceder a la sesión actual y operaciones de autenticación.
  */
+const FALLBACK_AUTH: AuthContextType = {
+  usuario: null,
+  token: null,
+  isAuthenticated: false,
+  isLoading: false,
+  login: async () => { throw new Error('Fuera de AuthProvider'); },
+  register: async () => { throw new Error('Fuera de AuthProvider'); },
+  logout: () => {},
+};
+
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth debe ser utilizado dentro de un AuthProvider');
-  }
-  return context;
+  return context ?? FALLBACK_AUTH;
 }

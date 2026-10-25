@@ -2,8 +2,11 @@ package com.fitzone.modulo.gimnasio.service;
 
 import com.fitzone.core.domain.enums.EstadoMembresia;
 import com.fitzone.core.domain.enums.TipoUsuario;
+import com.fitzone.core.exception.AccesoDenegadoException;
 import com.fitzone.core.exception.AccesoException;
+import com.fitzone.core.exception.AccesoNoAutorizadoException;
 import com.fitzone.core.exception.CodigoError;
+import com.fitzone.core.exception.PeticionInvalidaException;
 import com.fitzone.core.exception.RecursoNoEncontradoException;
 import com.fitzone.core.exception.ReglaNegocioException;
 import com.fitzone.modulo.gimnasio.models.Acceso;
@@ -17,13 +20,18 @@ import com.fitzone.modulo.usuarios.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.reflect.Method;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -35,6 +43,18 @@ public class AccesoService {
     private final UsuarioRepository usuarioRepository;
     private final MembresiaRepository membresiaRepository;
     private final QrTokenService qrTokenService;
+
+    @Transactional(readOnly = true)
+    public QrTokenResponse generarMiQr(Long idUsuarioFallback) {
+        Optional<Usuario> autenticado = obtenerUsuarioAutenticadoOptional();
+        if (autenticado.isPresent()) {
+            return generarQr(autenticado.get().getIdUsuario());
+        }
+        if (idUsuarioFallback != null) {
+            return generarQr(idUsuarioFallback);
+        }
+        throw new AccesoNoAutorizadoException("Debe iniciar sesión para obtener su código QR");
+    }
 
     @Transactional(readOnly = true)
     public QrTokenResponse generarQr(Long idUsuario) {
@@ -59,6 +79,11 @@ public class AccesoService {
 
     @Transactional
     public Acceso registrarIngreso(String tokenQr, Long idSede) {
+        Long idSedeEfectiva = resolverYValidarSedeOperador(idSede);
+        if (idSedeEfectiva == null) {
+            throw new PeticionInvalidaException("El idSede es obligatorio cuando el operador no tiene sede asignada en sesión");
+        }
+
         Long idUsuario = qrTokenService.validarYObtenerUsuario(tokenQr);
 
         // Control de un solo uso e idempotencia ante reintentos de red
@@ -87,10 +112,10 @@ public class AccesoService {
         }
 
         // Bloqueo pesimista sobre la sede para coordinar cálculo de aforo con cambios concurrentes de capacidad
-        Sede sede = sedeRepository.findByIdWithLock(idSede)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Sede", idSede));
+        Sede sede = sedeRepository.findByIdWithLock(idSedeEfectiva)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Sede", idSedeEfectiva));
 
-        long aforoActual = accesoRepository.countBySede_IdSedeAndFechaHoraEgresoIsNull(idSede);
+        long aforoActual = accesoRepository.countBySede_IdSedeAndFechaHoraEgresoIsNull(idSedeEfectiva);
         if (aforoActual >= sede.getAforoMaximo()) {
             throw new AccesoException(HttpStatus.CONFLICT, CodigoError.AFORO_COMPLETO,
                     "La sede ha alcanzado su aforo máximo permitido (" + sede.getAforoMaximo() + ")");
@@ -113,6 +138,10 @@ public class AccesoService {
         Acceso acceso = accesoRepository.findByIdWithLock(idAcceso)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Acceso", idAcceso));
 
+        if (acceso.getSede() != null && acceso.getSede().getIdSede() != null) {
+            resolverYValidarSedeOperador(acceso.getSede().getIdSede());
+        }
+
         if (acceso.getFechaHoraEgreso() != null) {
             throw new ReglaNegocioException("El acceso ya tiene registrada su fecha y hora de egreso");
         }
@@ -123,9 +152,81 @@ public class AccesoService {
 
     @Transactional(readOnly = true)
     public List<Acceso> listarPorSede(Long idSede) {
-        if (!sedeRepository.existsById(idSede)) {
-            throw new RecursoNoEncontradoException("Sede", idSede);
+        Long idSedeEfectiva = resolverYValidarSedeOperador(idSede);
+        if (idSedeEfectiva == null) {
+            throw new PeticionInvalidaException("El idSede es obligatorio");
         }
-        return accesoRepository.findBySede_IdSedeOrderByFechaHoraIngresoDesc(idSede);
+        if (!sedeRepository.existsById(idSedeEfectiva)) {
+            throw new RecursoNoEncontradoException("Sede", idSedeEfectiva);
+        }
+        return accesoRepository.findBySede_IdSedeOrderByFechaHoraIngresoDesc(idSedeEfectiva);
+    }
+
+    private Long resolverYValidarSedeOperador(Long idSedeSolicitada) {
+        Optional<Usuario> operadorOpt = obtenerUsuarioAutenticadoOptional();
+        if (operadorOpt.isEmpty()) {
+            return idSedeSolicitada;
+        }
+
+        Usuario operador = operadorOpt.get();
+        boolean esPersonal = operador.getTipoUsuario() == TipoUsuario.RECEPCIONISTA
+                || operador.getTipoUsuario() == TipoUsuario.GERENTE;
+        if (!esPersonal || operador.getIdSede() == null) {
+            return idSedeSolicitada;
+        }
+
+        if (idSedeSolicitada == null) {
+            return operador.getIdSede();
+        }
+        if (!idSedeSolicitada.equals(operador.getIdSede())) {
+            throw new AccesoDenegadoException(
+                    "No tiene permisos para operar sobre una sede distinta a su sede asignada (" + operador.getIdSede() + ")");
+        }
+        return idSedeSolicitada;
+    }
+
+    private Optional<Usuario> obtenerUsuarioAutenticadoOptional() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
+            return Optional.empty();
+        }
+
+        // 1. Intentar extraer subject UUID si el principal es un Jwt de Spring Security
+        Object principal = auth.getPrincipal();
+        if (principal != null) {
+            try {
+                Method getSubject = principal.getClass().getMethod("getSubject");
+                Object subObj = getSubject.invoke(principal);
+                if (subObj instanceof String sub && !sub.isBlank()) {
+                    Optional<Usuario> porSub = buscarPorUuidOEmail(sub);
+                    if (porSub.isPresent()) {
+                        return porSub;
+                    }
+                }
+            } catch (Exception ignored) {
+                // No es un objeto Jwt con getSubject()
+            }
+        }
+
+        // 2. Intentar por auth.getName() (email o UUID)
+        String name = auth.getName();
+        if (name != null && !name.isBlank()) {
+            return buscarPorUuidOEmail(name);
+        }
+
+        return Optional.empty();
+    }
+
+    private Optional<Usuario> buscarPorUuidOEmail(String identificador) {
+        try {
+            UUID authId = UUID.fromString(identificador);
+            Optional<Usuario> porAuthId = usuarioRepository.findByAuthId(authId);
+            if (porAuthId.isPresent()) {
+                return porAuthId;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // No es un UUID, probamos por email
+        }
+        return usuarioRepository.findByEmail(identificador);
     }
 }

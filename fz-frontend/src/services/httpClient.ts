@@ -26,8 +26,11 @@
 export interface BackendErrorResponse {
   codigo: string | number;
   mensaje: string;
-  /** Puede ser un mapa campo->error (400), una lista de mensajes, o un string simple */
-  detalles?: Record<string, string> | string[] | string;
+  /** Puede ser un mapa campo->error (400), una lista de mensajes/objetos {campo, mensaje}, o un string simple */
+  detalles?:
+    | Record<string, string>
+    | Array<string | { campo: string; mensaje: string }>
+    | string;
   timestamp: string;
 }
 
@@ -72,9 +75,13 @@ function buildUserMessage(response: BackendErrorResponse): string {
     return `${base} — ${fieldErrors}`;
   }
 
-  // Si los detalles son un array de strings
+  // Si los detalles son un array (strings o { campo, mensaje })
   if (Array.isArray(response.detalles)) {
-    return `${base} — ${response.detalles.join(', ')}`;
+    if (response.detalles.length === 0) return base;
+    const items = response.detalles.map((d) =>
+      typeof d === 'string' ? d : `${d.campo}: ${d.mensaje}`
+    );
+    return `${base} — ${items.join(', ')}`;
   }
 
   // Si los detalles son un string simple
@@ -146,6 +153,15 @@ async function httpRequest<T>(
     // Si el servidor devolvió un cuerpo vacío (204 No Content), retornamos null
     if (response.status === 204) return null as T;
     return response.json() as Promise<T>;
+  }
+
+  // Si el token expiró o es inválido (401) en una ruta autenticada, cerramos sesión y redirigimos a /login
+  if (response.status === 401 && _authToken && !path.startsWith('/v1/auth/login')) {
+    _authToken = null;
+    localStorage.removeItem('fitzone_auth_session');
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
   }
 
   // Si hubo error HTTP (4xx, 5xx), intentamos parsear el cuerpo de error del backend
