@@ -47,6 +47,6 @@ ON CONFLICT (id_cancha) DO NOTHING;
 -- 6. Clases Grupales (Disponible y Completa para lista de espera)
 INSERT INTO fz_cls_clases_grupales (id_clase, id_sede, nombre_actividad, fecha_hora_inicio, duracion_minutos, cupo_maximo, cupo_disponible, created_at, updated_at, created_by, updated_by, is_deleted)
 VALUES
-    (1, 1, 'Spinning Pro', (CURRENT_DATE + INTERVAL '1 day' + TIME '18:00:00'), 60, 20, 20, NOW(), NOW(), 'system', 'system', false),
-    (2, 1, 'Yoga Integral (Completa)', (CURRENT_DATE + INTERVAL '2 days' + TIME '10:00:00'), 45, 1, 0, NOW(), NOW(), 'system', 'system', false)
+    (1, 1, 'Spinning Pro', (CURRENT_DATE + INTERVAL '1 day 18 hours'), 60, 20, 20, NOW(), NOW(), 'system', 'system', false),
+    (2, 1, 'Yoga Integral (Completa)', (CURRENT_DATE + INTERVAL '2 days 10 hours'), 45, 1, 0, NOW(), NOW(), 'system', 'system', false)
 ON CONFLICT (id_clase) DO NOTHING;
