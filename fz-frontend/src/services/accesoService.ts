@@ -394,13 +394,20 @@ export async function obtenerMiQr(idUsuarioFallback?: number): Promise<QrTokenDT
     headers['X-Usuario-Id'] = String(idUsuarioFallback);
   }
 
-  const resp = await httpClient.get<{ tokenQr: string; segundosRestantes: number }>(
-    ACCESO_ENDPOINTS.MI_QR,
-    { headers }
-  );
-  return {
-    token: resp.tokenQr,
-    expiraEnSegundos: resp.segundosRestantes,
-    generadoEn: new Date().toISOString(),
-  };
+  try {
+    const resp = await httpClient.get<{ tokenQr: string; segundosRestantes: number }>(
+      ACCESO_ENDPOINTS.MI_QR,
+      { headers }
+    );
+    return {
+      token: resp.tokenQr,
+      expiraEnSegundos: resp.segundosRestantes,
+      generadoEn: new Date().toISOString(),
+    };
+  } catch (err: unknown) {
+    if (idUsuarioFallback !== undefined) {
+      return obtenerQrSocio(idUsuarioFallback);
+    }
+    throw err;
+  }
 }
