@@ -26,7 +26,6 @@ const QUICK_ROLES: Array<{
   password: string;
 }> = [
   { tipo: 'SOCIO', label: 'Socio', email: 'socio@fitzone.com', password: 'password123' },
-  { tipo: 'EXTERNO', label: 'Externo', email: 'externo@fitzone.com', password: 'password123' },
   { tipo: 'RECEPCIONISTA', label: 'Recepcionista', email: 'recepcionista@fitzone.com', password: 'password123' },
   { tipo: 'GERENTE', label: 'Gerente', email: 'gerente@fitzone.com', password: 'password123' },
 ];
@@ -98,18 +97,15 @@ export function LoginForm({
           <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
             Acceso rápido de prueba por rol
           </span>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {QUICK_ROLES.map((item) => (
               <button
                 key={item.tipo}
                 type="button"
                 onClick={() => handleQuickFill(item.email, item.password)}
-                className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 hover:border-fitzone-navy hover:bg-slate-100/70 transition-all text-left cursor-pointer group"
+                className="flex items-center justify-center p-2 rounded-xl bg-white border border-slate-200 hover:border-fitzone-navy hover:bg-slate-100/70 transition-all text-center cursor-pointer group"
               >
                 <TipoUsuarioBadge tipo={item.tipo} size="xs" />
-                <span className="text-[10px] text-slate-400 group-hover:text-fitzone-navy font-mono">
-                  Llenar
-                </span>
               </button>
             ))}
           </div>

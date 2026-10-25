@@ -27,6 +27,8 @@ import {
 } from '../services/clasesService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
+import { useTienePrestacion } from '../hooks/usePrestaciones';
 import type { ClaseGrupalDTO, ReservaClaseDTO, ListaEsperaDTO } from '../types';
 import { formatearFechaHora } from '../utils/formatters';
 import { AgendaSemanal } from '../components/clases/AgendaSemanal';
@@ -40,7 +42,6 @@ import { USE_MOCK } from '../config';
 // Flag centralizado: si es true, opera con datos en memoria y socio demo.
 // En producción (false), no se usa ningún mock y se requiere sesión real.
 const SOCIO_MOCK_ID = 2; // Valentina García (membresía ACTIVO) para modo mock
-const socioIdActual: number | null = USE_MOCK ? SOCIO_MOCK_ID : null;
 
 // Column definition kept for reference (not rendered, but exported for type safety)
 export const CLASES_COLUMNS: Column<ClaseGrupalDTO>[] = [
@@ -74,7 +75,16 @@ export function ClasesPage() {
   const { addToast } = useToast();
 
   // ── Tab activo ────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<TabClases>('disponibles');
+  const { usuario } = useAuth();
+  const puedeAdminClases = useTienePrestacion('CLASES_ADMIN');
+  const socioIdActual: number | null = USE_MOCK
+    ? SOCIO_MOCK_ID
+    : usuario?.tipoUsuario === 'SOCIO'
+      ? usuario.idUsuario
+      : null;
+  const [activeTab, setActiveTab] = useState<TabClases>(
+    puedeAdminClases ? 'agenda-admin' : 'disponibles'
+  );
 
   // ── Data: clases, reservas del socio y lista de espera ───────────────────
   const [clases, setClases] = useState<ClaseGrupalDTO[]>([]);
@@ -122,7 +132,7 @@ export function ClasesPage() {
       if (!cancelled) setLoading(false);
     }
     return () => { cancelled = true; };
-  }, [sedeActiva]);
+  }, [sedeActiva, socioIdActual]);
 
   useEffect(() => {
     void cargarDatos();
@@ -294,7 +304,7 @@ export function ClasesPage() {
         </div>
 
         {/* Botón "Nueva clase" solo visible en el tab Admin */}
-        {activeTab === 'agenda-admin' && (
+        {activeTab === 'agenda-admin' && puedeAdminClases && (
           <Button id="btn-programar-nueva-clase" variant="coral" onClick={handleOpenNew}>
             Programar Nueva Clase
           </Button>
@@ -351,6 +361,7 @@ export function ClasesPage() {
           </span>
         </button>
 
+        {puedeAdminClases && (
         <button
           id="tab-agenda-admin"
           onClick={() => setActiveTab('agenda-admin')}
@@ -361,6 +372,7 @@ export function ClasesPage() {
           <Dumbbell className="w-3.5 h-3.5" />
           Agenda (Admin)
         </button>
+        )}
       </div>
 
       {/* ── Error banner ───────────────────────────────────────────────────── */}

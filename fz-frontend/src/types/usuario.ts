@@ -21,7 +21,7 @@ export interface UsuarioDTO {
   telefono: string;
   fotoUrl: string | null;
   tipoUsuario: TipoUsuario;
-  idSede: number;
+  idSede: number | null;
 }
 
 /**
@@ -35,6 +35,6 @@ export interface UsuarioFormData {
   telefono: string;
   fotoUrl?: string | null;
   tipoUsuario: TipoUsuario;
-  idSede: number;
+  idSede: number | null;
+  password?: string;
 }
-
