@@ -7,5 +7,9 @@ meta {
 get {
   url: {{baseUrl}}/v1/usuarios/1/membresia
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }

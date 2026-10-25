@@ -5,13 +5,13 @@ meta {
 }
 
 put {
-  url: {{baseUrl}}/v1/usuarios/1?idOperador={{idOperador}}
+  url: {{baseUrl}}/v1/usuarios/1
   body: json
-  auth: none
+  auth: bearer
 }
 
-params:query {
-  idOperador: {{idOperador}}
+auth:bearer {
+  token: {{token}}
 }
 
 body:json {
