@@ -19,19 +19,19 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 
 import java.util.List;
 import java.util.UUID;
@@ -82,6 +82,16 @@ public class UsuarioController {
             @AuthenticationPrincipal Jwt jwt) {
         validarAccesoUsuario(id, jwt);
         return membresiaService.obtenerVigentePorUsuario(id);
+    }
+
+    @GetMapping("/me/qr")
+    @PreAuthorize("hasRole('SOCIO')")
+    @Operation(summary = "Genera y obtiene el token QR dinámico vigente del socio autenticado en sesión (SCRUM-96)")
+    public QrTokenResponse obtenerMiQr(
+            @RequestHeader(value = "X-Usuario-Id", required = false) @Positive Long headerUsuarioId,
+            @RequestParam(value = "idUsuario", required = false) @Positive Long paramUsuarioId) {
+        Long fallbackId = headerUsuarioId != null ? headerUsuarioId : paramUsuarioId;
+        return accesoService.generarMiQr(fallbackId);
     }
 
     @GetMapping("/{id}/qr")

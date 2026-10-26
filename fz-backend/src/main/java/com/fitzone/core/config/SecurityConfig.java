@@ -3,6 +3,7 @@ package com.fitzone.core.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -51,7 +52,8 @@ public class SecurityConfig {
                         .requestMatchers("/ping", "/health", "/error").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/v1/auth/**", "/v1/planes").permitAll()
-                        .requestMatchers("/v1/usuarios/**", "/v1/membresias/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/v1/sedes", "/v1/sedes/*").permitAll()
+                        .requestMatchers("/v1/usuarios/**", "/v1/membresias/**", "/v1/accesos/**", "/v1/sedes/**").authenticated()
                         .requestMatchers("/v1/**").permitAll()
                         // Endpoint administrativo protegido internamente con Bearer Root Key
                         .requestMatchers("/admin/database/**").permitAll()

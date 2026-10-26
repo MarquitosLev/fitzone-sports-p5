@@ -1,9 +1,10 @@
-import { httpClient } from './httpClient';
+import { httpClient, AppError } from './httpClient';
 import type {
   AccesoDTO,
   AforoSedeDTO,
   ValidacionIngresoRequestDTO,
   ResultadoValidacionDTO,
+  MotivoRechazoAcceso,
   UsuarioDTO,
   SedeDTO,
   QrTokenDTO,
@@ -17,8 +18,10 @@ export const ACCESO_ENDPOINTS = {
   AFORO: (idSede: number) => `/v1/sedes/${idSede}/aforo`,
   ACCESOS_ACTIVOS: (idSede: number) => `/v1/sedes/${idSede}/accesos/activos`,
   LISTAR: (idSede: number) => `/v1/accesos?idSede=${idSede}`,
-  VALIDAR_INGRESO: '/v1/accesos/validar',
+  VALIDAR_INGRESO: '/v1/accesos/ingreso',
   REGISTRAR_EGRESO: (idAcceso: number) => `/v1/accesos/${idAcceso}/egreso`,
+  QR_SOCIO: (idUsuario: number) => `/v1/usuarios/${idUsuario}/qr`,
+  MI_QR: '/v1/usuarios/me/qr',
 } as const;
 
 // ─── MOCK DATA Y ESTADO EN MEMORIA (BUG-09, RN-01, RN-04, RF-04, RF-05) ──────
@@ -203,6 +206,7 @@ export async function validarIngreso(
   if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 250));
     const tokenUpper = request.token.trim().toUpperCase();
+    const idSedeMock = request.idSede ?? 1;
 
     // 1. Simulación explícita por token rápido de prueba
     if (tokenUpper.includes('VENCIDO') || tokenUpper === 'TEST-QR-VENCIDO') {
@@ -241,13 +245,13 @@ export async function validarIngreso(
     }
 
     // 2. Validación de Aforo Máximo en la sede solicitada
-    const sede = MOCK_SEDES[request.idSede] || {
-      idSede: request.idSede,
-      nombre: `Sede #${request.idSede}`,
+    const sede = MOCK_SEDES[idSedeMock] || {
+      idSede: idSedeMock,
+      nombre: `Sede #${idSedeMock}`,
       aforoMaximo: 50,
     };
     const personasAdentro = mockAccesos.filter(
-      (a) => a.sede.idSede === request.idSede && a.fechaHoraEgreso === null
+      (a) => a.sede.idSede === idSedeMock && a.fechaHoraEgreso === null
     ).length;
 
     if (personasAdentro >= sede.aforoMaximo) {
@@ -300,10 +304,43 @@ export async function validarIngreso(
     };
   }
 
-  return httpClient.post<ResultadoValidacionDTO>(
-    ACCESO_ENDPOINTS.VALIDAR_INGRESO,
-    { body: JSON.stringify(request) }
-  );
+  const MOTIVOS_RECHAZO: MotivoRechazoAcceso[] = [
+    'QR_VENCIDO',
+    'MEMBRESIA_INACTIVA',
+    'YA_INGRESADO',
+    'AFORO_COMPLETO',
+  ];
+
+  const payload =
+    request.idSede !== undefined
+      ? { tokenQr: request.token, idSede: request.idSede }
+      : { tokenQr: request.token };
+
+  try {
+    const acceso = await httpClient.post<AccesoDTO>(
+      ACCESO_ENDPOINTS.VALIDAR_INGRESO,
+      { body: JSON.stringify(payload) }
+    );
+    return {
+      aprobado: true,
+      mensaje: 'Acceso autorizado · Molinete habilitado',
+      usuario: acceso.usuario,
+      acceso,
+    };
+  } catch (err: unknown) {
+    if (
+      err instanceof AppError &&
+      typeof err.backendResponse?.codigo === 'string' &&
+      MOTIVOS_RECHAZO.includes(err.backendResponse.codigo as MotivoRechazoAcceso)
+    ) {
+      return {
+        aprobado: false,
+        motivoRechazo: err.backendResponse.codigo as MotivoRechazoAcceso,
+        mensaje: err.backendResponse.mensaje,
+      };
+    }
+    throw err;
+  }
 }
 
 /**
@@ -322,12 +359,11 @@ export async function registrarEgreso(idAcceso: number): Promise<AccesoDTO> {
     return { ...acceso };
   }
 
-  return httpClient.put<AccesoDTO>(ACCESO_ENDPOINTS.REGISTRAR_EGRESO(idAcceso));
+  return httpClient.post<AccesoDTO>(ACCESO_ENDPOINTS.REGISTRAR_EGRESO(idAcceso));
 }
 
 /**
- * Genera o consulta el token dinámico de acceso QR para el socio (SCRUM-85).
- * Simula la emisión de un token con rotación automática cada 60 segundos.
+ * Genera o consulta el token dinámico de acceso QR para un socio por ID (SCRUM-85).
  */
 export async function obtenerQrSocio(idUsuario: number): Promise<QrTokenDTO> {
   if (USE_MOCK) {
@@ -341,6 +377,30 @@ export async function obtenerQrSocio(idUsuario: number): Promise<QrTokenDTO> {
     };
   }
 
-  return httpClient.get<QrTokenDTO>(`/v1/accesos/qr/${idUsuario}`);
+  const resp = await httpClient.get<{ tokenQr: string; segundosRestantes: number }>(
+    ACCESO_ENDPOINTS.QR_SOCIO(idUsuario)
+  );
+  return {
+    token: resp.tokenQr,
+    expiraEnSegundos: resp.segundosRestantes,
+    generadoEn: new Date().toISOString(),
+  };
 }
 
+/**
+ * Obtiene el token QR dinámico del socio autenticado en sesión desde `/v1/usuarios/me/qr` (SCRUM-96, SCRUM-101).
+ */
+export async function obtenerMiQr(idUsuarioFallback?: number): Promise<QrTokenDTO> {
+  if (USE_MOCK) {
+    return obtenerQrSocio(idUsuarioFallback ?? 2);
+  }
+
+  const resp = await httpClient.get<{ tokenQr: string; segundosRestantes: number }>(
+    ACCESO_ENDPOINTS.MI_QR
+  );
+  return {
+    token: resp.tokenQr,
+    expiraEnSegundos: resp.segundosRestantes,
+    generadoEn: new Date().toISOString(),
+  };
+}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { QrCode, ScanLine, Keyboard, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
 import { TextField } from '../ui/TextField';
 import { Button } from '../ui/Button';
+import { USE_MOCK } from '../../config';
 
 export interface ValidadorIngresoProps {
   onValidar: (token: string) => Promise<void> | void;
@@ -146,40 +147,42 @@ export function ValidadorIngreso({
       </form>
 
       {/* Simulador de Pruebas Rápidas (Dev / Mock) */}
-      <div className="pt-4 border-t border-slate-100 space-y-3">
-        <div className="flex items-center gap-1.5 text-slate-500">
-          <Sparkles className="w-3.5 h-3.5 text-fitzone-gold" />
-          <span className="text-[10px] font-black uppercase tracking-wider">
-            Casos de Prueba con 1 Clic (Desarrollo / Mock)
-          </span>
-        </div>
+      {USE_MOCK && (
+        <div className="pt-4 border-t border-slate-100 space-y-3">
+          <div className="flex items-center gap-1.5 text-slate-500">
+            <Sparkles className="w-3.5 h-3.5 text-fitzone-gold" />
+            <span className="text-[10px] font-black uppercase tracking-wider">
+              Casos de Prueba con 1 Clic (Desarrollo / Mock)
+            </span>
+          </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          {TOKENS_PRUEBA.map((item) => (
-            <button
-              key={item.token}
-              type="button"
-              onClick={() => handleSeleccionarTokenPrueba(item.token)}
-              disabled={disabled || loading}
-              className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 text-xs ${
-                item.tipo === 'ok'
-                  ? 'bg-emerald-50/70 hover:bg-emerald-100/70 border-emerald-200 text-emerald-900'
-                  : 'bg-red-50/50 hover:bg-red-100/60 border-red-200 text-red-900'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-1 w-full font-bold">
-                <span className="truncate">{item.label}</span>
-                {item.tipo === 'ok' ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                ) : (
-                  <XCircle className="w-3.5 h-3.5 text-fitzone-red shrink-0" />
-                )}
-              </div>
-              <span className="text-[10px] text-slate-500 line-clamp-1">{item.descripcion}</span>
-            </button>
-          ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {TOKENS_PRUEBA.map((item) => (
+              <button
+                key={item.token}
+                type="button"
+                onClick={() => handleSeleccionarTokenPrueba(item.token)}
+                disabled={disabled || loading}
+                className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 text-xs ${
+                  item.tipo === 'ok'
+                    ? 'bg-emerald-50/70 hover:bg-emerald-100/70 border-emerald-200 text-emerald-900'
+                    : 'bg-red-50/50 hover:bg-red-100/60 border-red-200 text-red-900'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1 w-full font-bold">
+                  <span className="truncate">{item.label}</span>
+                  {item.tipo === 'ok' ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  ) : (
+                    <XCircle className="w-3.5 h-3.5 text-fitzone-red shrink-0" />
+                  )}
+                </div>
+                <span className="text-[10px] text-slate-500 line-clamp-1">{item.descripcion}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
