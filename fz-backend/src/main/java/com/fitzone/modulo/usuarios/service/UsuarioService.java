@@ -36,6 +36,12 @@ public class UsuarioService {
     }
 
     @Transactional(readOnly = true)
+    public Usuario obtenerPorAuthId(UUID authId) {
+        return usuarioRepository.findByAuthId(authId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario con authId " + authId + " no encontrado"));
+    }
+
+    @Transactional(readOnly = true)
     public List<Usuario> buscar(String dni, TipoUsuario tipoUsuario) {
         return buscar(dni, tipoUsuario, null);
     }

@@ -81,10 +81,9 @@ class UsuarioControllerTest {
                 .tipoUsuario(TipoUsuario.SOCIO)
                 .build();
 
-        when(usuarioService.crear(any(Usuario.class), eq(2L))).thenReturn(persistido);
+        when(usuarioService.crear(any(Usuario.class), eq(null))).thenReturn(persistido);
 
         mockMvc.perform(post("/v1/usuarios")
-                        .param("idOperador", "2")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(nuevo)))
                 .andExpect(status().isCreated())
@@ -153,11 +152,10 @@ class UsuarioControllerTest {
                 .tipoUsuario(TipoUsuario.SOCIO)
                 .build();
 
-        when(usuarioService.crear(any(Usuario.class), eq(2L)))
+        when(usuarioService.crear(any(Usuario.class), eq(null)))
                 .thenThrow(new ConflictoException("Ya existe un usuario con el DNI 12345678"));
 
         mockMvc.perform(post("/v1/usuarios")
-                        .param("idOperador", "2")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(duplicado)))
                 .andExpect(status().isConflict())
@@ -232,10 +230,9 @@ class UsuarioControllerTest {
                 .tipoUsuario(TipoUsuario.SOCIO)
                 .build();
 
-        when(usuarioService.actualizar(eq(1L), any(Usuario.class), eq(2L))).thenReturn(actualizado);
+        when(usuarioService.actualizar(eq(1L), any(Usuario.class), eq(null))).thenReturn(actualizado);
 
         mockMvc.perform(put("/v1/usuarios/1")
-                        .param("idOperador", "2")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(datos)))
                 .andExpect(status().isOk())

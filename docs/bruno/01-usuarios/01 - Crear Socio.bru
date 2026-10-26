@@ -5,13 +5,13 @@ meta {
 }
 
 post {
-  url: {{baseUrl}}/v1/usuarios?idOperador={{idOperador}}
+  url: {{baseUrl}}/v1/usuarios
   body: json
-  auth: none
+  auth: bearer
 }
 
-params:query {
-  idOperador: {{idOperador}}
+auth:bearer {
+  token: {{token}}
 }
 
 body:json {
@@ -24,8 +24,4 @@ body:json {
     "tipoUsuario": "SOCIO",
     "password": "Password123!"
   }
-}
-
-vars:pre-request {
-  idOperador: 1
 }

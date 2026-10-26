@@ -111,7 +111,7 @@ export function MembresiasPage() {
     if (!dni.trim()) return;
     setCargandoSocio(true);
     try {
-      const usuarios = await buscarUsuariosPorDni(dni, sedeActiva?.idSede);
+      const usuarios = await buscarUsuariosPorDni(dni);
       const socioEncontrado = usuarios.find((u) => u.dni.trim() === dni.trim()) || usuarios[0];
       if (socioEncontrado) {
         handleSeleccionarSocio(socioEncontrado);
@@ -124,7 +124,7 @@ export function MembresiasPage() {
         addToast({
           type: 'warning',
           title: 'Socio no encontrado',
-          message: `No se encontró ningún usuario con DNI ${dni} en la sede actual.`,
+          message: `No se encontró ningún usuario con DNI ${dni}.`,
         });
       }
     } catch (err: unknown) {
@@ -200,7 +200,7 @@ export function MembresiasPage() {
     }
     setBuscandoSociosModal(true);
     try {
-      const resultados = await buscarUsuariosPorDni(dni, sedeActiva?.idSede);
+      const resultados = await buscarUsuariosPorDni(dni);
       setBusquedaModalSocios(resultados);
     } catch {
       setBusquedaModalSocios([]);
