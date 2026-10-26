@@ -1,5 +1,6 @@
 package com.fitzone.modulo.pagos.service;
 
+import com.fitzone.core.domain.enums.EstadoMembresia;
 import com.fitzone.core.domain.enums.EstadoPago;
 import com.fitzone.core.domain.enums.TipoOrigenTransaccion;
 import com.fitzone.core.exception.ConflictoException;
@@ -110,10 +111,14 @@ public class PagoService {
             estadoFinal = EstadoPago.CONFIRMADO;
             fechaConfirmacion = LocalDateTime.now();
 
-            // Si es membresía y el pago fue confirmado, se renueva automáticamente
+            // Si es membresía y el pago fue confirmado, se renueva si no estaba activa o si ya tenía un pago previo
             if (request.getConcepto() == TipoOrigenTransaccion.MEMBRESIA) {
-                membresiaService.renovar(membresia.getIdMembresia());
-                log.info("Membresía #{} renovada automáticamente tras pago confirmado", membresia.getIdMembresia());
+                boolean yaTeniaPago = transaccionRepository.existsByMembresia_IdMembresiaAndEstadoPago(
+                        membresia.getIdMembresia(), EstadoPago.CONFIRMADO);
+                if (membresia.getEstado() != EstadoMembresia.ACTIVO || yaTeniaPago) {
+                    membresiaService.renovar(membresia.getIdMembresia());
+                    log.info("Membresía #{} renovada automáticamente tras pago confirmado", membresia.getIdMembresia());
+                }
             }
         } else {
             estadoFinal = EstadoPago.RECHAZADO;

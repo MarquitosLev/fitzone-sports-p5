@@ -172,7 +172,7 @@ export async function listarMembresias(idSede?: number): Promise<MembresiaDTO[]>
     if (idSede === undefined || idSede === null) {
       return [...MOCK_MEMBRESIAS];
     }
-    return MOCK_MEMBRESIAS.filter((m) => m.usuario.idSede === idSede);
+    return MOCK_MEMBRESIAS.filter((m) => !m.usuario.idSede || m.usuario.idSede === idSede);
   }
 
   return httpClient.get<MembresiaDTO[]>('/v1/membresias');

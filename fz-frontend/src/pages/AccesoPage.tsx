@@ -145,7 +145,7 @@ type VistaAcceso = 'mi-qr' | 'control-aforo' | 'historial';
 export function AccesoPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { sedeActiva } = useSede();
+  const { sedeActiva, sedes, setSedeActiva } = useSede();
   const { addToast } = useToast();
   const { usuario: usuarioAuth } = useAuth();
   const esSocio = usuarioAuth?.tipoUsuario === 'SOCIO';
@@ -156,6 +156,20 @@ export function AccesoPage() {
   const puedeVerAforo = !usuarioAuth || tienePrestacionAforo;
   const puedeEscanear = !usuarioAuth || tienePrestacionEscanear;
   const puedeVerMiQr = !usuarioAuth || tienePrestacionMiQr;
+
+  // Sincronizar la sede activa con la sede asignada del recepcionista/gerente autenticado (SCRUM-96, SCRUM-101)
+  useEffect(() => {
+    if (
+      usuarioAuth?.idSede &&
+      (usuarioAuth.tipoUsuario === 'RECEPCIONISTA' || usuarioAuth.tipoUsuario === 'GERENTE') &&
+      sedeActiva?.idSede !== usuarioAuth.idSede
+    ) {
+      const sedeDelOperador = sedes.find((s) => s.idSede === usuarioAuth.idSede);
+      if (sedeDelOperador) {
+        setSedeActiva(sedeDelOperador);
+      }
+    }
+  }, [usuarioAuth, sedeActiva, sedes, setSedeActiva]);
 
   // Pestaña activa: 'mi-qr' (Socio), 'control-aforo' (Recepción SCRUM-82), o 'historial'
   // Se basa en prestaciones atómicas (SCRUM-107) y en la ruta actual (/mi-qr vs /acceso).
@@ -187,6 +201,9 @@ export function AccesoPage() {
   const [socioSeleccionado, setSocioSeleccionado] = useState<UsuarioDTO>(
     esSocio && usuarioAuth ? usuarioAuth : SOCIOS_EJEMPLO[0]
   );
+  const [sociosRealesCargados, setSociosRealesCargados] = useState<boolean>(
+    USE_MOCK || Boolean(esSocio && usuarioAuth)
+  );
   const [membresia, setMembresia] = useState<MembresiaDTO | null>(null);
   const [cargandoMembresia, setCargandoMembresia] = useState<boolean>(true);
 
@@ -208,32 +225,46 @@ export function AccesoPage() {
   const [accesosSede, setAccesosSede] = useState<AccesoDTO[]>([]);
   const [cargandoAccesos, setCargandoAccesos] = useState<boolean>(false);
 
-  // Cargar socios reales desde el backend cuando USE_MOCK === false
+  // Cargar socios reales desde el backend cuando USE_MOCK === false y no es un SOCIO individual
   useEffect(() => {
     if (esSocio && usuarioAuth) {
       setSocioSeleccionado(usuarioAuth);
+      setSociosRealesCargados(true);
       return;
     }
-    if (USE_MOCK) return;
+    if (USE_MOCK) {
+      setSociosRealesCargados(true);
+      return;
+    }
+    if (vistaActiva !== 'mi-qr' || !puedeVerMiQr) {
+      return;
+    }
 
     let cancelado = false;
     httpClient
       .get<UsuarioDTO[]>('/v1/usuarios?tipo=SOCIO')
       .then((lista) => {
-        if (cancelado || !Array.isArray(lista) || lista.length === 0) return;
-        setSociosDisponibles(lista);
-        setSocioSeleccionado((prev) =>
-          lista.some((u) => u.idUsuario === prev.idUsuario) ? prev : lista[0]
-        );
+        if (cancelado) return;
+        if (Array.isArray(lista) && lista.length > 0) {
+          setSociosDisponibles(lista);
+          setSocioSeleccionado((prev) =>
+            lista.some((u) => u.idUsuario === prev.idUsuario) ? prev : lista[0]
+          );
+        }
       })
       .catch(() => {
         // Fallback silencioso si no hay sesión o permisos para listar
+      })
+      .finally(() => {
+        if (!cancelado) {
+          setSociosRealesCargados(true);
+        }
       });
 
     return () => {
       cancelado = true;
     };
-  }, [esSocio, usuarioAuth]);
+  }, [esSocio, usuarioAuth, vistaActiva, puedeVerMiQr]);
 
   // ── Lógica Socio: Solicitar Token QR Dinámico (SCRUM-96, SCRUM-101) ──────────
   const solicitarNuevoToken = useCallback(
@@ -269,8 +300,12 @@ export function AccesoPage() {
     [addToast, usuarioAuth]
   );
 
-  // Efecto cuando cambia el socio seleccionado
+  // Efecto cuando cambia el socio seleccionado (solo cuando la vista 'mi-qr' está activa)
   useEffect(() => {
+    if (vistaActiva !== 'mi-qr' || !puedeVerMiQr || !sociosRealesCargados) {
+      return;
+    }
+
     let cancelado = false;
 
     const cargar = async () => {
@@ -306,22 +341,22 @@ export function AccesoPage() {
     return () => {
       cancelado = true;
     };
-  }, [socioSeleccionado, solicitarNuevoToken, addToast]);
+  }, [vistaActiva, puedeVerMiQr, sociosRealesCargados, socioSeleccionado, solicitarNuevoToken, addToast]);
 
   // ── Lógica Recepción: Cargar Aforo en tiempo real ─────────────────────────────
   const cargarAforo = useCallback(async () => {
-    if (!sedeActiva) return;
+    if (!sedeActiva || !puedeVerAforo) return;
     try {
       const datosAforo = await obtenerAforo(sedeActiva.idSede);
       setAforo(datosAforo);
     } catch (err: unknown) {
       console.error('Error al actualizar aforo:', err);
     }
-  }, [sedeActiva]);
+  }, [sedeActiva, puedeVerAforo]);
 
   // ── Lógica Recepción: Cargar Accesos Activos de la sede ────────────────────────
   const cargarAccesosActivos = useCallback(async () => {
-    if (!sedeActiva) return;
+    if (!sedeActiva || !puedeVerAforo) return;
     setLoadingAccesos(true);
     try {
       const activos = await listarAccesosActivos(sedeActiva.idSede);
@@ -331,24 +366,24 @@ export function AccesoPage() {
     } finally {
       setLoadingAccesos(false);
     }
-  }, [sedeActiva]);
+  }, [sedeActiva, puedeVerAforo]);
 
-  // Al montar o cambiar de sede, se actualizan los datos de recepción
+  // Al montar o cambiar de sede, se actualizan los datos de recepción (solo si tiene permiso ACCESO_AFORO_VIEW)
   useEffect(() => {
     setResultadoValidacion(null);
     setErrorOperativo(null);
 
-    if (sedeActiva) {
+    if (sedeActiva && puedeVerAforo) {
       setLoadingAforo(true);
       void Promise.all([cargarAforo(), cargarAccesosActivos()]).finally(() => {
         setLoadingAforo(false);
       });
     }
-  }, [sedeActiva, cargarAforo, cargarAccesosActivos]);
+  }, [sedeActiva, puedeVerAforo, cargarAforo, cargarAccesosActivos]);
 
   // ── Lógica Recepción: Historial de accesos ────────────────────────────────────
   useEffect(() => {
-    if (vistaActiva !== 'historial' || !sedeActiva) return;
+    if (vistaActiva !== 'historial' || !sedeActiva || !puedeVerAforo) return;
 
     let cancelado = false;
     const cargar = async () => {
@@ -367,7 +402,7 @@ export function AccesoPage() {
     return () => {
       cancelado = true;
     };
-  }, [vistaActiva, sedeActiva]);
+  }, [vistaActiva, sedeActiva, puedeVerAforo]);
 
   // ── Lógica Recepción: Validación de Ingreso ──────────────────────────────────
   const handleValidarIngreso = async (token: string) => {
@@ -382,9 +417,12 @@ export function AccesoPage() {
 
     setValidando(true);
     try {
+      // SCRUM-96 / SCRUM-101: cuando el operador autenticado tiene sede asignada y usa API real,
+      // no se envía idSede en el body porque el backend la obtiene de su sesión autenticada.
+      const omitirIdSedeEnBody = !USE_MOCK && Boolean(usuarioAuth?.idSede);
       const res = await validarIngreso({
         token,
-        idSede: sedeActiva.idSede,
+        ...(omitirIdSedeEnBody ? {} : { idSede: sedeActiva.idSede }),
       });
 
       setResultadoValidacion(res);
@@ -483,7 +521,7 @@ export function AccesoPage() {
         return {
           titulo: 'Ingreso No Permitido',
           mensaje: 'Tu membresía no se encuentra en estado activo.',
-          tipo: 'warning' as const,
+        tipo: 'warning' as const,
         };
     }
   };

@@ -128,7 +128,7 @@ export async function listarUsuarios(idSede?: number | null): Promise<UsuarioDTO
     if (idSede === undefined || idSede === null) {
       return [...MOCK_USUARIOS];
     }
-    return MOCK_USUARIOS.filter((u) => u.idSede === idSede);
+    return MOCK_USUARIOS.filter((u) => !u.idSede || u.idSede === idSede);
   }
 
   const todos = await httpClient.get<UsuarioDTO[]>('/v1/usuarios');

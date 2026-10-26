@@ -1,17 +1,17 @@
 meta {
-  name: 08 - Error Socio con Sede (422)
+  name: 08 - Error Personal sin Sede (422)
   type: http
   seq: 8
 }
 
 post {
-  url: {{baseUrl}}/v1/usuarios?idOperador={{idOperador}}
+  url: {{baseUrl}}/v1/usuarios
   body: json
-  auth: none
+  auth: bearer
 }
 
-params:query {
-  idOperador: {{idOperador}}
+auth:bearer {
+  token: {{token}}
 }
 
 body:json {
@@ -20,8 +20,7 @@ body:json {
     "nombre": "Test",
     "apellido": "Invalido",
     "email": "invalido@fitzone.com",
-    "tipoUsuario": "SOCIO",
-    "idSede": 1,
+    "tipoUsuario": "RECEPCIONISTA",
     "password": "Password123!"
   }
 }

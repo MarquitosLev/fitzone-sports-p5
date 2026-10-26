@@ -162,7 +162,7 @@ public class AccesoService {
         return accesoRepository.findBySede_IdSedeOrderByFechaHoraIngresoDesc(idSedeEfectiva);
     }
 
-    private Long resolverYValidarSedeOperador(Long idSedeSolicitada) {
+    public Long resolverYValidarSedeOperador(Long idSedeSolicitada) {
         Optional<Usuario> operadorOpt = obtenerUsuarioAutenticadoOptional();
         if (operadorOpt.isEmpty()) {
             return idSedeSolicitada;

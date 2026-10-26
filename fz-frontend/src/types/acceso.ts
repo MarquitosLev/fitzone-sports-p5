@@ -25,10 +25,12 @@ export type MotivoRechazoAcceso =
 
 /**
  * Payload para solicitar la validación de ingreso físico por molinete.
+ * Cuando el recepcionista está autenticado en sesión (SCRUM-96), `idSede` es opcional
+ * ya que el backend toma la sede asignada del operador logueado.
  */
 export interface ValidacionIngresoRequestDTO {
   token: string;
-  idSede: number;
+  idSede?: number;
 }
 
 /**
@@ -70,4 +72,3 @@ export interface QrTokenDTO {
   /** Timestamp ISO de generación del token */
   generadoEn: string;
 }
-

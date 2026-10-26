@@ -34,6 +34,17 @@ public class MembresiaService {
         return planRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
+    public List<Membresia> listarTodas() {
+        return membresiaRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public Membresia obtenerPorId(Long idMembresia) {
+        return membresiaRepository.findById(idMembresia)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Membresia", idMembresia));
+    }
+
     @Transactional
     public Membresia crear(Membresia membresia) {
         // Elimina cualquier ID provisto por el cliente para evitar sobrescribir membresías existentes
@@ -99,11 +110,22 @@ public class MembresiaService {
 
     @Transactional
     public Membresia renovar(Long idMembresia) {
+        return renovar(idMembresia, null);
+    }
+
+    @Transactional
+    public Membresia renovar(Long idMembresia, Integer idPlan) {
         Membresia membresia = membresiaRepository.findById(idMembresia)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Membresia", idMembresia));
 
         if (membresia.getEstado() == EstadoMembresia.CANCELADO) {
             throw new ReglaNegocioException("Una membresía cancelada no puede ser renovada");
+        }
+
+        if (idPlan != null) {
+            Plan nuevoPlan = planRepository.findById(idPlan)
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Plan", idPlan));
+            membresia.setPlan(nuevoPlan);
         }
 
         Plan plan = membresia.getPlan();

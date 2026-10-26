@@ -1,6 +1,7 @@
 package com.fitzone.modulo.usuarios.controller;
 
 import com.fitzone.core.domain.enums.TipoUsuario;
+import com.fitzone.core.exception.AccesoDenegadoException;
 import com.fitzone.modulo.gimnasio.models.QrTokenResponse;
 import com.fitzone.modulo.gimnasio.service.AccesoService;
 import com.fitzone.modulo.canchas.models.ReservaCancha;
@@ -19,6 +20,8 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +34,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -45,24 +49,38 @@ public class UsuarioController {
     private final com.fitzone.modulo.clases.service.ReservaClaseService reservaClaseService;
     private final PagoService pagoService;
 
+    @GetMapping("/me")
+    @Operation(summary = "Obtiene el perfil del usuario autenticado a partir del token JWT")
+    public Usuario obtenerMiPerfil(@AuthenticationPrincipal Jwt jwt) {
+        UUID authId = UUID.fromString(jwt.getSubject());
+        return usuarioService.obtenerPorAuthId(authId);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")
     @Operation(summary = "Alta de un nuevo usuario (socio, externo, recepcionista o gerente)")
     public Usuario crear(
             @Valid @RequestBody Usuario usuario,
-            @Parameter(description = "ID del usuario que realiza el alta (opcional en fase inicial, por defecto operador sistema)") @RequestParam(required = false) @Positive Long idOperador) {
-        return usuarioService.crear(usuario, idOperador);
+            @AuthenticationPrincipal Jwt jwt) {
+        return usuarioService.crear(usuario, obtenerIdOperador(jwt));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Detalle del perfil de un usuario por su ID interno")
-    public Usuario obtenerPorId(@PathVariable @Positive Long id) {
+    public Usuario obtenerPorId(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        validarAccesoUsuario(id, jwt);
         return usuarioService.obtenerPorId(id);
     }
 
     @GetMapping("/{id}/membresia")
     @Operation(summary = "Obtiene la membresía vigente (activa o suspendida) de un usuario")
-    public Membresia obtenerMembresiaVigente(@PathVariable @Positive Long id) {
+    public Membresia obtenerMembresiaVigente(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        validarAccesoUsuario(id, jwt);
         return membresiaService.obtenerVigentePorUsuario(id);
     }
 
@@ -78,29 +96,42 @@ public class UsuarioController {
 
     @GetMapping("/{id}/qr")
     @Operation(summary = "Genera y obtiene el token QR dinámico vigente de un socio con los segundos restantes")
-    public QrTokenResponse obtenerQr(@PathVariable @Positive Long id) {
+    public QrTokenResponse obtenerQr(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        validarAccesoUsuario(id, jwt);
         return accesoService.generarQr(id);
     }
 
     @GetMapping("/{id}/reservas-clase")
     @Operation(summary = "Obtiene las reservas de clases grupales de un socio")
-    public List<com.fitzone.modulo.clases.models.ReservaClase> obtenerMisReservas(@PathVariable @Positive Long id) {
+    public List<com.fitzone.modulo.clases.models.ReservaClase> obtenerMisReservas(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        validarAccesoUsuario(id, jwt);
         return reservaClaseService.listarPorUsuario(id);
     }
 
     @GetMapping("/{id}/reservas-cancha")
     @Operation(summary = "Obtiene el listado de reservas de cancha realizadas por el usuario")
-    public List<ReservaCancha> listarReservasCancha(@PathVariable @Positive Long id) {
+    public List<ReservaCancha> listarReservasCancha(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        validarAccesoUsuario(id, jwt);
         return canchaService.listarReservasPorUsuario(id);
     }
 
     @GetMapping("/{id}/pagos")
     @Operation(summary = "Obtiene el historial de transacciones de pago de un usuario")
-    public List<Transaccion> listarPagos(@PathVariable @Positive Long id) {
+    public List<Transaccion> listarPagos(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        validarAccesoUsuario(id, jwt);
         return pagoService.listarPorUsuario(id);
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")
     @Operation(summary = "Búsqueda y listado de usuarios con filtros opcionales por DNI, tipo y/o sede")
     public List<Usuario> buscar(
             @Parameter(description = "DNI para filtrar usuarios de forma exacta") @RequestParam(required = false) String dni,
@@ -110,11 +141,31 @@ public class UsuarioController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")
     @Operation(summary = "Edición de datos de perfil de un usuario")
     public Usuario actualizar(
             @PathVariable @Positive Long id,
             @Valid @RequestBody Usuario usuario,
-            @Parameter(description = "ID del usuario que realiza la modificación (opcional en fase inicial, por defecto operador sistema)") @RequestParam(required = false) @Positive Long idOperador) {
-        return usuarioService.actualizar(id, usuario, idOperador);
+            @AuthenticationPrincipal Jwt jwt) {
+        return usuarioService.actualizar(id, usuario, obtenerIdOperador(jwt));
+    }
+
+    private Long obtenerIdOperador(Jwt jwt) {
+        if (jwt == null || jwt.getSubject() == null) {
+            return null;
+        }
+        return usuarioService.obtenerPorAuthId(UUID.fromString(jwt.getSubject())).getIdUsuario();
+    }
+
+    private void validarAccesoUsuario(Long idObjetivo, Jwt jwt) {
+        if (jwt == null || jwt.getSubject() == null) {
+            return;
+        }
+        Usuario solicitante = usuarioService.obtenerPorAuthId(UUID.fromString(jwt.getSubject()));
+        boolean esPersonal = solicitante.getTipoUsuario() == TipoUsuario.RECEPCIONISTA
+                || solicitante.getTipoUsuario() == TipoUsuario.GERENTE;
+        if (!esPersonal && !idObjetivo.equals(solicitante.getIdUsuario())) {
+            throw new AccesoDenegadoException("No tiene permisos para acceder a los recursos de otro usuario");
+        }
     }
 }

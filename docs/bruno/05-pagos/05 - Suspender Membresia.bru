@@ -7,7 +7,11 @@ meta {
 patch {
   url: {{baseUrl}}/v1/membresias/1/estado
   body: json
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 body:json {

@@ -206,6 +206,7 @@ export async function validarIngreso(
   if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 250));
     const tokenUpper = request.token.trim().toUpperCase();
+    const idSedeMock = request.idSede ?? 1;
 
     // 1. Simulación explícita por token rápido de prueba
     if (tokenUpper.includes('VENCIDO') || tokenUpper === 'TEST-QR-VENCIDO') {
@@ -244,13 +245,13 @@ export async function validarIngreso(
     }
 
     // 2. Validación de Aforo Máximo en la sede solicitada
-    const sede = MOCK_SEDES[request.idSede] || {
-      idSede: request.idSede,
-      nombre: `Sede #${request.idSede}`,
+    const sede = MOCK_SEDES[idSedeMock] || {
+      idSede: idSedeMock,
+      nombre: `Sede #${idSedeMock}`,
       aforoMaximo: 50,
     };
     const personasAdentro = mockAccesos.filter(
-      (a) => a.sede.idSede === request.idSede && a.fechaHoraEgreso === null
+      (a) => a.sede.idSede === idSedeMock && a.fechaHoraEgreso === null
     ).length;
 
     if (personasAdentro >= sede.aforoMaximo) {
@@ -310,10 +311,15 @@ export async function validarIngreso(
     'AFORO_COMPLETO',
   ];
 
+  const payload =
+    request.idSede !== undefined
+      ? { tokenQr: request.token, idSede: request.idSede }
+      : { tokenQr: request.token };
+
   try {
     const acceso = await httpClient.post<AccesoDTO>(
       ACCESO_ENDPOINTS.VALIDAR_INGRESO,
-      { body: JSON.stringify({ tokenQr: request.token, idSede: request.idSede }) }
+      { body: JSON.stringify(payload) }
     );
     return {
       aprobado: true,
@@ -389,25 +395,12 @@ export async function obtenerMiQr(idUsuarioFallback?: number): Promise<QrTokenDT
     return obtenerQrSocio(idUsuarioFallback ?? 2);
   }
 
-  const headers: Record<string, string> = {};
-  if (idUsuarioFallback !== undefined) {
-    headers['X-Usuario-Id'] = String(idUsuarioFallback);
-  }
-
-  try {
-    const resp = await httpClient.get<{ tokenQr: string; segundosRestantes: number }>(
-      ACCESO_ENDPOINTS.MI_QR,
-      { headers }
-    );
-    return {
-      token: resp.tokenQr,
-      expiraEnSegundos: resp.segundosRestantes,
-      generadoEn: new Date().toISOString(),
-    };
-  } catch (err: unknown) {
-    if (idUsuarioFallback !== undefined) {
-      return obtenerQrSocio(idUsuarioFallback);
-    }
-    throw err;
-  }
+  const resp = await httpClient.get<{ tokenQr: string; segundosRestantes: number }>(
+    ACCESO_ENDPOINTS.MI_QR
+  );
+  return {
+    token: resp.tokenQr,
+    expiraEnSegundos: resp.segundosRestantes,
+    generadoEn: new Date().toISOString(),
+  };
 }

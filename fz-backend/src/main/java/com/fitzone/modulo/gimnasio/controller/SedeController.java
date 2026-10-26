@@ -58,6 +58,7 @@ public class SedeController {
     }
 
     @GetMapping("/{id}/aforo")
+    @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")
     @Operation(summary = "Consulta de aforo actual, máximo y porcentaje de ocupación en tiempo real")
     public AforoSede obtenerAforo(@PathVariable @Positive Long id) {
         return sedeService.obtenerAforo(id);

@@ -30,6 +30,9 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
     // Verificar si una reserva de cancha ya fue pagada con éxito
     boolean existsByReservaCancha_IdReservaCanchaAndEstadoPago(Long idReservaCancha, EstadoPago estadoPago);
 
+    // Verificar si una membresía ya registra un pago confirmado previo
+    boolean existsByMembresia_IdMembresiaAndEstadoPago(Long idMembresia, EstadoPago estadoPago);
+
     // Historial cronológico de transacciones de un usuario
     List<Transaccion> findByUsuario_IdUsuarioOrderByFechaHoraCreacionDesc(Long idUsuario);
 }
