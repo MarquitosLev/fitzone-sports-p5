@@ -22,4 +22,7 @@ Esta carpeta contiene la documentación viva, las especificaciones de arquitectu
 5. **[Colección de Bruno para Pruebas de API](./bruno/README.md)**  
    Colección organizada por módulos (`01-usuarios/`, `02-canchas/`, etc.) y entornos (`local`, `dev`) para probar todos los endpoints REST directamente desde la aplicación Bruno.
 
+6. **[Kit de QA y desarrollo](./KIT_QA_DESARROLLO.md)**  
+   Guía interna del equipo: qué contiene el kit, cómo usar las [historias de usuario para QA](./HISTORIAS_DE_USUARIO.md) y el [backlog técnico](./BACKLOG_DESARROLLO.md).
+
 
