@@ -27,7 +27,7 @@ Vale para todas las historias:
 - [ ] Frontend: función de servicio con rama real y rama `USE_MOCK`.
 - [ ] Autorización revisada para los cinco perfiles: socio, moroso, externo, recepcionista y gerente.
 - [ ] Endpoints nuevos con `@Operation` y sumados a `docs/bruno/`.
-- [ ] `./mvnw test`, `npm test` y `npm run build` pasan.
+- [ ] `./mvnw test` en `fz-backend/`, y `npm test` y `npm run build` en `fz-frontend/`, pasan.
 - [ ] "Prueba del desarrollador" completa en la web, con `VITE_USE_MOCK=false`, antes de abrir el PR.
 
 ## Quién prueba qué
@@ -128,7 +128,7 @@ Vale para todas las historias:
 **Como** gerente, **quiero** crear y editar planes, **para** definir precios.
 
 - **Prioridad:** P1. **QA:** GER-04.
-- [ ] Backend: crear `POST` y `PUT /v1/planes` con `hasRole('GERENTE')`.
+- [ ] Backend: crear `POST /v1/planes` y `PUT /v1/planes/{id}`, con el plan en el body y `hasRole('GERENTE')`.
 - [ ] Backend: mantener `GET /v1/planes` público.
 - [ ] Frontend: agregar el formulario en `MembresiasPage`, visible solo para gerente.
 
@@ -278,7 +278,7 @@ Vale para todas las historias:
 - **Prioridad:** P1. **QA:** GER-03.
 - [ ] Frontend: crear la pantalla de sedes, visible solo para gerente.
 - [ ] Frontend: refrescar el selector de sede tras guardar.
-- [ ] Backend: agregar test de permisos de `POST` y `PUT /v1/sedes`.
+- [ ] Backend: agregar test de permisos de `POST /v1/sedes` y `PUT /v1/sedes/{id}`.
 
 **Listo cuando:** la sede nueva se puede usar sin reiniciar.
 
