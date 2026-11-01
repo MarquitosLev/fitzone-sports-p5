@@ -15,6 +15,9 @@ public interface ListaEsperaRepository extends JpaRepository<ListaEspera, Long> 
     // Listas de espera donde está inscripto un usuario
     List<ListaEspera> findByUsuario_IdUsuario(Long idUsuario);
 
+    // Borra la cola de una clase al darla de baja
+    void deleteByClase_IdClase(Long idClase);
+
     // Permite al servicio verificar rápidamente si ya está encolado antes de agregarlo
     boolean existsByClase_IdClaseAndUsuario_IdUsuario(Long idClase, Long idUsuario);
 

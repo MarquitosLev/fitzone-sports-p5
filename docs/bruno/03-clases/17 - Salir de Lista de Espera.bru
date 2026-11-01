@@ -1,0 +1,21 @@
+meta {
+  name: 17 - Salir de Lista de Espera
+  type: http
+  seq: 17
+}
+
+delete {
+  url: {{baseUrl}}/v1/lista-espera/{{idEspera}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
+}
+
+tests {
+  test("responde 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

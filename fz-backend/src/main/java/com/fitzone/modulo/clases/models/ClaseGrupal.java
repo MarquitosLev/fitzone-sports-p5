@@ -1,6 +1,7 @@
 package com.fitzone.modulo.clases.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fitzone.core.domain.common.BaseEntity;
 import com.fitzone.modulo.gimnasio.models.Sede;
 
@@ -14,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -65,6 +67,18 @@ public class ClaseGrupal extends BaseEntity {
 
     @Column(name = "cupo_disponible", nullable = false)
     private Integer cupoDisponible;
+
+    // Estado del socio logueado sobre la clase: no se persiste y solo viaja cuando el servicio lo completa
+    // al armar la agenda. Sin NON_NULL, una reserva traería su clase con yaReservada=false.
+    @Transient
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Boolean yaReservada;
+
+    @Transient
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Integer posicionEspera;
 
     @JsonProperty("idSede")
     public void setIdSede(Long idSede) {

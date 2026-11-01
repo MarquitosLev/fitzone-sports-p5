@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +21,7 @@ public class ReservaClaseController {
     private final ReservaClaseService reservaClaseService;
 
     @PatchMapping("/{id}/cancelar")
+    @PreAuthorize("hasRole('SOCIO')")
     @Operation(summary = "Cancelación de reserva de clase grupal liberando cupo para la lista de espera")
     public ReservaClase cancelar(@PathVariable @Positive Long id) {
         return reservaClaseService.cancelar(id);

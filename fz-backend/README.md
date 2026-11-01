@@ -85,8 +85,21 @@ public CanchaResponse crear(CanchaRequest request) {
 }
 ```
 
-### Usuario y sede (hasta que se integre el JWT)
-La validación del JWT y los roles son de otro sprint. Mientras tanto, los endpoints de `/v1/**` están abiertos (`SecurityConfig`) y **el usuario y la sede viajan por parámetro o en el body** (`?idUsuario=...&idSede=...` o dentro del `XxxRequest`). Validalos igual que cualquier otro dato (`@NotNull @Positive`).
+### Usuario y sede
+El JWT de Supabase identifica al usuario. Los servicios lo obtienen con `UsuarioActual` (`core/security`), nunca de un id que venga en el request: `obtener()` devuelve el usuario logueado y `validarSede(idSede)` rechaza con 403 al personal que opera sobre una sede que no es la suya. Un gerente sin sede asignada opera sobre todas.
+
+El rol se valida con `@PreAuthorize` en el controlador. Que un recurso sea propio se valida en el servicio y, si no lo es, se lanza `AccesoDenegadoException`.
+
+Las rutas que todavía no pasaron a `authenticated()` en `SecurityConfig` siguen abiertas hasta su historia de integración.
+
+#### Matriz de permisos de Clases (M3)
+
+| Operación | SOCIO | EXTERNO | RECEPCIONISTA | GERENTE |
+| :-- | :-- | :-- | :-- | :-- |
+| Agenda y detalle | Cualquier sede | — | Su sede | Su sede |
+| Reservar, cancelar y lista de espera | Solo lo propio | — | — | — |
+| Alta, edición y baja de clases | — | — | — | Su sede |
+| Inscriptos y cola de espera | — | — | Su sede | Su sede |
 
 ---
 

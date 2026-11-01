@@ -7,9 +7,26 @@ meta {
 get {
   url: {{baseUrl}}/v1/clases?idSede=1
   body: none
-  auth: none
+  auth: bearer
 }
 
-params:query {
-  idSede: 1
+auth:bearer {
+  token: {{tokenSocio}}
+}
+
+script:post-response {
+  const yoga = res.getBody().find((c) => c.nombreActividad === "Yoga Integral (Completa)");
+  bru.setVar("idClaseCompleta", yoga.idClase);
+}
+
+tests {
+  test("responde 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("incluye el estado del socio", function () {
+    const clase = res.getBody().find((c) => c.idClase === bru.getVar("idClase"));
+    expect(clase.yaReservada).to.equal(false);
+    expect(clase.posicionEspera).to.equal(undefined);
+  });
 }

@@ -4,8 +4,11 @@ import com.fitzone.core.domain.enums.EstadoMembresia;
 import com.fitzone.core.domain.enums.TipoUsuario;
 import com.fitzone.modulo.canchas.models.Cancha;
 import com.fitzone.modulo.canchas.repository.CanchaRepository;
+import com.fitzone.core.domain.enums.EstadoReservaClase;
 import com.fitzone.modulo.clases.models.ClaseGrupal;
+import com.fitzone.modulo.clases.models.ReservaClase;
 import com.fitzone.modulo.clases.repository.ClaseGrupalRepository;
+import com.fitzone.modulo.clases.repository.ReservaClaseRepository;
 import com.fitzone.modulo.gimnasio.models.Sede;
 import com.fitzone.modulo.gimnasio.repository.SedeRepository;
 import com.fitzone.modulo.usuarios.models.Membresia;
@@ -44,6 +47,7 @@ public class DataInitializer implements CommandLineRunner {
         private final MembresiaRepository membresiaRepository;
         private final CanchaRepository canchaRepository;
         private final ClaseGrupalRepository claseGrupalRepository;
+        private final ReservaClaseRepository reservaClaseRepository;
 
         @Override
         public void run(String... args) {
@@ -265,5 +269,31 @@ public class DataInitializer implements CommandLineRunner {
                                         .build());
                         log.info("[DEV SEED] Creada clase grupal Yoga Integral (Completa)");
                 }
+
+                // El cupo se calcula con las reservas confirmadas: sin esta reserva la clase no estaría completa
+                claseGrupalRepository.findBySede_IdSede(sedeCentral.getIdSede()).stream()
+                                .filter(c -> "Yoga Integral (Completa)".equals(c.getNombreActividad()))
+                                .filter(c -> reservaClaseRepository.countByClase_IdClaseAndEstado(c.getIdClase(),
+                                                EstadoReservaClase.CONFIRMADA) == 0)
+                                .findFirst()
+                                .ifPresent(yoga -> usuarioRepository.findByEmail("socio.vencido@fitzone.com")
+                                                .ifPresent(socio -> reservaClaseRepository.save(ReservaClase.builder()
+                                                                .clase(yoga)
+                                                                .usuario(socio)
+                                                                .estado(EstadoReservaClase.CONFIRMADA)
+                                                                .build())));
+
+                // Las fechas son relativas: en una base ya creada vencen y dejarían sin clases para probar
+                LocalDateTime ahora = LocalDateTime.now();
+                claseGrupalRepository.findBySede_IdSede(sedeCentral.getIdSede()).stream()
+                                .filter(c -> c.getFechaHoraInicio().isBefore(ahora))
+                                .forEach(c -> {
+                                        if ("Spinning Pro".equals(c.getNombreActividad())) {
+                                                c.setFechaHoraInicio(ahora.plusDays(1).withHour(18).withMinute(0).withSecond(0));
+                                        } else if ("Yoga Integral (Completa)".equals(c.getNombreActividad())) {
+                                                c.setFechaHoraInicio(ahora.plusDays(2).withHour(10).withMinute(0).withSecond(0));
+                                        }
+                                        claseGrupalRepository.save(c);
+                                });
         }
 }

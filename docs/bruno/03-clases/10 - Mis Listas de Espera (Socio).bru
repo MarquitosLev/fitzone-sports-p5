@@ -1,0 +1,26 @@
+meta {
+  name: 10 - Mis Listas de Espera (Socio)
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/v1/usuarios/me/lista-espera
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
+}
+
+tests {
+  test("responde 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("incluye la inscripción creada", function () {
+    const ids = res.getBody().map((e) => e.idEspera);
+    expect(ids).to.include(bru.getVar("idEspera"));
+  });
+}
