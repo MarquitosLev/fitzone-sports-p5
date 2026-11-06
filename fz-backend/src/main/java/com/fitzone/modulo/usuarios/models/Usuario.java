@@ -91,6 +91,7 @@ public class Usuario extends BaseEntity {
 
     // Solo existe para que Hibernate cree la FK de id_sede; el valor se lee y se escribe con idSede.
     // Ninguna respuesta necesita la sede completa del usuario, por eso queda sin getter ni setter.
+    // No usar .sede(...) del builder: la columna es de solo lectura y ese valor no se guarda.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_sede", insertable = false, updatable = false,
             foreignKey = @ForeignKey(name = "fk_usr_usuarios_sedes"))

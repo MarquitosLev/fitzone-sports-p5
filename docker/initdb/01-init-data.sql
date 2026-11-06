@@ -4,7 +4,7 @@
 -- Las tablas las crea Hibernate al arrancar el backend, no este script. Por eso:
 --   * En la primera inicialización del contenedor (volumen nuevo) las tablas todavía no existen:
 --     el script avisa y no inserta nada, y la semilla la carga DataInitializer al arrancar la app.
---     Antes cortaba con "relation fz_sedes does not exist" y el contenedor no levantaba (SCRUM-93).
+--     Así Postgres termina su inicialización sin errores aunque las tablas no existan.
 --   * Para cargarla a mano con la app ya levantada al menos una vez:
 --     docker exec -i fitzone_postgres_local psql -U fitzone_user -d fitzone_db < docker/initdb/01-init-data.sql
 -- El orden de los INSERT respeta las FK (sedes y planes, después usuarios, membresías, canchas y clases).

@@ -33,7 +33,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "fz_pag_transacciones")
 // El concepto define a qué se imputa el pago: MEMBRESIA lleva solo id_membresia y RESERVA_CANCHA solo
-// id_reserva_cancha. RESERVA_EXTERNO y RESERVA_SOCIO son valores heredados que PagoService ya no acepta.
+// id_reserva_cancha. RESERVA_EXTERNO y RESERVA_SOCIO son valores heredados de datos viejos.
 @Check(name = "ck_pag_transacciones_origen", constraints =
         "(concepto = 'MEMBRESIA' AND id_membresia IS NOT NULL AND id_reserva_cancha IS NULL)"
         + " OR (concepto = 'RESERVA_CANCHA' AND id_reserva_cancha IS NOT NULL AND id_membresia IS NULL)"
