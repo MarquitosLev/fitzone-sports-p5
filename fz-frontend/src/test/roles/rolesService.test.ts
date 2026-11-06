@@ -5,6 +5,7 @@ import {
   obtenerPrestacionesPorRol,
   crearRolPersonalizado,
   eliminarRolPersonalizado,
+  PRESTACIONES_EXCLUSIVAS_SOCIO,
 } from '../../services/rolesService';
 import { PRESTACIONES } from '../../types/rol';
 
@@ -22,11 +23,12 @@ describe('SCRUM-107: rolesService (RBAC por prestaciones dinámicas)', () => {
     expect(roles.some((r) => r.codigo === 'EXTERNO' && r.esSistema)).toBe(true);
   });
 
-  it('el rol GERENTE posee todas las prestaciones atómicas', () => {
+  it('el rol GERENTE posee todas las prestaciones salvo las exclusivas del socio', () => {
     const prestacionesGerente = obtenerPrestacionesPorRol('GERENTE');
     const totalPrestaciones = Object.keys(PRESTACIONES).length;
-    expect(prestacionesGerente.length).toBe(totalPrestaciones);
+    expect(prestacionesGerente.length).toBe(totalPrestaciones - PRESTACIONES_EXCLUSIVAS_SOCIO.length);
     expect(prestacionesGerente).toContain('ROLES_GESTIONAR');
+    expect(prestacionesGerente).not.toContain('ACCESO_MI_QR');
   });
 
   it('el rol SOCIO posee prestaciones exclusivas de cliente y no administrativas', () => {

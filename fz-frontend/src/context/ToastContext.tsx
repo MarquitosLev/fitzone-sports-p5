@@ -39,6 +39,15 @@ export function useToast(): ToastContextValue {
 }
 
 /**
+ * Variante tolerante de `useToast`: devuelve null si no hay ToastProvider.
+ * La usan componentes reutilizables (como RoleMiddleware) que también se
+ * renderizan en tests o en el Playground sin el provider.
+ */
+export function useToastOpcional(): ToastContextValue | null {
+  return useContext(ToastContext);
+}
+
+/**
  * Provider que envuelve la app y pone los toasts disponibles globalmente.
  * Se coloca en App.tsx para que todos los componentes puedan disparar notificaciones.
  */
