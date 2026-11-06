@@ -5,7 +5,7 @@
  * - Franjas horarias con estados: LIBRE, OCUPADO, MANTENIMIENTO, RECIEN_TOMADO.
  * - Destaca visualmente la franja pico (19 a 21 hs).
  * - Selección interactiva de turno.
- * - Precios calculados con descuento tachado para socios activos.
+ * - Precio de lista por franja; el precio final sale de la cotización del backend.
  * - Detección de turnos en horarios pasados para el día actual.
  * - Leyenda explicativa y estados de carga.
  */
@@ -26,8 +26,6 @@ export interface GrillaDisponibilidadProps {
   cancha?: CanchaDTO;
   /** Fecha en formato YYYY-MM-DD para validar turnos pasados de hoy */
   fecha?: string;
-  /** Si el usuario actual es socio (para mostrar precios con descuento) */
-  esSocio?: boolean;
   /** Estado de carga de la disponibilidad */
   loading?: boolean;
   /** Deshabilitar selección de turnos */
@@ -41,7 +39,6 @@ export function GrillaDisponibilidad({
   onSeleccionarTurno,
   cancha,
   fecha,
-  esSocio = false,
   loading = false,
   disabled = false,
   className = '',
@@ -112,12 +109,8 @@ export function GrillaDisponibilidad({
           const isJustTaken = slot.estado === 'RECIEN_TOMADO';
           const isAvailable = !isPast && !isOccupied && !isMaintenance && !isJustTaken;
 
-          // Cálculo de precios estimados para mostrar en la tarjeta
-          const basePrice = slot.precioEstimado ?? cancha?.precioBaseHora ?? 8000;
-          const peakSurge = slot.esPico ? Math.round(basePrice * 0.2) : 0;
-          const subtotal = basePrice + peakSurge;
-          const discount = esSocio ? Math.round(subtotal * 0.15) : 0;
-          const finalPrice = subtotal - discount;
+          // Precio de lista de la cancha; el precio final (recargo y descuento) lo da la cotización
+          const precioLista = slot.precioEstimado ?? cancha?.precioBaseHora ?? null;
 
           // Estilos visuales según estado
           let cardStyle =
@@ -210,34 +203,15 @@ export function GrillaDisponibilidad({
 
               {/* Precios y Estado */}
               <div className="pt-2 border-t border-current/10 flex items-center justify-between gap-2 w-full flex-wrap">
-                {isAvailable || isSelected ? (
+                {(isAvailable || isSelected) && precioLista !== null ? (
                   <div className="min-w-0">
-                    {esSocio && discount > 0 ? (
-                      <div className="flex items-baseline gap-1.5 flex-wrap">
-                        <span
-                          className={`text-[11px] line-through font-semibold ${
-                            isSelected ? 'text-white/60' : 'text-slate-400'
-                          }`}
-                        >
-                          {formatearMonto(subtotal)}
-                        </span>
-                        <span
-                          className={`text-sm font-black font-outfit ${
-                            isSelected ? 'text-fitzone-coral' : 'text-[#1B2A55]'
-                          }`}
-                        >
-                          {formatearMonto(finalPrice)}
-                        </span>
-                      </div>
-                    ) : (
-                      <span
-                        className={`text-sm font-black font-outfit ${
-                          isSelected ? 'text-fitzone-coral' : 'text-[#1B2A55]'
-                        }`}
-                      >
-                        {formatearMonto(finalPrice)}
-                      </span>
-                    )}
+                    <span
+                      className={`text-sm font-black font-outfit ${
+                        isSelected ? 'text-fitzone-coral' : 'text-[#1B2A55]'
+                      }`}
+                    >
+                      {formatearMonto(precioLista)}
+                    </span>
                   </div>
                 ) : (
                   <span className="text-[11px] font-semibold text-slate-400">

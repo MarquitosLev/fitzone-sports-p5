@@ -17,12 +17,10 @@ import {
   ShieldAlert,
   DoorOpen,
   RefreshCw,
-  UserCheck,
   Smartphone,
   ExternalLink,
   ListFilter,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 import { Card, Spinner, Alert, Button, DataTable } from '../components/ui';
 import type { Column } from '../components/ui';
@@ -35,7 +33,6 @@ import {
   PersonasAdentroList,
 } from '../components/acceso';
 import {
-  obtenerQrSocio,
   obtenerMiQr,
   listarAccesos,
   obtenerAforo,
@@ -44,85 +41,18 @@ import {
   registrarEgreso,
 } from '../services/accesoService';
 import { obtenerMembresiaPorUsuario } from '../services/membresiasService';
-import { httpClient } from '../services/httpClient';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { useTienePrestacion } from '../hooks/usePrestaciones';
-import { USE_MOCK } from '../config';
 import type {
   MembresiaDTO,
-  UsuarioDTO,
   AccesoDTO,
   QrTokenDTO,
   AforoSedeDTO,
   ResultadoValidacionDTO,
 } from '../types';
 import { formatearFechaHora } from '../utils/formatters';
-
-// Lista de socios para selección rápida en modo socio/demostración
-const SOCIOS_EJEMPLO: UsuarioDTO[] = [
-  {
-    idUsuario: 2,
-    authId: 'uuid-socio-2',
-    dni: '28456789',
-    nombre: 'Valentina',
-    apellido: 'García',
-    email: 'vgarcia@email.com',
-    telefono: '11-5432-1098',
-    fotoUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    tipoUsuario: 'SOCIO',
-    idSede: 1,
-  },
-  {
-    idUsuario: 6,
-    authId: 'uuid-socio-3',
-    dni: '32845761',
-    nombre: 'Mateo',
-    apellido: 'Fernández',
-    email: 'mateo.f@email.com',
-    telefono: '11-8765-4321',
-    fotoUrl: null,
-    tipoUsuario: 'SOCIO',
-    idSede: 1,
-  },
-  {
-    idUsuario: 1,
-    authId: 'uuid-socio-1',
-    dni: '30123456',
-    nombre: 'Lucas',
-    apellido: 'Martínez',
-    email: 'lucas.martinez@email.com',
-    telefono: '11-4567-8901',
-    fotoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    tipoUsuario: 'SOCIO',
-    idSede: 1,
-  },
-  {
-    idUsuario: 7,
-    authId: null,
-    dni: '39123890',
-    nombre: 'Camila',
-    apellido: 'Torres',
-    email: 'camila.torres@email.com',
-    telefono: '11-1234-5678',
-    fotoUrl: null,
-    tipoUsuario: 'SOCIO',
-    idSede: 1,
-  },
-  {
-    idUsuario: 3,
-    authId: null,
-    dni: '35789012',
-    nombre: 'Martín',
-    apellido: 'López',
-    email: 'mlopez@email.com',
-    telefono: '11-6789-0123',
-    fotoUrl: null,
-    tipoUsuario: 'EXTERNO',
-    idSede: 1,
-  },
-];
 
 const COLUMNAS_ACCESOS: Column<AccesoDTO>[] = [
   { key: 'idAcceso', header: 'ID', width: 60, align: 'center' },
@@ -197,13 +127,8 @@ export function AccesoPage() {
   }, [location.pathname, usuarioAuth, puedeVerMiQr, tienePrestacionAforo, tienePrestacionMiQr]);
 
   // ── Estado Vista 1: Pase QR Socio (SCRUM-85) ────────────────────────────────
-  const [sociosDisponibles, setSociosDisponibles] = useState<UsuarioDTO[]>(SOCIOS_EJEMPLO);
-  const [socioSeleccionado, setSocioSeleccionado] = useState<UsuarioDTO>(
-    esSocio && usuarioAuth ? usuarioAuth : SOCIOS_EJEMPLO[0]
-  );
-  const [sociosRealesCargados, setSociosRealesCargados] = useState<boolean>(
-    USE_MOCK || Boolean(esSocio && usuarioAuth)
-  );
+  // El pase es personal: solo lo ve el socio logueado
+  const socioQr = esSocio ? usuarioAuth : null;
   const [membresia, setMembresia] = useState<MembresiaDTO | null>(null);
   const [cargandoMembresia, setCargandoMembresia] = useState<boolean>(true);
 
@@ -225,66 +150,15 @@ export function AccesoPage() {
   const [accesosSede, setAccesosSede] = useState<AccesoDTO[]>([]);
   const [cargandoAccesos, setCargandoAccesos] = useState<boolean>(false);
 
-  // Cargar socios reales desde el backend cuando USE_MOCK === false y no es un SOCIO individual
-  useEffect(() => {
-    if (esSocio && usuarioAuth) {
-      setSocioSeleccionado(usuarioAuth);
-      setSociosRealesCargados(true);
-      return;
-    }
-    if (USE_MOCK) {
-      setSociosRealesCargados(true);
-      return;
-    }
-    if (vistaActiva !== 'mi-qr' || !puedeVerMiQr) {
-      return;
-    }
-
-    let cancelado = false;
-    httpClient
-      .get<UsuarioDTO[]>('/v1/usuarios?tipo=SOCIO')
-      .then((lista) => {
-        if (cancelado) return;
-        if (Array.isArray(lista) && lista.length > 0) {
-          setSociosDisponibles(lista);
-          setSocioSeleccionado((prev) =>
-            lista.some((u) => u.idUsuario === prev.idUsuario) ? prev : lista[0]
-          );
-        }
-      })
-      .catch(() => {
-        // Fallback silencioso si no hay sesión o permisos para listar
-      })
-      .finally(() => {
-        if (!cancelado) {
-          setSociosRealesCargados(true);
-        }
-      });
-
-    return () => {
-      cancelado = true;
-    };
-  }, [esSocio, usuarioAuth, vistaActiva, puedeVerMiQr]);
-
   // ── Lógica Socio: Solicitar Token QR Dinámico (SCRUM-96, SCRUM-101) ──────────
   const solicitarNuevoToken = useCallback(
     async (idUsuario: number) => {
+      if (!socioQr || socioQr.idUsuario !== idUsuario) return;
       setCargandoQr(true);
       setErrorQr(null);
       try {
-        // Si el socio autenticado pide su propio QR, consume /v1/usuarios/me/qr (SCRUM-101)
-        const esPropioSocioAutenticado =
-          Boolean(usuarioAuth && usuarioAuth.tipoUsuario === 'SOCIO' && usuarioAuth.idUsuario === idUsuario);
-        const tokenResp = esPropioSocioAutenticado
-          ? await obtenerMiQr(idUsuario)
-          : await obtenerQrSocio(idUsuario);
-
-        setSocioSeleccionado((current) => {
-          if (current.idUsuario === idUsuario) {
-            setQrTokenData(tokenResp);
-          }
-          return current;
-        });
+        // El socio pide su propio QR: GET /v1/usuarios/me/qr
+        setQrTokenData(await obtenerMiQr(idUsuario));
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'No se pudo generar el token de acceso.';
         setErrorQr(msg);
@@ -297,12 +171,12 @@ export function AccesoPage() {
         setCargandoQr(false);
       }
     },
-    [addToast, usuarioAuth]
+    [addToast, socioQr]
   );
 
   // Efecto cuando cambia el socio seleccionado (solo cuando la vista 'mi-qr' está activa)
   useEffect(() => {
-    if (vistaActiva !== 'mi-qr' || !puedeVerMiQr || !sociosRealesCargados) {
+    if (vistaActiva !== 'mi-qr' || !puedeVerMiQr || !socioQr) {
       return;
     }
 
@@ -313,13 +187,13 @@ export function AccesoPage() {
       setQrTokenData(null);
       setErrorQr(null);
       try {
-        const m = await obtenerMembresiaPorUsuario(socioSeleccionado.idUsuario);
+        const m = await obtenerMembresiaPorUsuario(socioQr.idUsuario);
         if (cancelado) return;
         setMembresia(m);
 
         // REGLA DE NEGOCIO: Solo si la membresía está ACTIVA solicitamos el token QR
         if (m && m.estado === 'ACTIVO') {
-          void solicitarNuevoToken(socioSeleccionado.idUsuario);
+          void solicitarNuevoToken(socioQr.idUsuario);
         }
       } catch (err: unknown) {
         if (cancelado) return;
@@ -341,7 +215,7 @@ export function AccesoPage() {
     return () => {
       cancelado = true;
     };
-  }, [vistaActiva, puedeVerMiQr, sociosRealesCargados, socioSeleccionado, solicitarNuevoToken, addToast]);
+  }, [vistaActiva, puedeVerMiQr, socioQr, solicitarNuevoToken, addToast]);
 
   // ── Lógica Recepción: Cargar Aforo en tiempo real ─────────────────────────────
   const cargarAforo = useCallback(async () => {
@@ -417,9 +291,8 @@ export function AccesoPage() {
 
     setValidando(true);
     try {
-      // SCRUM-96 / SCRUM-101: cuando el operador autenticado tiene sede asignada y usa API real,
-      // no se envía idSede en el body porque el backend la obtiene de su sesión autenticada.
-      const omitirIdSedeEnBody = !USE_MOCK && Boolean(usuarioAuth?.idSede);
+      // Si el operador tiene sede asignada, el backend la toma de la sesión y no se envía idSede
+      const omitirIdSedeEnBody = Boolean(usuarioAuth?.idSede);
       const res = await validarIngreso({
         token,
         ...(omitirIdSedeEnBody ? {} : { idSede: sedeActiva.idSede }),
@@ -541,7 +414,7 @@ export function AccesoPage() {
               Pase Digital de Acceso
             </h1>
             <p className="text-xs text-slate-500 font-medium">
-              Control de acceso físico, aforo en tiempo real y pase QR para socios (SCRUM-82, SCRUM-85)
+              Control de acceso físico, aforo en tiempo real y pase QR para socios
             </p>
           </div>
         </div>
@@ -597,49 +470,16 @@ export function AccesoPage() {
       </div>
 
       {/* ─── VISTA 1: MI CÓDIGO QR (SOCIO - SCRUM-85) ─────────────────────────── */}
-      {vistaActiva === 'mi-qr' && puedeVerMiQr && (
+      {vistaActiva === 'mi-qr' && puedeVerMiQr && !socioQr && (
+        <Alert
+          type="info"
+          title="Pase personal"
+          message="El pase QR lo ve cada socio desde su cuenta."
+        />
+      )}
+
+      {vistaActiva === 'mi-qr' && puedeVerMiQr && socioQr && (
         <div className="space-y-6">
-          {/* Selector de Socio de Prueba / Simulación de Estado (oculto para un SOCIO real) */}
-          {(!esSocio || USE_MOCK) && (
-            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 max-w-xl mx-auto">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <UserCheck className="w-3.5 h-3.5 text-fitzone-coral" />
-                  Simular Socio / Caso de Negocio:
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium">
-                  Cambia el socio para evaluar las reglas
-                </span>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {sociosDisponibles.map((s) => {
-                  const esSeleccionado = socioSeleccionado.idUsuario === s.idUsuario;
-                  return (
-                    <button
-                      key={s.idUsuario}
-                      type="button"
-                      onClick={() => setSocioSeleccionado(s)}
-                      data-testid={`btn-socio-${s.idUsuario}`}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        esSeleccionado
-                          ? 'bg-fitzone-navy text-white shadow-xs'
-                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      {s.nombre} {s.apellido}
-                      {USE_MOCK && s.idUsuario === 2 && ' (Activo)'}
-                      {USE_MOCK && s.idUsuario === 6 && ' (Por vencer)'}
-                      {USE_MOCK && s.idUsuario === 1 && ' (Vencido)'}
-                      {USE_MOCK && s.idUsuario === 7 && ' (Suspendido)'}
-                      {USE_MOCK && s.idUsuario === 3 && ' (Sin Membresía)'}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           {/* Contenedor principal responsive y centrado optimizado para mobile */}
           <div className="max-w-md mx-auto space-y-5 animate-in fade-in duration-300">
             {/* 1. Componente de Estado de Membresía en la parte superior */}
@@ -651,7 +491,7 @@ export function AccesoPage() {
               <div data-testid="seccion-membresia-card">
                 <MembresiaEstadoCard
                   membresia={membresia}
-                  socio={socioSeleccionado}
+                  socio={socioQr}
                   onRenovarClick={handleRenovar}
                 />
               </div>
@@ -670,7 +510,7 @@ export function AccesoPage() {
                       duracionSegundos={qrTokenData?.expiraEnSegundos || 60}
                       cargando={cargandoQr}
                       error={errorQr}
-                      onSolicitarNuevoToken={() => solicitarNuevoToken(socioSeleccionado.idUsuario)}
+                      onSolicitarNuevoToken={() => solicitarNuevoToken(socioQr.idUsuario)}
                     />
 
                     {/* Instrucciones de uso en el molinete */}
@@ -754,10 +594,6 @@ export function AccesoPage() {
                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
                   RECEPCIÓN Y MOSTRADOR
                 </span>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100/70 text-emerald-800 text-[10px] font-extrabold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Molinetes Sincronizados</span>
-                </div>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-fitzone-navy font-outfit mt-1 flex items-center gap-2.5">
                 <DoorOpen className="w-6 h-6 text-fitzone-coral" />
@@ -771,35 +607,7 @@ export function AccesoPage() {
                 )}
               </p>
             </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-600 font-bold shadow-xs">
-                <ShieldCheck className="w-4 h-4 text-fitzone-green" />
-                <span>Reglas RN-01 & RF-05 activas</span>
-              </div>
-            </div>
           </div>
-
-          {/* Banner de Modo Mock */}
-          {USE_MOCK && (
-            <div
-              data-testid="banner-mock-mode"
-              className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-xs"
-            >
-              <div className="flex items-center gap-2">
-                <span className="font-bold uppercase tracking-wider text-[10px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full shrink-0">
-                  Modo Mock
-                </span>
-                <span>
-                  Simulación de accesos físicos en memoria para <strong>{sedeActiva?.nombre || 'la sede'}</strong> (BUG-09 resuelto). Podés usar los botones rápidos de prueba para validar cada caso.
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-[11px] text-amber-700 font-mono shrink-0">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>VITE_USE_MOCK=true</span>
-              </div>
-            </div>
-          )}
 
           {/* Alerta de error operativo si existe */}
           {errorOperativo && (

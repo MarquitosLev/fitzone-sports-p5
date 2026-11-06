@@ -18,7 +18,7 @@ export interface RoleMiddlewareProps {
 }
 
 /**
- * Redirige al inicio del rol (`/`, que IndexRedirect resuelve a /rol/<rol>)
+ * Redirige al inicio del rol (`/`, que IndexRedirect resuelve con INICIO_POR_ROL)
  * y avisa con un toast. El toast va en un efecto para no disparar side effects en el render.
  */
 function RedireccionSinPermiso() {
@@ -43,7 +43,7 @@ function RedireccionSinPermiso() {
  *
  * Uso en App.tsx:
  *   <Route element={<RoleMiddleware allowedRoles={['GERENTE']} />}>
- *     <Route path="rol/gerente" element={<GerenteRolPage />} />
+ *     <Route path="admin/roles" element={<RolesPage />} />
  *   </Route>
  */
 export function RoleMiddleware({ allowedRoles, prestacionRequerida }: RoleMiddlewareProps) {

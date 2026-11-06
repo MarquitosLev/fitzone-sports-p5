@@ -5,6 +5,7 @@ import com.fitzone.core.domain.enums.TipoUsuario;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.RecursoNoEncontradoException;
 import com.fitzone.core.exception.ReglaNegocioException;
+import com.fitzone.core.security.UsuarioActual;
 import com.fitzone.modulo.canchas.dto.CotizacionDTO;
 import com.fitzone.modulo.canchas.models.Cancha;
 import com.fitzone.modulo.canchas.models.EstadoFranja;
@@ -42,6 +43,7 @@ public class CanchaService {
     private final UsuarioRepository usuarioRepository;
     private final MembresiaRepository membresiaRepository;
     private final CalculadorPrecioCancha calculadorPrecioCancha;
+    private final UsuarioActual usuarioActual;
 
     @Transactional
     public Cancha crear(Cancha cancha) {
@@ -49,6 +51,7 @@ public class CanchaService {
         if (idSede == null) {
             throw new ReglaNegocioException("La sede es obligatoria");
         }
+        usuarioActual.validarSede(idSede);
         Sede sede = sedeRepository.findById(idSede)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Sede", idSede));
         cancha.setSede(sede);
@@ -73,8 +76,12 @@ public class CanchaService {
         }
 
         Long idSedeActual = existente.getSede().getIdSede();
+        Usuario operador = usuarioActual.obtener();
+        usuarioActual.validarSede(operador, idSedeActual);
         Long nuevoIdSede = datos.getSede() != null ? datos.getSede().getIdSede() : null;
         if (nuevoIdSede != null && !nuevoIdSede.equals(idSedeActual)) {
+            // Mover la cancha a otra sede exige poder operar también sobre la de destino
+            usuarioActual.validarSede(operador, nuevoIdSede);
             Sede nuevaSede = sedeRepository.findById(nuevoIdSede)
                     .orElseThrow(() -> new RecursoNoEncontradoException("Sede", nuevoIdSede));
             existente.setSede(nuevaSede);
@@ -114,27 +121,30 @@ public class CanchaService {
     @Transactional
     public Cancha cambiarMantenimiento(Long id, boolean enMantenimiento) {
         Cancha cancha = obtenerPorId(id);
+        usuarioActual.validarSede(cancha.getSede().getIdSede());
         cancha.setEnMantenimiento(enMantenimiento);
         return canchaRepository.save(cancha);
     }
 
+    /**
+     * Endpoint público: sin sesión cotiza el precio sin descuento. Con sesión de un socio con
+     * membresía vigente aplica el 15% (RN-03). El usuario sale del token, nunca del request.
+     */
     @Transactional(readOnly = true)
-    public CotizacionDTO cotizar(Long idCancha, Long idUsuario, LocalDateTime inicio, LocalDateTime fin) {
+    public CotizacionDTO cotizar(Long idCancha, LocalDateTime inicio, LocalDateTime fin) {
+        return cotizarPara(idCancha, usuarioActual.obtenerOpcional().orElse(null), inicio, fin);
+    }
+
+    private CotizacionDTO cotizarPara(Long idCancha, Usuario usuario, LocalDateTime inicio, LocalDateTime fin) {
         if (inicio == null || fin == null || !inicio.isBefore(fin)) {
             throw new ReglaNegocioException("La fecha y hora de inicio debe ser anterior a la de fin");
         }
         Cancha cancha = obtenerPorId(idCancha);
 
-        Usuario usuario = null;
-        boolean esSocioActivo = false;
-        if (idUsuario != null) {
-            usuario = usuarioRepository.findById(idUsuario)
-                    .orElseThrow(() -> new RecursoNoEncontradoException("Usuario", idUsuario));
-            if (usuario.getTipoUsuario() == TipoUsuario.SOCIO) {
-                esSocioActivo = membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
-                        idUsuario, List.of(EstadoMembresia.ACTIVO), LocalDate.now());
-            }
-        }
+        boolean esSocioActivo = usuario != null
+                && usuario.getTipoUsuario() == TipoUsuario.SOCIO
+                && membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
+                        usuario.getIdUsuario(), List.of(EstadoMembresia.ACTIVO), LocalDate.now());
 
         ContextoPrecio contexto = ContextoPrecio.builder()
                 .cancha(cancha)
@@ -187,10 +197,6 @@ public class CanchaService {
         if (reserva == null) {
             throw new ReglaNegocioException("Los datos de la reserva son obligatorios");
         }
-        Long idUsuario = reserva.getUsuario() != null ? reserva.getUsuario().getIdUsuario() : null;
-        if (idUsuario == null) {
-            throw new ReglaNegocioException("El idUsuario es obligatorio");
-        }
         LocalDateTime inicio = reserva.getFechaHoraInicio();
         LocalDateTime fin = reserva.getFechaHoraFin();
         if (inicio == null || fin == null) {
@@ -209,8 +215,8 @@ public class CanchaService {
             throw new ReglaNegocioException("El turno debe estar dentro del horario de atención (08:00 a 23:00)");
         }
 
-        Usuario usuario = usuarioRepository.findById(idUsuario)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario", idUsuario));
+        // La reserva queda siempre a nombre del logueado: se ignora cualquier idUsuario del body
+        Usuario usuario = usuarioActual.obtener();
         if (usuario.getTipoUsuario() != TipoUsuario.SOCIO && usuario.getTipoUsuario() != TipoUsuario.EXTERNO) {
             throw new ReglaNegocioException("Solo usuarios SOCIO y EXTERNO pueden reservar canchas");
         }
@@ -227,7 +233,7 @@ public class CanchaService {
             throw new ConflictoException("La cancha ya se encuentra reservada en el horario solicitado");
         }
 
-        CotizacionDTO cotizacion = cotizar(idCancha, idUsuario, inicio, fin);
+        CotizacionDTO cotizacion = cotizarPara(idCancha, usuario, inicio, fin);
         reserva.setPrecioFinal(cotizacion.getPrecioFinal());
         reserva.setCancha(cancha);
         reserva.setUsuario(usuario);
@@ -245,5 +251,10 @@ public class CanchaService {
             throw new RecursoNoEncontradoException("Usuario", idUsuario);
         }
         return reservaCanchaRepository.findByUsuario_IdUsuario(idUsuario);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReservaCancha> listarMias() {
+        return reservaCanchaRepository.findConCanchaYSedeByUsuario(usuarioActual.obtener().getIdUsuario());
     }
 }

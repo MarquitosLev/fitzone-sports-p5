@@ -361,14 +361,74 @@ export function _resetMockReservas(): void {
   MOCK_RESERVAS = JSON.parse(JSON.stringify(INITIAL_MOCK_RESERVAS));
 }
 
+// ─── CONTRATO REAL DEL BACKEND (SCRUM-98) ─────────────────────────────────────
+
+/** Respuesta de GET /v1/canchas/{id}/cotizacion (CotizacionDTO del backend). */
+export interface CotizacionApi {
+  precioBase: number;
+  descuento: number;
+  recargo: number;
+  precioFinal: number;
+}
+
+/** Elemento de GET /v1/canchas/{id}/disponibilidad (FranjaDisponibilidad del backend). */
+export interface FranjaApi {
+  horaInicio: string; // "2026-11-20T08:00:00"
+  horaFin: string;
+  estado: 'LIBRE' | 'OCUPADO' | 'MANTENIMIENTO';
+}
+
+/** "2026-11-20T08:00:00" → "08:00" */
+function horaDe(fechaHoraIso: string): string {
+  return fechaHoraIso.slice(11, 16);
+}
+
 /**
- * Cotiza el turno de una cancha (SCRUM-73).
- * Calcula tarifa base, recargo pico (19-21 hs) y descuento socio (15%).
+ * Traduce la cotización del backend al formato que usan las pantallas.
+ * El precio sale siempre del servidor: los porcentajes solo se informan si hubo recargo o descuento.
+ */
+export function mapearCotizacion(api: CotizacionApi, esPico: boolean): CotizacionReservaDTO {
+  const hayRecargo = api.recargo > 0;
+  const hayDescuento = api.descuento > 0;
+  return {
+    precioBase: api.precioBase,
+    esPico: esPico || hayRecargo,
+    recargoPico: api.recargo,
+    porcentajeRecargoPico: hayRecargo ? Math.round((api.recargo / api.precioBase) * 100) : 0,
+    descuentoSocio: api.descuento,
+    porcentajeDescuentoSocio: hayDescuento
+      ? Math.round((api.descuento / (api.precioBase + api.recargo)) * 100)
+      : 0,
+    esSocio: hayDescuento,
+    total: api.precioFinal,
+  };
+}
+
+export function mapearFranja(api: FranjaApi, cancha?: CanchaDTO): FranjaHorariaDTO {
+  const horaInicio = horaDe(api.horaInicio);
+  const horaFin = horaDe(api.horaFin);
+  return {
+    id: `${horaInicio}-${horaFin}`,
+    horaInicio,
+    horaFin,
+    textoTurno: `${horaInicio} – ${horaFin}`,
+    esPico: esHorarioPico(horaInicio),
+    estado: api.estado,
+    precioEstimado: cancha?.precioBaseHora,
+  };
+}
+
+/**
+ * Cotiza el turno de una cancha (SCRUM-73, SCRUM-98).
+ * En modo real el backend decide el descuento con el usuario de la sesión: `esSocio` solo se usa en mock.
+ * `fecha` y `horaFin` son obligatorios con la API real (el backend cotiza por rango de fechas).
  */
 export async function cotizarTurno(
   idCancha: number,
   horaInicio: string,
-  esSocio: boolean
+  esSocio: boolean,
+  fecha?: string,
+  horaFin?: string
 ): Promise<CotizacionReservaDTO> {
   if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -377,9 +437,15 @@ export async function cotizarTurno(
     return calcularCotizacion(precioBase, horaInicio, esSocio);
   }
 
-  return httpClient.get<CotizacionReservaDTO>(
-    `/v1/canchas/${idCancha}/cotizacion?horaInicio=${encodeURIComponent(horaInicio)}&esSocio=${esSocio}`
+  if (!fecha || !horaFin) {
+    throw new AppError('Faltan la fecha o la hora de fin para cotizar el turno', 400);
+  }
+  const inicio = `${fecha}T${horaInicio}:00`;
+  const fin = `${fecha}T${horaFin}:00`;
+  const api = await httpClient.get<CotizacionApi>(
+    `/v1/canchas/${idCancha}/cotizacion?inicio=${encodeURIComponent(inicio)}&fin=${encodeURIComponent(fin)}`
   );
+  return mapearCotizacion(api, esHorarioPico(horaInicio));
 }
 
 /**
@@ -455,9 +521,10 @@ export async function obtenerDisponibilidad(
     });
   }
 
-  return httpClient.get<FranjaHorariaDTO[]>(
+  const franjas = await httpClient.get<FranjaApi[]>(
     `/v1/canchas/${idCancha}/disponibilidad?fecha=${encodeURIComponent(fechaIso)}`
   );
+  return franjas.map((f) => mapearFranja(f));
 }
 
 /**
@@ -597,24 +664,27 @@ export async function crearReserva(
     return nuevaReserva;
   }
 
-  return httpClient.post<ReservaCanchaDTO>('/v1/canchas/reservas', {
-    body: JSON.stringify(payload),
+  // La reserva queda a nombre del usuario de la sesión: el backend ignora cualquier identidad del body
+  return httpClient.post<ReservaCanchaDTO>(`/v1/canchas/${payload.idCancha}/reservas`, {
+    body: JSON.stringify({
+      fechaHoraInicio: `${payload.fecha}T${payload.horaInicio}:00`,
+      fechaHoraFin: `${payload.fecha}T${payload.horaFin}:00`,
+    }),
   });
 }
 
-/**
- * Obtiene las reservas del usuario actual (o socio activo).
- */
-export async function listarMisReservas(
-  idUsuario = 1
-): Promise<ReservaCanchaDTO[]> {
+/** Obtiene las reservas del usuario logueado (GET /v1/usuarios/me/reservas-cancha). */
+export async function listarMisReservas(): Promise<ReservaCanchaDTO[]> {
   if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 200));
     return [...MOCK_RESERVAS];
   }
 
-  return httpClient.get<ReservaCanchaDTO[]>(`/v1/canchas/reservas/usuario/${idUsuario}`);
+  return httpClient.get<ReservaCanchaDTO[]>('/v1/usuarios/me/reservas-cancha');
 }
+
+/** El backend todavía no expone la cancelación de turnos (fuera de la especificación del MVP). */
+export const CANCELACION_DISPONIBLE = USE_MOCK;
 
 /**
  * Cancela una reserva de cancha.
@@ -642,6 +712,10 @@ export async function cancelarReserva(
     return cancelada;
   }
 
-  return httpClient.patch<ReservaCanchaDTO>(`/v1/canchas/reservas/${idReservaCancha}/cancelar`);
+  throw new AppError('La cancelación de turnos todavía no está disponible', 501, {
+    codigo: 'SOLICITUD_INVALIDA',
+    mensaje: 'La cancelación de turnos todavía no está disponible. Comunicate con recepción.',
+    timestamp: new Date().toISOString(),
+  });
 }
 

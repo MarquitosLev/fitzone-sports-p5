@@ -52,7 +52,6 @@ class PagoControllerTest {
     @DisplayName("POST /v1/pagos retorna 201 Created cuando los datos son válidos")
     void procesarPago_retorna201() throws Exception {
         PagoRequest request = PagoRequest.builder()
-                .idUsuario(1L)
                 .idSede(10L)
                 .concepto(TipoOrigenTransaccion.MEMBRESIA)
                 .idMembresia(2L)
@@ -79,11 +78,10 @@ class PagoControllerTest {
     }
 
     @Test
-    @DisplayName("POST /v1/pagos sin idUsuario responde 400 Bad Request por validación")
-    void procesarPago_sinIdUsuario_responde400() throws Exception {
+    @DisplayName("POST /v1/pagos sin concepto responde 400 Bad Request por validación")
+    void procesarPago_sinConcepto_responde400() throws Exception {
         PagoRequest request = PagoRequest.builder()
                 .idSede(10L)
-                .concepto(TipoOrigenTransaccion.MEMBRESIA)
                 .idMembresia(2L)
                 .build();
 
@@ -98,7 +96,6 @@ class PagoControllerTest {
     @DisplayName("POST /v1/pagos con parámetros inconsistentes responde 400 SOLICITUD_INVALIDA")
     void procesarPago_invalido_responde400() throws Exception {
         PagoRequest request = PagoRequest.builder()
-                .idUsuario(1L)
                 .idSede(10L)
                 .concepto(TipoOrigenTransaccion.MEMBRESIA)
                 .build();
@@ -117,7 +114,6 @@ class PagoControllerTest {
     @DisplayName("POST /v1/pagos con reserva duplicada responde 409 CONFLICTO")
     void procesarPago_duplicado_responde409() throws Exception {
         PagoRequest request = PagoRequest.builder()
-                .idUsuario(1L)
                 .idSede(10L)
                 .concepto(TipoOrigenTransaccion.RESERVA_CANCHA)
                 .idReservaCancha(5L)
@@ -134,17 +130,16 @@ class PagoControllerTest {
     }
 
     @Test
-    @DisplayName("POST /v1/pagos con usuario inexistente responde 404 RECURSO_NO_ENCONTRADO")
-    void procesarPago_usuarioInexistente_responde404() throws Exception {
+    @DisplayName("POST /v1/pagos con membresía inexistente responde 404 RECURSO_NO_ENCONTRADO")
+    void procesarPago_membresiaInexistente_responde404() throws Exception {
         PagoRequest request = PagoRequest.builder()
-                .idUsuario(999L)
                 .idSede(10L)
                 .concepto(TipoOrigenTransaccion.MEMBRESIA)
                 .idMembresia(2L)
                 .build();
 
         when(pagoService.procesarPago(any(PagoRequest.class)))
-                .thenThrow(new RecursoNoEncontradoException("Usuario", 999L));
+                .thenThrow(new RecursoNoEncontradoException("Membresia", 999L));
 
         mockMvc.perform(post("/v1/pagos")
                         .contentType(MediaType.APPLICATION_JSON)

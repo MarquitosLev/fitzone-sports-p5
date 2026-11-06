@@ -11,6 +11,7 @@ import { Card, StatusBadge, Button } from '../ui';
 import { MantenimientoToggle } from './MantenimientoToggle';
 import type { CanchaDTO } from '../../types';
 import { formatearMonto } from '../../utils/formatters';
+import { TIPO_LABELS } from './tiposCancha';
 
 export interface CanchaCardProps {
   cancha: CanchaDTO;
@@ -25,15 +26,6 @@ export interface CanchaCardProps {
   selected?: boolean;
   className?: string;
 }
-
-const TIPO_LABELS: Record<string, string> = {
-  PADEL: 'Pádel',
-  FUTBOL_5: 'Fútbol 5',
-  FUTBOL_7: 'Fútbol 7',
-  TENIS: 'Tenis',
-  BASQUET: 'Básquet',
-  OTRO: 'Deporte',
-};
 
 export function CanchaCard({
   cancha,

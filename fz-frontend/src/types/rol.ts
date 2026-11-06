@@ -42,10 +42,3 @@ export interface RolDTO {
   esSistema: boolean;
   prestaciones: Prestacion[];
 }
-
-export interface CrearRolDTO {
-  codigo: string;
-  nombre: string;
-  descripcion: string;
-  prestaciones: Prestacion[];
-}

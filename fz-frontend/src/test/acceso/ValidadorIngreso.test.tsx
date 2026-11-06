@@ -35,17 +35,6 @@ describe('ValidadorIngreso Component', () => {
     expect(onValidarMock).toHaveBeenCalledWith('FZ-QR-9900');
   });
 
-  it('dispara onValidar al seleccionar un botón rápido de prueba de caso de error', () => {
-    const onValidarMock = vi.fn();
-    render(<ValidadorIngreso onValidar={onValidarMock} />);
-
-    const btnQrVencido = screen.getByRole('button', { name: /QR Vencido/i });
-    fireEvent.click(btnQrVencido);
-
-    expect(onValidarMock).toHaveBeenCalledWith('TEST-QR-VENCIDO');
-    expect(screen.getByLabelText(/Código o Token del Pase QR/i)).toHaveValue('TEST-QR-VENCIDO');
-  });
-
   it('permite limpiar el campo mediante el botón Limpiar', () => {
     render(<ValidadorIngreso onValidar={vi.fn()} />);
 

@@ -4,6 +4,8 @@ import com.fitzone.core.domain.enums.EstadoPago;
 import com.fitzone.core.domain.enums.TipoOrigenTransaccion;
 import com.fitzone.modulo.pagos.models.Transaccion;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -35,4 +37,11 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
 
     // Historial cronológico de transacciones de un usuario
     List<Transaccion> findByUsuario_IdUsuarioOrderByFechaHoraCreacionDesc(Long idUsuario);
+
+    // Historial propio con el detalle del concepto ya cargado: plan de la membresía, o cancha y horario de la reserva
+    @Query("SELECT t FROM Transaccion t JOIN FETCH t.sede " +
+           "LEFT JOIN FETCH t.membresia m LEFT JOIN FETCH m.plan " +
+           "LEFT JOIN FETCH t.reservaCancha r LEFT JOIN FETCH r.cancha " +
+           "WHERE t.usuario.idUsuario = :idUsuario ORDER BY t.fechaHoraCreacion DESC")
+    List<Transaccion> findConDetalleByUsuario(@Param("idUsuario") Long idUsuario);
 }

@@ -18,7 +18,7 @@ describe('DesglosePrecio Component', () => {
     expect(screen.getAllByText((content) => content.includes('8.000')).length).toBeGreaterThanOrEqual(2);
   });
 
-  it('muestra recargo por horario pico (+20%) cuando esPico es true', () => {
+  it('muestra el recargo de horario pico que trae la cotización', () => {
     render(
       <DesglosePrecio
         precioBase={10000}
@@ -29,12 +29,12 @@ describe('DesglosePrecio Component', () => {
       />
     );
 
-    expect(screen.getByText(/horario pico \(19 a 21 hs\) · \+20%/i)).toBeInTheDocument();
+    expect(screen.getByText(/recargo horario pico/i)).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('+') && content.includes('2.000'))).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('12.000'))).toBeInTheDocument();
   });
 
-  it('muestra beneficio de socio (-15%) y precio tachado cuando esSocio es true', () => {
+  it('muestra el descuento de socio de la cotización y el precio tachado', () => {
     const cotizacion: CotizacionReservaDTO = {
       precioBase: 10000,
       esPico: true,
@@ -48,7 +48,7 @@ describe('DesglosePrecio Component', () => {
 
     render(<DesglosePrecio cotizacion={cotizacion} />);
 
-    expect(screen.getByText(/descuento socio activo · −15%/i)).toBeInTheDocument();
+    expect(screen.getByText(/descuento socio · −15%/i)).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('−') && content.includes('1.800'))).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('10.200'))).toBeInTheDocument();
     // Subtotal tachado
@@ -57,17 +57,11 @@ describe('DesglosePrecio Component', () => {
     expect(screen.getByText(/beneficio socio/i)).toBeInTheDocument();
   });
 
-  it('renderiza nota explicativa sobre el cálculo de descuentos', () => {
-    render(
-      <DesglosePrecio
-        precioBase={8000}
-        esSocio={true}
-        mostrarExplicacion={true}
-      />
-    );
+  it('no inventa recargo ni descuento si la cotización no los trae', () => {
+    render(<DesglosePrecio precioBase={8000} esPico={true} esSocio={true} mostrarExplicacion={true} />);
 
-    expect(
-      screen.getByText(/el beneficio del 15% para socios se aplica sobre la tarifa calculada/i)
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/recargo horario pico/i)).toBeNull();
+    expect(screen.queryByText(/descuento socio ·/i)).toBeNull();
+    expect(screen.getByText(/los socios con la membresía vigente tienen descuento/i)).toBeInTheDocument();
   });
 });

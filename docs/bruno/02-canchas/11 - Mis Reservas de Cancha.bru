@@ -1,0 +1,15 @@
+meta {
+  name: 11 - Mis Reservas de Cancha
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/v1/usuarios/me/reservas-cancha
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
+}

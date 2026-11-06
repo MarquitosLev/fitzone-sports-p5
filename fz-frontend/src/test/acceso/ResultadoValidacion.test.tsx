@@ -100,7 +100,7 @@ describe('ResultadoValidacion Component', () => {
     );
 
     expect(screen.getByTestId('resultado-validacion-motivo')).toHaveTextContent('YA_INGRESADO');
-    expect(screen.getByText('Ingreso Previo Activo (RN-01)')).toBeInTheDocument();
+    expect(screen.getByText('Ingreso Previo Activo')).toBeInTheDocument();
     expect(screen.getByText(/olvidó registrar su salida del club/i)).toBeInTheDocument();
   });
 
@@ -115,7 +115,7 @@ describe('ResultadoValidacion Component', () => {
     );
 
     expect(screen.getByTestId('resultado-validacion-motivo')).toHaveTextContent('AFORO_COMPLETO');
-    expect(screen.getByText('Aforo Completo en Sede (RF-05)')).toBeInTheDocument();
+    expect(screen.getByText('Aforo Completo en Sede')).toBeInTheDocument();
     expect(screen.getByText(/aguardar a que se registren egresos/i)).toBeInTheDocument();
   });
 

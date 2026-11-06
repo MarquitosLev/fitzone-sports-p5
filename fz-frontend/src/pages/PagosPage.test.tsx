@@ -1,10 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { PagosPage } from './PagosPage';
 import { SedeProvider } from '../context/SedeContext';
 import { ToastProvider } from '../context/ToastContext';
 import * as pagosService from '../services/pagosService';
-import type { TransaccionDTO, ComprobanteDTO, SedeDTO } from '../types';
+import * as canchasService from '../services/canchasService';
+import * as membresiasService from '../services/membresiasService';
+import { AuthContext } from '../context/AuthContext';
+import type { AuthContextType } from '../context/AuthContext';
+import type {
+  TransaccionDTO,
+  ComprobanteDTO,
+  SedeDTO,
+  UsuarioDTO,
+  MembresiaDTO,
+  ReservaCanchaDTO,
+} from '../types';
 
 const mockSede: SedeDTO = {
   idSede: 1,
@@ -101,34 +113,83 @@ const mockComprobante: ComprobanteDTO = {
   urlDescargaPdf: '',
 };
 
+const socio: UsuarioDTO = {
+  idUsuario: 2,
+  authId: 'auth-2',
+  dni: '30000000',
+  nombre: 'Socio',
+  apellido: 'Prueba',
+  email: 'socio@fitzone.com',
+  telefono: '1100000000',
+  fotoUrl: null,
+  tipoUsuario: 'SOCIO',
+  idSede: null,
+};
+
+const sesionSocio: AuthContextType = {
+  usuario: socio,
+  token: 'token',
+  isAuthenticated: true,
+  isLoading: false,
+  login: async () => ({ token: 'token', usuario: socio }),
+  register: async () => ({ token: 'token', usuario: socio }),
+  logout: () => {},
+};
+
+/** Turno futuro sin pagar: aparece en el checkout. */
+const reservaPendiente = {
+  idReservaCancha: 30,
+  cancha: { idCancha: 1, nombre: 'Pádel · Cancha 1', tipo: 'PADEL', sede: mockSede },
+  fechaHoraInicio: '2099-01-10T19:00:00',
+  fechaHoraFin: '2099-01-10T20:00:00',
+  precioFinal: 6800,
+} as unknown as ReservaCanchaDTO;
+
+const membresiaSocio = {
+  idMembresia: 201,
+  usuario: socio,
+  plan: { idPlan: 2, nombre: 'Plan Trimestral', precioBase: 38000, duracionMeses: 3 },
+  fechaInicio: '2026-11-01',
+  fechaVencimiento: '2027-02-01',
+  fechaCancelacion: null,
+  estado: 'ACTIVO',
+} as MembresiaDTO;
+
 function renderWithProviders(ui: React.ReactElement) {
+  // MemoryRouter: la página lee ?reserva= para preseleccionar el ítem a pagar
   return render(
-    <ToastProvider>
-      <SedeProvider sedes={[mockSede]} sedeInicial={mockSede}>
-        {ui}
-      </SedeProvider>
-    </ToastProvider>
+    <MemoryRouter>
+      <ToastProvider>
+        <AuthContext.Provider value={sesionSocio}>
+          <SedeProvider sedes={[mockSede]} sedeInicial={mockSede}>
+            {ui}
+          </SedeProvider>
+        </AuthContext.Provider>
+      </ToastProvider>
+    </MemoryRouter>
   );
 }
 
 describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(pagosService, 'listarPagos').mockResolvedValue([...mockTransacciones]);
+    vi.spyOn(pagosService, 'listarMisPagos').mockResolvedValue([...mockTransacciones]);
+    vi.spyOn(canchasService, 'listarMisReservas').mockResolvedValue([reservaPendiente]);
+    vi.spyOn(membresiasService, 'obtenerMembresiaPorUsuario').mockResolvedValue(membresiaSocio);
     vi.spyOn(pagosService, 'obtenerComprobantePorTransaccion').mockImplementation(async (id) =>
       id === 1 ? mockComprobante : null
     );
   });
 
-  it('renderiza cabecera, pestañas y vista inicial de Checkout', () => {
+  it('renderiza cabecera, pestañas y vista inicial de Checkout', async () => {
     renderWithProviders(<PagosPage />);
 
     expect(screen.getByRole('heading', { level: 1, name: /Gestión de Pagos y Comprobantes/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Checkout \/ Pagar/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Historial/i })).toBeInTheDocument();
 
-    // En Checkout se muestran los ítems seleccionables
-    expect(screen.getAllByText(/Pádel · Cancha 1 — Horario Pico/i).length).toBeGreaterThanOrEqual(1);
+    // En Checkout se muestran lo que el socio tiene pendiente de pago
+    expect((await screen.findAllByText(/Turno · Pádel · Cancha 1/i)).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Renovación Membresía · Plan Trimestral/i)).toBeInTheDocument();
   });
 
@@ -140,7 +201,7 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Total Abonado')).toBeInTheDocument();
-      expect(screen.getByText('Comprobantes AFIP')).toBeInTheDocument();
+      expect(screen.getByText('Comprobantes')).toBeInTheDocument();
       expect(screen.getByText('Rechazados / A Revisar')).toBeInTheDocument();
     });
 
@@ -167,7 +228,7 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
     expect(screen.queryByText('Pádel · Cancha 1 (Turno 19:00 a 20:00 hs)')).not.toBeInTheDocument();
   });
 
-  it('procesa el pago simulado y muestra la pantalla ResultadoPago', async () => {
+  it('procesa el pago y muestra la pantalla ResultadoPago', async () => {
     const procesarPagoSpy = vi.spyOn(pagosService, 'procesarPago').mockResolvedValue({
       transaccion: mockTransacciones[0]!,
       comprobante: mockComprobante,
@@ -177,7 +238,7 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
 
     renderWithProviders(<PagosPage />);
 
-    const botonPagar = screen.getByRole('button', { name: /Pagar ·/i });
+    const botonPagar = await screen.findByRole('button', { name: /Pagar ·/i });
     fireEvent.click(botonPagar);
 
     await waitFor(() => {
@@ -187,7 +248,7 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
     });
   });
 
-  it('maneja el flujo de pago rechazado y permite reintentar exitosamente', async () => {
+  it('si el backend rechaza el pago permite reintentarlo', async () => {
     vi.spyOn(pagosService, 'procesarPago').mockResolvedValue({
       transaccion: mockTransacciones[1]!,
       comprobante: null,
@@ -207,7 +268,7 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
 
     renderWithProviders(<PagosPage />);
 
-    const botonPagar = screen.getByRole('button', { name: /Pagar ·/i });
+    const botonPagar = await screen.findByRole('button', { name: /Pagar ·/i });
     fireEvent.click(botonPagar);
 
     await waitFor(() => {
@@ -220,7 +281,7 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
     fireEvent.click(botonReintentar);
 
     await waitFor(() => {
-      expect(reintentarSpy).toHaveBeenCalledWith(2, 'tok_mock_aprobado');
+      expect(reintentarSpy).toHaveBeenCalledWith(2);
       expect(screen.getByText('¡Pago Confirmado!')).toBeInTheDocument();
     });
   });

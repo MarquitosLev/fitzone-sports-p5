@@ -7,11 +7,11 @@
  */
 
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LogOut, LogIn, Home, ChevronRight } from 'lucide-react';
+import { LogOut, LogIn, ChevronRight } from 'lucide-react';
 import { useSede } from '../../context/SedeContext';
 import { useAuth } from '../../context/AuthContext';
 import { usePrestacionesUsuario } from '../../hooks/usePrestaciones';
-import { NAV_ITEMS, INICIO_POR_ROL, RUTAS_PUBLICAS } from './navegacion';
+import { NAV_ITEMS, RUTAS_PUBLICAS } from './navegacion';
 import type { NavItem } from './navegacion';
 
 export interface SidebarProps {
@@ -33,11 +33,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
     return !item.prestacion || misPrestaciones.includes(item.prestacion);
   });
 
-  // Con sesión, el primer ítem es el inicio del rol (si el rol tiene uno definido)
-  const inicioRol = usuario ? INICIO_POR_ROL[usuario.tipoUsuario] : undefined;
-  const itemsVisibles: NavItem[] = inicioRol
-    ? [{ id: 'inicio', label: 'Inicio', icon: Home, to: inicioRol }, ...modulosVisibles]
-    : modulosVisibles;
+  const itemsVisibles: NavItem[] = modulosVisibles;
 
   const handleLogout = () => {
     if (onCloseMobile) onCloseMobile();

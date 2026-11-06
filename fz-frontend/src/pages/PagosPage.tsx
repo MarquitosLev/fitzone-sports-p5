@@ -25,110 +25,141 @@ import {
   BotonDescargaPdf,
 } from '../components/pagos';
 import {
-  listarPagos,
+  TOKEN_PASARELA_APROBADO,
+  listarMisPagos,
   procesarPago,
   reintentarPago,
   obtenerComprobantePorTransaccion,
   descargarComprobantePdf,
   descargarBlobEnNavegador,
 } from '../services/pagosService';
+import { listarMisReservas } from '../services/canchasService';
+import { obtenerMembresiaPorUsuario } from '../services/membresiasService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
+import { useSearchParams } from 'react-router-dom';
+import { AppError } from '../services/httpClient';
 import type {
   TransaccionDTO,
   ComprobanteDTO,
   DetalleItemPago,
   ProcesarPagoPayload,
   ResultadoPagoDTO,
+  UsuarioDTO,
 } from '../types';
-import { formatearFechaHora, formatearMonto } from '../utils/formatters';
+import { formatearFechaHora, formatearMonto, toLocalISOString } from '../utils/formatters';
 
-interface ItemCobroDemo {
+interface ItemCobro {
   id: string;
   detalle: DetalleItemPago;
   monto: number;
-  concepto: 'RESERVA_SOCIO' | 'MEMBRESIA_SOCIO';
+  concepto: 'RESERVA_SOCIO' | 'RESERVA_EXTERNO' | 'MEMBRESIA_SOCIO';
   idReservaCancha?: number;
   idMembresia?: number;
+  /** Sede donde se registra el cobro (la de la cancha en una reserva) */
+  idSede?: number;
 }
 
-const ITEMS_COBRO_DEMO: ItemCobroDemo[] = [
-  {
-    id: 'cancha-padel-1',
-    monto: 6800,
-    concepto: 'RESERVA_SOCIO',
-    idReservaCancha: 101,
-    detalle: {
-      tipo: 'CANCHA',
-      titulo: 'Pádel · Cancha 1 — Horario Pico',
-      subtitulo: 'Sede FitZone Palermo',
-      canchaNombre: 'Cancha 1 (Pádel Cristal)',
-      deporte: 'Padel',
-      fecha: '20/10/2026',
-      horario: '19:00 a 20:00 hs',
-      cotizacion: {
-        precioBase: 6667,
-        esPico: true,
-        recargoPico: 1333,
-        porcentajeRecargoPico: 20,
-        descuentoSocio: 1200,
-        porcentajeDescuentoSocio: 15,
-        esSocio: true,
-        total: 6800,
+/**
+ * Con la API real, lo que el usuario logueado puede pagar: sus reservas futuras sin un pago
+ * confirmado y, si es socio, su membresía (pagarla la renueva). El monto es el del servidor.
+ */
+async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobro[]> {
+  const [reservas, pagos] = await Promise.all([listarMisReservas(), listarMisPagos()]);
+  const pagadas = new Set(
+    pagos.filter((p) => p.estadoPago === 'CONFIRMADO').map((p) => p.reservaCanchaId)
+  );
+  // El backend guarda LocalDateTime en hora local: se compara contra la hora local, no UTC
+  const ahora = toLocalISOString(new Date());
+  const concepto = usuario.tipoUsuario === 'EXTERNO' ? 'RESERVA_EXTERNO' : 'RESERVA_SOCIO';
+
+  const items: ItemCobro[] = reservas
+    .filter((r) => !pagadas.has(r.idReservaCancha) && r.fechaHoraInicio > ahora)
+    .map((r) => ({
+      id: `reserva-${r.idReservaCancha}`,
+      monto: Number(r.precioFinal),
+      concepto,
+      idReservaCancha: r.idReservaCancha,
+      idSede: r.cancha.sede?.idSede,
+      detalle: {
+        tipo: 'CANCHA',
+        titulo: `Turno · ${r.cancha.nombre}`,
+        subtitulo: r.cancha.sede?.nombre,
+        canchaNombre: r.cancha.nombre,
+        deporte: r.cancha.tipo,
+        fecha: r.fechaHoraInicio.slice(0, 10),
+        horario: `${r.fechaHoraInicio.slice(11, 16)} a ${r.fechaHoraFin.slice(11, 16)} hs`,
       },
-    },
-  },
-  {
-    id: 'membresia-trimestral',
-    monto: 38000,
-    concepto: 'MEMBRESIA_SOCIO',
-    idMembresia: 201,
-    detalle: {
-      tipo: 'MEMBRESIA',
-      titulo: 'Renovación Membresía · Plan Trimestral',
-      subtitulo: 'Acceso Total Multi-Sede',
-      planNombre: 'Plan Trimestral FitZone',
-      duracionMeses: 3,
-      fechaInicio: '01/11/2026',
-      fechaVencimiento: '31/01/2027',
-    },
-  },
-  {
-    id: 'cancha-futbol-5',
-    monto: 13600,
-    concepto: 'RESERVA_SOCIO',
-    idReservaCancha: 102,
-    detalle: {
-      tipo: 'CANCHA',
-      titulo: 'Fútbol 5 · Cancha Techada',
-      subtitulo: 'Sede FitZone Belgrano',
-      canchaNombre: 'Cancha Central Sintética',
-      deporte: 'Futbol 5',
-      fecha: '22/10/2026',
-      horario: '21:00 a 22:00 hs',
-      cotizacion: {
-        precioBase: 16000,
-        esPico: false,
-        recargoPico: 0,
-        porcentajeRecargoPico: 0,
-        descuentoSocio: 2400,
-        porcentajeDescuentoSocio: 15,
-        esSocio: true,
-        total: 13600,
-      },
-    },
-  },
-];
+    }));
+
+  if (usuario.tipoUsuario === 'SOCIO') {
+    const membresia = await obtenerMembresiaPorUsuario(usuario.idUsuario);
+    if (membresia) {
+      items.push({
+        id: `membresia-${membresia.idMembresia}`,
+        monto: Number(membresia.plan.precioBase),
+        concepto: 'MEMBRESIA_SOCIO',
+        idMembresia: membresia.idMembresia,
+        detalle: {
+          tipo: 'MEMBRESIA',
+          titulo: `Renovación Membresía · ${membresia.plan.nombre}`,
+          subtitulo: `Vence el ${membresia.fechaVencimiento}`,
+          planNombre: membresia.plan.nombre,
+          duracionMeses: membresia.plan.duracionMeses,
+          fechaInicio: membresia.fechaInicio,
+          fechaVencimiento: membresia.fechaVencimiento,
+        },
+      });
+    }
+  }
+  return items;
+}
 
 export function PagosPage() {
   const { sedeActiva } = useSede();
   const { addToast } = useToast();
+  const { usuario } = useAuth();
+  const [searchParams] = useSearchParams();
+  const idReservaPedida = Number(searchParams.get('reserva')) || null;
+
+  // Con la API real solo pagan socios y externos lo propio; el cobro en mostrador es otra historia
+  const puedePagar = usuario?.tipoUsuario === 'SOCIO' || usuario?.tipoUsuario === 'EXTERNO';
 
   // Control de pestañas principales: 'checkout' o 'historial'
   const [activeTab, setActiveTab] = useState<'checkout' | 'historial'>('checkout');
 
+  // Ítems a cobrar: los pendientes del usuario logueado
+  const [itemsCobro, setItemsCobro] = useState<ItemCobro[]>([]);
+  const [loadingItems, setLoadingItems] = useState(true);
+
   // Estado del flujo de checkout
-  const [selectedDemoItem, setSelectedDemoItem] = useState<ItemCobroDemo>(ITEMS_COBRO_DEMO[0]!);
+  const [itemSeleccionado, setItemSeleccionado] = useState<ItemCobro | null>(null);
+
+  useEffect(() => {
+    if (!usuario || !puedePagar) {
+      setLoadingItems(false);
+      return;
+    }
+    let cancelado = false;
+    setLoadingItems(true);
+    cargarItemsPendientes(usuario)
+      .then((items) => {
+        if (cancelado) return;
+        setItemsCobro(items);
+        const pedido = items.find((i) => i.idReservaCancha === idReservaPedida);
+        setItemSeleccionado(pedido ?? items[0] ?? null);
+      })
+      .catch(() => {
+        if (!cancelado) setItemsCobro([]);
+      })
+      .finally(() => {
+        if (!cancelado) setLoadingItems(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [usuario, puedePagar, idReservaPedida]);
   const [checkoutStep, setCheckoutStep] = useState<'formulario' | 'resultado'>('formulario');
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultadoPago, setResultadoPago] = useState<ResultadoPagoDTO | null>(null);
@@ -143,13 +174,18 @@ export function PagosPage() {
   const [vistaModo, setVistaModo] = useState<'tarjetas' | 'tabla'>('tarjetas');
   const [comprobantesMap, setComprobantesMap] = useState<Record<number, ComprobanteDTO>>({});
 
-  // Carga de transacciones por sede
+  // Historial: los pagos propios del socio o externo. El historial por sede para el
+  // personal todavía no tiene endpoint.
+  const cargarHistorial = async (): Promise<TransaccionDTO[]> =>
+    puedePagar ? listarMisPagos() : [];
+
+  // Carga de transacciones
   const cargarTransacciones = async () => {
     if (!sedeActiva) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await listarPagos(sedeActiva.idSede);
+      const data = await cargarHistorial();
       setTransacciones(data);
 
       // Precargamos comprobantes para las confirmadas
@@ -177,7 +213,7 @@ export function PagosPage() {
       setLoading(true);
       setError(null);
       try {
-        const data = await listarPagos(sedeActiva.idSede);
+        const data = await cargarHistorial();
         if (cancelled) return;
         setTransacciones(data);
 
@@ -207,23 +243,29 @@ export function PagosPage() {
     return () => {
       cancelled = true;
     };
-  }, [sedeActiva]);
+  }, [sedeActiva, puedePagar]);
+
+  // httpClient ya avisó los errores del backend: no se duplica el toast
+  const avisarError = (titulo: string, err: unknown, porDefecto: string) => {
+    if (err instanceof AppError) return;
+    addToast({ type: 'error', title: titulo, message: err instanceof Error ? err.message : porDefecto });
+  };
 
   // Manejo de confirmación de pago en checkout
-  const handleConfirmarPago = async (tokenPasarela: string) => {
-    if (!sedeActiva) return;
+  const handleConfirmarPago = async () => {
+    if (!sedeActiva || !itemSeleccionado || !usuario) return;
     setIsProcessing(true);
     try {
       const payload: ProcesarPagoPayload = {
-        idSede: sedeActiva.idSede,
-        idUsuario: 1, // Lucas Martínez (Socio)
-        concepto: selectedDemoItem.concepto,
-        monto: selectedDemoItem.monto,
-        tokenTransaccionPasarela: tokenPasarela,
-        idReservaCancha: selectedDemoItem.idReservaCancha,
-        idMembresia: selectedDemoItem.idMembresia,
+        idSede: itemSeleccionado.idSede ?? sedeActiva.idSede,
+        idUsuario: usuario.idUsuario,
+        concepto: itemSeleccionado.concepto,
+        monto: itemSeleccionado.monto,
+        tokenTransaccionPasarela: TOKEN_PASARELA_APROBADO,
+        idReservaCancha: itemSeleccionado.idReservaCancha,
+        idMembresia: itemSeleccionado.idMembresia,
         tipoComprobante: 'FACTURA_B',
-        detalleItem: selectedDemoItem.detalle,
+        detalleItem: itemSeleccionado.detalle,
       };
 
       const res = await procesarPago(payload);
@@ -234,7 +276,7 @@ export function PagosPage() {
         addToast({
           type: 'success',
           title: 'Pago Acreditado',
-          message: 'La transacción fue aprobada y se emitió la factura.',
+          message: 'La transacción fue aprobada y se emitió el comprobante.',
         });
       } else {
         addToast({
@@ -244,14 +286,13 @@ export function PagosPage() {
         });
       }
 
-      // Refrescamos el historial en segundo plano
+      // Refrescamos el historial en segundo plano y, si se pagó, sacamos el ítem de los pendientes
       void cargarTransacciones();
+      if (res.aprobado) {
+        setItemsCobro((prev) => prev.filter((i) => i.id !== itemSeleccionado.id));
+      }
     } catch (err: unknown) {
-      addToast({
-        type: 'error',
-        title: 'Error de Procesamiento',
-        message: err instanceof Error ? err.message : 'No se pudo comunicar con la pasarela.',
-      });
+      avisarError('Error de Procesamiento', err, 'No se pudo comunicar con la pasarela.');
     } finally {
       setIsProcessing(false);
     }
@@ -264,23 +305,23 @@ export function PagosPage() {
 
     setIsProcessing(true);
     try {
-      const res = await reintentarPago(idToRetry, 'tok_mock_aprobado');
+      const res = await reintentarPago(idToRetry);
       setResultadoPago(res);
       setCheckoutStep('resultado');
 
-      addToast({
-        type: 'success',
-        title: 'Reintento Exitoso',
-        message: `Se confirmó el cobro original de ${formatearMonto(res.transaccion.monto)} sin alteraciones.`,
-      });
+      addToast(
+        res.aprobado
+          ? {
+              type: 'success',
+              title: 'Reintento Exitoso',
+              message: `Se confirmó el cobro original de ${formatearMonto(res.transaccion.monto)} sin alteraciones.`,
+            }
+          : { type: 'error', title: 'Reintento Rechazado', message: res.mensaje ?? 'La pasarela volvió a rechazar el pago.' }
+      );
 
       void cargarTransacciones();
     } catch (err: unknown) {
-      addToast({
-        type: 'error',
-        title: 'Fallo al Reintentar',
-        message: err instanceof Error ? err.message : 'No se pudo reintentar el pago.',
-      });
+      avisarError('Fallo al Reintentar', err, 'No se pudo reintentar el pago.');
     } finally {
       setIsProcessing(false);
     }
@@ -291,7 +332,7 @@ export function PagosPage() {
     try {
       const comp = comprobantesMap[transaccion.idTransaccion];
       const idComp = comp?.idComprobante || transaccion.idTransaccion;
-      const numFactura = comp?.numeroFactura || `FAC-0001-${transaccion.idTransaccion}`;
+      const numFactura = comp?.numeroFactura || String(transaccion.idTransaccion);
 
       const blob = await descargarComprobantePdf(idComp);
       descargarBlobEnNavegador(blob, `comprobante-${numFactura}.pdf`);
@@ -400,7 +441,7 @@ export function PagosPage() {
             <span>Gestión de Pagos y Comprobantes</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Realizá el checkout seguro de tus reservas y membresías, o consultá tu historial oficial con facturas AFIP.
+            Realizá el checkout seguro de tus reservas y membresías, o consultá tu historial con sus comprobantes en PDF.
           </p>
         </div>
 
@@ -437,7 +478,25 @@ export function PagosPage() {
       {/* ─── PESTAÑA 1: CHECKOUT / PAGAR ───────────────────────────────────── */}
       {activeTab === 'checkout' && (
         <div className="space-y-6 animate-fade-in">
-          {checkoutStep === 'formulario' ? (
+          {!puedePagar ? (
+            <Alert
+              type="info"
+              title={usuario ? 'El checkout es para socios y clientes' : 'Iniciá sesión para pagar'}
+              message={
+                usuario
+                  ? 'Cada socio o cliente paga sus propias reservas y membresías. El cobro en mostrador todavía no está disponible.'
+                  : 'Ingresá con tu cuenta para ver tus reservas y membresía pendientes de pago.'
+              }
+            />
+          ) : loadingItems ? (
+            <div className="flex justify-center py-16">
+              <Spinner size="lg" />
+            </div>
+          ) : checkoutStep === 'formulario' && !itemSeleccionado ? (
+            <div className="p-8 text-center bg-slate-50 rounded-3xl border border-slate-200/70 text-slate-500 text-xs">
+              No tenés reservas ni membresías pendientes de pago.
+            </div>
+          ) : checkoutStep === 'formulario' && itemSeleccionado ? (
             <div className="space-y-6">
               {/* Selector de ítem pendiente de pago */}
               <div className="space-y-3">
@@ -445,12 +504,12 @@ export function PagosPage() {
                   1. Seleccioná el ítem que deseás abonar:
                 </span>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {ITEMS_COBRO_DEMO.map((item) => {
-                    const isSelected = selectedDemoItem.id === item.id;
+                  {itemsCobro.map((item) => {
+                    const isSelected = itemSeleccionado.id === item.id;
                     return (
                       <div
                         key={item.id}
-                        onClick={() => setSelectedDemoItem(item)}
+                        onClick={() => setItemSeleccionado(item)}
                         className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
                           isSelected
                             ? 'border-fitzone-navy bg-fitzone-navy/5 shadow-xs'
@@ -485,11 +544,10 @@ export function PagosPage() {
                   2. Revisá el resumen y confirmá el arancel:
                 </span>
                 <ResumenPago
-                  detalle={selectedDemoItem.detalle}
-                  montoTotal={selectedDemoItem.monto}
+                  detalle={itemSeleccionado.detalle}
+                  montoTotal={itemSeleccionado.monto}
                   isProcessing={isProcessing}
                   onConfirmarPago={handleConfirmarPago}
-                  permitirSimularRechazo={true}
                 />
               </div>
             </div>
@@ -534,12 +592,12 @@ export function PagosPage() {
             <div className="bg-white rounded-3xl p-5 shadow-card border border-slate-100 flex items-center justify-between">
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Comprobantes AFIP
+                  Comprobantes
                 </span>
                 <h3 className="text-2xl sm:text-3xl font-black text-fitzone-navy font-outfit mt-1">
                   {metricas.comprobantesEmitidos}
                 </h3>
-                <span className="text-[11px] text-slate-500 font-medium block mt-0.5">Facturas electrónicas oficiales</span>
+                <span className="text-[11px] text-slate-500 font-medium block mt-0.5">Comprobantes de pago emitidos</span>
               </div>
               <div className="w-11 h-11 rounded-2xl bg-fitzone-navy/10 text-fitzone-navy flex items-center justify-center">
                 <FileText className="w-5 h-5" />
@@ -612,6 +670,14 @@ export function PagosPage() {
               </button>
             </div>
           </div>
+
+          {!puedePagar && (
+            <Alert
+              type="info"
+              title="Historial por sede no disponible"
+              message="Por ahora cada socio o cliente ve sus propios pagos. El historial de cobros por sede para el personal todavía no está habilitado."
+            />
+          )}
 
           {error && <Alert type="error" title="Error" message={error} />}
 

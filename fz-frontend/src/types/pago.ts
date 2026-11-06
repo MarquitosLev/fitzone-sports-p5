@@ -13,7 +13,13 @@ export type EstadoPago = 'PENDIENTE' | 'CONFIRMADO' | 'RECHAZADO' | 'REEMBOLSADO
  * Corresponde al campo `concepto` de la entidad Transaccion en el backend.
  * Incluye reservas de socio y externo, y renovación/alta de membresía de socio.
  */
-export type TipoOrigenTransaccion = 'RESERVA_EXTERNO' | 'RESERVA_SOCIO' | 'MEMBRESIA_SOCIO';
+export type TipoOrigenTransaccion =
+  | 'RESERVA_EXTERNO'
+  | 'RESERVA_SOCIO'
+  | 'MEMBRESIA_SOCIO'
+  // Valores que hoy usa el backend al cobrar (SCRUM-99)
+  | 'MEMBRESIA'
+  | 'RESERVA_CANCHA';
 
 /**
  * DTO de Transacción (un cobro registrado en el sistema).

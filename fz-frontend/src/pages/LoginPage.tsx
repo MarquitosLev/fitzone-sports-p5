@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LoginForm } from '../components/auth';
+import { INICIO_POR_ROL } from '../components/layout/navegacion';
 import { Modal, Button, Alert } from '../components/ui';
 import type { LoginCredentialsDTO } from '../types';
 
@@ -20,7 +21,7 @@ export function LoginPage() {
   // Si el usuario ya está autenticado, lo redirige automáticamente a la pantalla de su rol
   useEffect(() => {
     if (isAuthenticated && usuario) {
-      navigate(`/rol/${usuario.tipoUsuario.toLowerCase()}`, { replace: true });
+      navigate(INICIO_POR_ROL[usuario.tipoUsuario], { replace: true });
     }
   }, [isAuthenticated, usuario, navigate]);
 
@@ -29,7 +30,7 @@ export function LoginPage() {
     setErrorMessage(null);
     try {
       const res = await login(credentials);
-      navigate(`/rol/${res.usuario.tipoUsuario.toLowerCase()}`, { replace: true });
+      navigate(INICIO_POR_ROL[res.usuario.tipoUsuario], { replace: true });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al iniciar sesión';
       setErrorMessage(msg);
@@ -75,7 +76,6 @@ export function LoginPage() {
           errorMessage={errorMessage}
           onForgotPassword={() => setShowForgotModal(true)}
           onNavigateToRegister={() => navigate('/registro')}
-          showQuickRoles={true}
         />
       </div>
 

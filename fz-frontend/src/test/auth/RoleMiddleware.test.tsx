@@ -62,7 +62,7 @@ function renderEnRuta(ruta: string, usuario: UsuarioDTO | null, isLoading = fals
               <Route path="/usuarios" element={<div>Pantalla Usuarios</div>} />
             </Route>
             <Route element={<RoleMiddleware allowedRoles={['GERENTE']} />}>
-              <Route path="/rol/gerente" element={<div>Panel Gerente</div>} />
+              <Route path="/admin/roles" element={<div>Panel Gerente</div>} />
             </Route>
           </Routes>
         </AuthContext.Provider>
@@ -90,7 +90,7 @@ describe('SCRUM-92: RoleMiddleware (RutaProtegida)', () => {
   });
 
   it('un recepcionista que entra por URL al panel del gerente vuelve a su inicio', () => {
-    renderEnRuta('/rol/gerente', crearUsuario('RECEPCIONISTA'));
+    renderEnRuta('/admin/roles', crearUsuario('RECEPCIONISTA'));
     expect(screen.queryByText('Panel Gerente')).toBeNull();
     expect(screen.getByTestId('ubicacion')).toHaveTextContent(/^\/$/);
   });

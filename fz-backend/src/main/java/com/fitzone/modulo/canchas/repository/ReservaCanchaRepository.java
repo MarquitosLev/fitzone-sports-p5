@@ -18,6 +18,11 @@ public interface ReservaCanchaRepository extends JpaRepository<ReservaCancha, Lo
     // Reservas de un usuario
     List<ReservaCancha> findByUsuario_IdUsuario(Long idUsuario);
 
+    // Reservas propias con cancha y sede ya cargadas, de la más próxima a la más lejana
+    @Query("SELECT r FROM ReservaCancha r JOIN FETCH r.cancha c JOIN FETCH c.sede JOIN FETCH r.usuario " +
+           "WHERE r.usuario.idUsuario = :idUsuario ORDER BY r.fechaHoraInicio DESC")
+    List<ReservaCancha> findConCanchaYSedeByUsuario(@Param("idUsuario") Long idUsuario);
+
     // Consulta para validar disponibilidad o agenda de turnos en un rango horario (RN-02)
     List<ReservaCancha> findByCancha_IdCanchaAndFechaHoraInicioBetween(Long idCancha, LocalDateTime inicio, LocalDateTime fin);
 

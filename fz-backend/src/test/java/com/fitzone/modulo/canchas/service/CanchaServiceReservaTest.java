@@ -2,9 +2,11 @@ package com.fitzone.modulo.canchas.service;
 
 import com.fitzone.core.domain.enums.EstadoMembresia;
 import com.fitzone.core.domain.enums.TipoUsuario;
+import com.fitzone.core.exception.AccesoDenegadoException;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.RecursoNoEncontradoException;
 import com.fitzone.core.exception.ReglaNegocioException;
+import com.fitzone.core.security.UsuarioActual;
 import com.fitzone.modulo.canchas.models.Cancha;
 import com.fitzone.modulo.canchas.models.EstadoFranja;
 import com.fitzone.modulo.canchas.models.FranjaDisponibilidad;
@@ -15,6 +17,7 @@ import com.fitzone.modulo.canchas.strategy.CalculadorPrecioCancha;
 import com.fitzone.modulo.canchas.strategy.DescuentoSocioEstrategia;
 import com.fitzone.modulo.canchas.strategy.PrecioBaseEstrategia;
 import com.fitzone.modulo.canchas.strategy.RecargoHorarioPicoEstrategia;
+import com.fitzone.modulo.gimnasio.models.Sede;
 import com.fitzone.modulo.gimnasio.repository.SedeRepository;
 import com.fitzone.modulo.usuarios.models.Usuario;
 import com.fitzone.modulo.usuarios.repository.MembresiaRepository;
@@ -36,6 +39,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -57,6 +62,9 @@ class CanchaServiceReservaTest {
     @Mock
     private MembresiaRepository membresiaRepository;
 
+    @Mock
+    private UsuarioActual usuarioActual;
+
     private CanchaService canchaService;
     private Cancha cancha;
     private Usuario socio;
@@ -76,7 +84,8 @@ class CanchaServiceReservaTest {
                 sedeRepository,
                 usuarioRepository,
                 membresiaRepository,
-                calculador
+                calculador,
+                usuarioActual
         );
 
         cancha = Cancha.builder()
@@ -109,7 +118,7 @@ class CanchaServiceReservaTest {
                 .usuario(socio)
                 .build();
 
-        when(usuarioRepository.findById(10L)).thenReturn(Optional.of(socio));
+        when(usuarioActual.obtener()).thenReturn(socio);
         when(canchaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(cancha));
         when(reservaCanchaRepository.existsSolapamiento(1L, inicio, fin)).thenReturn(false);
         when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
@@ -139,7 +148,7 @@ class CanchaServiceReservaTest {
                 .usuario(externo)
                 .build();
 
-        when(usuarioRepository.findById(20L)).thenReturn(Optional.of(externo));
+        when(usuarioActual.obtener()).thenReturn(externo);
         when(canchaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(cancha));
         when(reservaCanchaRepository.existsSolapamiento(1L, inicio, fin)).thenReturn(false);
         when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
@@ -165,7 +174,7 @@ class CanchaServiceReservaTest {
                 .usuario(socio)
                 .build();
 
-        when(usuarioRepository.findById(10L)).thenReturn(Optional.of(socio));
+        when(usuarioActual.obtener()).thenReturn(socio);
         when(canchaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(cancha));
 
         assertThatThrownBy(() -> canchaService.reservar(1L, reserva))
@@ -185,7 +194,7 @@ class CanchaServiceReservaTest {
                 .usuario(socio)
                 .build();
 
-        when(usuarioRepository.findById(10L)).thenReturn(Optional.of(socio));
+        when(usuarioActual.obtener()).thenReturn(socio);
         when(canchaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(cancha));
         when(reservaCanchaRepository.existsSolapamiento(1L, inicio, fin)).thenReturn(true);
 
@@ -262,7 +271,7 @@ class CanchaServiceReservaTest {
                 .usuario(recepcionista)
                 .build();
 
-        when(usuarioRepository.findById(30L)).thenReturn(Optional.of(recepcionista));
+        when(usuarioActual.obtener()).thenReturn(recepcionista);
 
         assertThatThrownBy(() -> canchaService.reservar(1L, reserva))
                 .isInstanceOf(ReglaNegocioException.class)
@@ -317,6 +326,72 @@ class CanchaServiceReservaTest {
 
         assertThat(franjas).hasSize(15);
         assertThat(franjas).allMatch(f -> f.getEstado() == EstadoFranja.MANTENIMIENTO);
+    }
+
+    @Test
+    @DisplayName("Reservar: un idUsuario ajeno en el body se ignora y la reserva queda a nombre del logueado")
+    void testReservarIgnoraUsuarioDelBody() {
+        LocalDateTime inicio = LocalDate.now().plusDays(1).atTime(10, 0);
+        LocalDateTime fin = inicio.plusHours(1);
+
+        ReservaCancha reserva = ReservaCancha.builder()
+                .fechaHoraInicio(inicio)
+                .fechaHoraFin(fin)
+                .usuario(socio)
+                .build();
+
+        when(usuarioActual.obtener()).thenReturn(externo);
+        when(canchaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(cancha));
+        when(reservaCanchaRepository.existsSolapamiento(1L, inicio, fin)).thenReturn(false);
+        when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
+        when(reservaCanchaRepository.save(any(ReservaCancha.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ReservaCancha resultado = canchaService.reservar(1L, reserva);
+
+        assertThat(resultado.getUsuario()).isEqualTo(externo);
+        // El externo no recibe el descuento que tendría el socio del body
+        assertThat(resultado.getPrecioFinal()).isEqualByComparingTo("10000.00");
+        verify(membresiaRepository, never())
+                .existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Alta de cancha: el gerente de otra sede recibe 403 y no se guarda nada")
+    void testCrearCanchaEnOtraSede() {
+        Cancha nueva = Cancha.builder()
+                .sede(Sede.builder().idSede(2L).build())
+                .nombre("Cancha Paddle 2")
+                .precioBaseHora(new BigDecimal("15000.00"))
+                .build();
+        doThrow(new AccesoDenegadoException("No tiene permisos para operar sobre una sede distinta a la asignada"))
+                .when(usuarioActual).validarSede(2L);
+
+        assertThatThrownBy(() -> canchaService.crear(nueva))
+                .isInstanceOf(AccesoDenegadoException.class);
+        verify(canchaRepository, never()).save(any(Cancha.class));
+    }
+
+    @Test
+    @DisplayName("Mantenimiento: valida la sede de la cancha antes de cambiarla")
+    void testMantenimientoValidaSede() {
+        cancha.setSede(Sede.builder().idSede(1L).build());
+        when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
+        when(canchaRepository.save(any(Cancha.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Cancha resultado = canchaService.cambiarMantenimiento(1L, true);
+
+        assertThat(resultado.isEnMantenimiento()).isTrue();
+        verify(usuarioActual).validarSede(1L);
+    }
+
+    @Test
+    @DisplayName("Mis reservas: devuelve solo las del usuario logueado")
+    void testListarMias() {
+        ReservaCancha r1 = ReservaCancha.builder().idReservaCancha(100L).build();
+        when(usuarioActual.obtener()).thenReturn(socio);
+        when(reservaCanchaRepository.findConCanchaYSedeByUsuario(10L)).thenReturn(List.of(r1));
+
+        assertThat(canchaService.listarMias()).containsExactly(r1);
     }
 
     @Test

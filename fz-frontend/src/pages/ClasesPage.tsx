@@ -10,7 +10,7 @@
  *
  * El socio siempre sale del token: los servicios no reciben `idUsuario`.
  * Los errores del backend ya los muestra httpClient como toast; acá solo se
- * notifican los errores del modo mock y se deja fijo el bloqueo del moroso.
+ * notifican los errores que no vienen del backend y se deja fijo el bloqueo del moroso.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -28,7 +28,6 @@ import {
   anotarseEnEspera,
   salirDeEspera,
   cancelarReservaClase,
-  MOCK_SOCIO_LOGUEADO,
 } from '../services/clasesService';
 import { AppError } from '../services/httpClient';
 import { useSede } from '../context/SedeContext';
@@ -43,7 +42,6 @@ import type { ClaseFormPayload } from '../components/clases/ClaseForm';
 import { ClaseCard } from '../components/clases/ClaseCard';
 import { ReservaClaseItem } from '../components/clases/ReservaClaseItem';
 import { InscriptosClase } from '../components/clases/InscriptosClase';
-import { USE_MOCK } from '../config';
 
 // Column definition kept for reference (not rendered, but exported for type safety)
 export const CLASES_COLUMNS: Column<ClaseGrupalDTO>[] = [
@@ -85,8 +83,7 @@ export function ClasesPage() {
   const puedeVerAgendaAdmin = useTienePrestacion('CLASES_ADMIN');
   // ...pero el backend solo permite alta, edición y baja al GERENTE.
   const puedeGestionarClases = puedeVerAgendaAdmin && usuario?.tipoUsuario === 'GERENTE';
-  // En modo mock se opera siempre como el socio demo.
-  const esSocio = USE_MOCK || usuario?.tipoUsuario === 'SOCIO';
+  const esSocio = usuario?.tipoUsuario === 'SOCIO';
   const [activeTab, setActiveTab] = useState<TabClases>(
     puedeVerAgendaAdmin ? 'agenda-admin' : 'disponibles'
   );
@@ -317,26 +314,6 @@ export function ClasesPage() {
           </Button>
         )}
       </div>
-
-      {/* ── Banner de Modo Mock (visible cuando USE_MOCK=true) ─────── */}
-      {USE_MOCK && (
-        <div
-          data-testid="banner-mock-mode"
-          className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-xs"
-        >
-          <div className="flex items-center gap-2">
-            <span className="font-bold uppercase tracking-wider text-[10px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full shrink-0">
-              Modo Mock
-            </span>
-            <span>
-              Operando con datos simulados (Socio demo: <strong>{MOCK_SOCIO_LOGUEADO.nombre} {MOCK_SOCIO_LOGUEADO.apellido}</strong> · ID #{MOCK_SOCIO_LOGUEADO.idUsuario}).
-            </span>
-          </div>
-          <span className="text-[11px] text-amber-700 font-mono shrink-0">
-            USE_MOCK=true
-          </span>
-        </div>
-      )}
 
       {/* ── Tab selector ───────────────────────────────────────────────────── */}
       <div className="flex bg-slate-100 p-1 rounded-2xl w-fit gap-1">

@@ -71,6 +71,20 @@ public class UsuarioController {
         return listaEsperaService.listarMias();
     }
 
+    @GetMapping("/me/reservas-cancha")
+    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
+    @Operation(summary = "Obtiene las reservas de cancha del usuario logueado, con la cancha y su sede")
+    public List<ReservaCancha> obtenerMisReservasCancha() {
+        return canchaService.listarMias();
+    }
+
+    @GetMapping("/me/pagos")
+    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
+    @Operation(summary = "Historial de pagos del usuario logueado, con el plan o la cancha de cada uno")
+    public List<Transaccion> obtenerMisPagos() {
+        return pagoService.listarMios();
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")

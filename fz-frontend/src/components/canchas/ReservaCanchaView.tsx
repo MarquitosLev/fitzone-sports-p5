@@ -1,5 +1,5 @@
 /**
- * ReservaCanchaView.tsx — Pantalla de Reserva de Cancha (RF-10, RF-11).
+ * ReservaCanchaView.tsx — Pantalla de Reserva de Cancha.
  *
  * Flujo:
  * 1. Elegir cancha (filtro por deporte o selección directa de tarjeta).
@@ -16,13 +16,12 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Calendar,
   Clock,
-  UserCheck,
-  User,
   RefreshCw,
 } from 'lucide-react';
 import { CanchaCard } from './CanchaCard';
 import { SelectorFecha } from './SelectorFecha';
 import { GrillaDisponibilidad } from './GrillaDisponibilidad';
+import { etiquetaTipo } from './tiposCancha';
 import { DesglosePrecio } from './DesglosePrecio';
 import { Button, Alert, Modal } from '../ui';
 import {
@@ -33,6 +32,7 @@ import {
 } from '../../services/canchasService';
 import { useSede } from '../../context/SedeContext';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import { AppError } from '../../services/httpClient';
 import type {
   CanchaDTO,
@@ -63,10 +63,6 @@ export function ReservaCanchaView({
   // Fecha actual formateada en YYYY-MM-DD
   const hoyIso = useMemo(() => {
     const now = new Date();
-    // Si ya son las 22hs o más tarde (cierre de sedes), sugerir mañana por defecto
-    if (now.getHours() >= 22) {
-      now.setDate(now.getDate() + 1);
-    }
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -91,16 +87,16 @@ export function ReservaCanchaView({
   const [cotizacion, setCotizacion] = useState<CotizacionReservaDTO | null>(null);
   const [loadingCotizacion, setLoadingCotizacion] = useState(false);
 
-  // Perfil del usuario (toggle interactivo para simular socio vs externo)
-  const [esSocio, setEsSocio] = useState<boolean>(true);
+  // Perfil del usuario: sale de la sesión (el backend aplica el descuento)
+  const { usuario } = useAuth();
+  const esSocio = usuario?.tipoUsuario === 'SOCIO';
+  // Reservan socios y externos con sesión; el personal no reserva a su nombre
+  const puedeReservar = usuario?.tipoUsuario === 'SOCIO' || usuario?.tipoUsuario === 'EXTERNO';
 
   // Modal de Confirmación
   const [modalConfirmacionOpen, setModalConfirmacionOpen] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [errorConflicto, setErrorConflicto] = useState<string | null>(null);
-
-  // Simulación de error 409 (para pruebas y Playground)
-  const [simularConflicto409, setSimularConflicto409] = useState(false);
 
   // Cargar Canchas de la Sede
   const cargarCanchas = useCallback(async () => {
@@ -182,29 +178,18 @@ export function ReservaCanchaView({
         const coti = await cotizarTurno(
           canchaSeleccionada.idCancha,
           turnoSeleccionado.horaInicio,
-          esSocio
+          esSocio,
+          fechaSeleccionada,
+          turnoSeleccionado.horaFin
         );
         if (!cancelado) {
           setCotizacion(coti);
         }
       } catch {
-        // Fallback local en caso de error de red
-        if (!cancelado) {
-          const esPico = turnoSeleccionado.esPico;
-          const recargo = esPico ? Math.round(canchaSeleccionada.precioBaseHora * 0.2) : 0;
-          const sub = canchaSeleccionada.precioBaseHora + recargo;
-          const desc = esSocio ? Math.round(sub * 0.15) : 0;
-          setCotizacion({
-            precioBase: canchaSeleccionada.precioBaseHora,
-            esPico,
-            recargoPico: recargo,
-            porcentajeRecargoPico: 20,
-            descuentoSocio: desc,
-            porcentajeDescuentoSocio: esSocio ? 15 : 0,
-            esSocio,
-            total: sub - desc,
-          });
-        }
+        if (cancelado) return;
+        // El precio sale solo del servidor: sin cotización no se puede confirmar
+        // (el error ya lo avisó httpClient)
+        setCotizacion(null);
       } finally {
         if (!cancelado) setLoadingCotizacion(false);
       }
@@ -214,7 +199,13 @@ export function ReservaCanchaView({
     return () => {
       cancelado = true;
     };
-  }, [canchaSeleccionada, turnoSeleccionado, esSocio]);
+  }, [canchaSeleccionada, turnoSeleccionado, esSocio, fechaSeleccionada, addToast]);
+
+  // Deportes de las canchas cargadas (el filtro no ofrece deportes sin canchas)
+  const tiposDisponibles = useMemo(
+    () => Array.from(new Set(canchas.flatMap((c) => (c.tipo ? [c.tipo] : [])))),
+    [canchas]
+  );
 
   // Canchas filtradas por deporte
   const canchasFiltradas = useMemo(() => {
@@ -258,12 +249,7 @@ export function ReservaCanchaView({
           fecha: fechaSeleccionada,
           horaInicio: turnoSeleccionado.horaInicio,
           horaFin: turnoSeleccionado.horaFin,
-          esSocio,
-          idUsuario: esSocio ? 1 : undefined,
-          nombreInvitado: esSocio ? undefined : 'Cliente Externo',
-          emailInvitado: esSocio ? undefined : 'externo@email.com',
-        },
-        simularConflicto409
+        }
       );
 
       setModalConfirmacionOpen(false);
@@ -297,20 +283,25 @@ export function ReservaCanchaView({
             err.message.toLowerCase().includes('conflicto') ||
             err.message.toLowerCase().includes('ocupado')));
 
+      // httpClient ya mostró el mensaje del backend: no se duplica el toast
+      const yaAvisado = err instanceof AppError;
+
       if (isConflict) {
         setErrorConflicto(mensaje);
         setModalConfirmacionOpen(false);
 
-        addToast({
-          type: 'error',
-          title: 'Horario no disponible (409)',
-          message: mensaje,
-        });
+        if (!yaAvisado) {
+          addToast({
+            type: 'error',
+            title: 'Horario no disponible (409)',
+            message: mensaje,
+          });
+        }
 
-        // Requisito: "Si el horario ya fue tomado (409), se muestra el mensaje y se refresca la grilla."
+        // Si el horario ya fue tomado (409), se muestra el mensaje y se refresca la grilla
         await cargarDisponibilidad();
         setTurnoSeleccionado(null);
-      } else {
+      } else if (!yaAvisado) {
         addToast({
           type: 'error',
           title: 'Error al reservar',
@@ -328,19 +319,19 @@ export function ReservaCanchaView({
       <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-black uppercase text-fitzone-coral tracking-wider block">
-            RESERVA DE CANCHAS DEPORTIVAS (RF-10, RF-11)
+            RESERVA DE CANCHAS DEPORTIVAS
           </span>
           <h2 className="text-xl sm:text-2xl font-black text-fitzone-navy font-outfit mt-0.5">
             {esSocio ? 'Reservá con tu beneficio de socio' : 'Reservá tu turno como cliente externo'}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             {esSocio
-              ? 'Socios activos disfrutan de 15% de descuento en todos los horarios (estándar y pico).'
+              ? 'Con la membresía vigente, el descuento de socio se aplica al cotizar el turno.'
               : 'Tarifa general para público sin membresía activa.'}
           </p>
         </div>
 
-        {/* Toggle para cambiar de Socio a Externo y botón a Mis Reservas */}
+        {/* Acceso a Mis Reservas */}
         <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
           {onVerMisReservas && (
             <Button
@@ -352,30 +343,20 @@ export function ReservaCanchaView({
               Mis Reservas
             </Button>
           )}
-          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl text-xs font-bold">
-          <button
-            type="button"
-            onClick={() => setEsSocio(true)}
-            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              esSocio ? 'bg-fitzone-navy text-white shadow-xs' : 'text-slate-600 hover:text-fitzone-navy'
-            }`}
-          >
-            <UserCheck className="w-3.5 h-3.5 text-fitzone-coral" />
-            <span>Socio Activo (-15%)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setEsSocio(false)}
-            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              !esSocio ? 'bg-fitzone-navy text-white shadow-xs' : 'text-slate-600 hover:text-fitzone-navy'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>Cliente Externo</span>
-          </button>
-        </div>
       </div>
     </div>
+
+      {!puedeReservar && (
+        <Alert
+          type="info"
+          title={usuario ? 'Las reservas son para socios y clientes' : 'Iniciá sesión para reservar'}
+          message={
+            usuario
+              ? 'Con tu rol podés consultar la disponibilidad, pero el turno se reserva desde la cuenta del socio o cliente.'
+              : 'Podés ver turnos y precios sin sesión. Para confirmar un turno, iniciá sesión con tu cuenta.'
+          }
+        />
+      )}
 
       {/* Alerta de Conflicto 409 si ocurrió */}
       {errorConflicto && (
@@ -410,17 +391,8 @@ export function ReservaCanchaView({
 
           {/* Filtro por Deporte */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-            {['TODOS', 'PADEL', 'FUTBOL_5', 'TENIS', 'BASQUET'].map((tipo) => {
-              const label =
-                tipo === 'TODOS'
-                  ? 'Todas'
-                  : tipo === 'PADEL'
-                  ? 'Pádel'
-                  : tipo === 'FUTBOL_5'
-                  ? 'Fútbol 5'
-                  : tipo === 'TENIS'
-                  ? 'Tenis'
-                  : 'Básquet';
+            {['TODOS', ...tiposDisponibles].map((tipo) => {
+              const label = tipo === 'TODOS' ? 'Todas' : etiquetaTipo(tipo);
               return (
                 <button
                   key={tipo}
@@ -516,7 +488,6 @@ export function ReservaCanchaView({
             fecha={fechaSeleccionada}
             turnoSeleccionado={turnoSeleccionado}
             onSeleccionarTurno={handleSelectTurno}
-            esSocio={esSocio}
             loading={loadingFranjas}
           />
         </div>
@@ -572,6 +543,7 @@ export function ReservaCanchaView({
               variant="coral"
               size="lg"
               isLoading={loadingCotizacion}
+              disabled={!puedeReservar}
               onClick={handleAbrirConfirmacion}
               className="w-full sm:w-auto shadow-md"
             >
@@ -627,19 +599,6 @@ export function ReservaCanchaView({
             />
           )}
 
-          {/* Controles de Simulación de Conflicto 409 (útil para validación) */}
-          <div className="p-3 bg-amber-50/70 border border-amber-200/60 rounded-xl text-xs flex items-center justify-between">
-            <span className="text-amber-900 font-medium">
-              Simular conflicto de horario tomado (409)
-            </span>
-            <input
-              type="checkbox"
-              id="chk-simular-409"
-              checked={simularConflicto409}
-              onChange={(e) => setSimularConflicto409(e.target.checked)}
-              className="rounded text-fitzone-coral focus:ring-fitzone-coral cursor-pointer"
-            />
-          </div>
 
           {/* Acciones */}
           <div className="pt-2 flex flex-col-reverse sm:flex-row items-center gap-2.5">

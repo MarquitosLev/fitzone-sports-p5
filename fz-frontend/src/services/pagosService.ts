@@ -8,22 +8,95 @@
  * la referencia original (cancha o membresía) y el monto calculado sin mutar a otro concepto.
  */
 
-import { httpClient } from './httpClient';
+import { httpClient, getAuthToken, AppError } from './httpClient';
 import type {
   TransaccionDTO,
   ComprobanteDTO,
   ProcesarPagoPayload,
   ResultadoPagoDTO,
+  TipoOrigenTransaccion,
+  EstadoPago,
+  UsuarioDTO,
+  SedeDTO,
 } from '../types';
 import { USE_MOCK } from '../config';
 import { toLocalISOString } from '../utils/formatters';
 
+// ─── CONTRATO REAL DEL BACKEND (SCRUM-99) ─────────────────────────────────────
+
+/** Transacción tal como la devuelve el backend (entidad Transaccion con sus relaciones). */
+export interface TransaccionApi {
+  idTransaccion: number;
+  usuario: UsuarioDTO;
+  sede: SedeDTO;
+  membresia?: { idMembresia: number; plan?: { nombre?: string } } | null;
+  reservaCancha?: {
+    idReservaCancha: number;
+    fechaHoraInicio?: string;
+    cancha?: { nombre?: string };
+  } | null;
+  concepto: 'MEMBRESIA' | 'RESERVA_CANCHA' | 'RESERVA_SOCIO' | 'RESERVA_EXTERNO';
+  monto: number;
+  estadoPago: EstadoPago;
+  tokenTransaccionPasarela: string | null;
+  fechaHoraCreacion: string;
+  fechaHoraConfirmacion: string | null;
+}
+
+/** El backend solo cobra dos conceptos: la variante de socio/externo se resuelve con la sesión. */
+export function conceptoParaApi(concepto: TipoOrigenTransaccion): 'MEMBRESIA' | 'RESERVA_CANCHA' {
+  return concepto === 'MEMBRESIA_SOCIO' || concepto === 'MEMBRESIA' ? 'MEMBRESIA' : 'RESERVA_CANCHA';
+}
+
+function describirTransaccion(api: TransaccionApi): string {
+  if (api.membresia) {
+    return `Membresía · ${api.membresia.plan?.nombre ?? 'Plan'}`;
+  }
+  if (api.reservaCancha) {
+    const cancha = api.reservaCancha.cancha?.nombre ?? `Reserva #${api.reservaCancha.idReservaCancha}`;
+    const inicio = api.reservaCancha.fechaHoraInicio;
+    return inicio ? `${cancha} · ${inicio.slice(0, 10)} ${inicio.slice(11, 16)} hs` : cancha;
+  }
+  return api.concepto.replace(/_/g, ' ');
+}
+
+export function mapearTransaccion(api: TransaccionApi): TransaccionDTO {
+  return {
+    idTransaccion: api.idTransaccion,
+    usuario: api.usuario,
+    sede: api.sede,
+    membresiaId: api.membresia?.idMembresia ?? null,
+    reservaCanchaId: api.reservaCancha?.idReservaCancha ?? null,
+    concepto: api.concepto,
+    monto: Number(api.monto),
+    estadoPago: api.estadoPago,
+    tokenTransaccionPasarela: api.tokenTransaccionPasarela,
+    fechaHoraCreacion: api.fechaHoraCreacion,
+    fechaHoraConfirmacion: api.fechaHoraConfirmacion,
+    descripcion: describirTransaccion(api),
+    motivoRechazo:
+      api.estadoPago === 'RECHAZADO' ? 'La pasarela rechazó la operación. Podés reintentarla.' : null,
+  };
+}
+
+async function resultadoDesde(api: TransaccionApi): Promise<ResultadoPagoDTO> {
+  const transaccion = mapearTransaccion(api);
+  const aprobado = transaccion.estadoPago === 'CONFIRMADO';
+  return {
+    transaccion,
+    // El backend emite el comprobante al confirmar el pago
+    comprobante: aprobado ? await obtenerComprobantePorTransaccion(transaccion.idTransaccion) : null,
+    aprobado,
+    mensaje: aprobado ? '¡Pago acreditado exitosamente!' : transaccion.motivoRechazo ?? 'Pago rechazado',
+  };
+}
+
 // ─── ENDPOINTS REST (SCRUM-76 y SCRUM-77) ────────────────────────────────────
 export const PAGOS_ENDPOINTS = {
-  listar: '/v1/pagos',
-  procesarCheckout: '/v1/pagos/checkout',
-  reintentar: (idTransaccion: number) => `/v1/pagos/${idTransaccion}/reintentar`,
-  comprobantePorTransaccion: (idTransaccion: number) => `/v1/comprobantes/transaccion/${idTransaccion}`,
+  misPagos: '/v1/usuarios/me/pagos',
+  procesar: '/v1/pagos',
+  detalle: (idTransaccion: number) => `/v1/pagos/${idTransaccion}`,
+  comprobantePorTransaccion: (idTransaccion: number) => `/v1/pagos/${idTransaccion}/comprobante`,
   descargarComprobantePdf: (idComprobante: number) => `/v1/comprobantes/${idComprobante}/pdf`,
 } as const;
 
@@ -305,7 +378,8 @@ export function _resetMockPagos(): void {
 // ─── FUNCIONES DEL SERVICIO ───────────────────────────────────────────────────
 
 /**
- * Lista las transacciones de pago de una sede, con filtro opcional por socio.
+ * Lista las transacciones de pago de una sede, con filtro opcional por socio (modo mock).
+ * Con la API real no hay historial por sede todavía (DEV-M5-03): usar `listarMisPagos`.
  */
 export async function listarPagos(idSede: number, idUsuario?: number): Promise<TransaccionDTO[]> {
   if (USE_MOCK) {
@@ -317,8 +391,17 @@ export async function listarPagos(idSede: number, idUsuario?: number): Promise<T
     });
   }
 
-  const query = idUsuario ? `?idSede=${idSede}&idUsuario=${idUsuario}` : `?idSede=${idSede}`;
-  return httpClient.get<TransaccionDTO[]>(`${PAGOS_ENDPOINTS.listar}${query}`);
+  throw new AppError('El historial de pagos por sede todavía no está disponible', 501);
+}
+
+/** Historial del usuario logueado (GET /v1/usuarios/me/pagos). */
+export async function listarMisPagos(): Promise<TransaccionDTO[]> {
+  if (USE_MOCK) {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return [...mockPagos];
+  }
+  const data = await httpClient.get<TransaccionApi[]>(PAGOS_ENDPOINTS.misPagos);
+  return data.map(mapearTransaccion);
 }
 
 /**
@@ -334,13 +417,21 @@ export async function obtenerComprobantePorTransaccion(
   }
 
   try {
-    return await httpClient.get<ComprobanteDTO>(
+    const api = await httpClient.get<{ idComprobante: number; numeroFactura: string; transaccion: TransaccionApi }>(
       PAGOS_ENDPOINTS.comprobantePorTransaccion(idTransaccion)
     );
+    return {
+      idComprobante: api.idComprobante,
+      numeroFactura: api.numeroFactura,
+      transaccion: mapearTransaccion(api.transaccion),
+    };
   } catch {
     return null;
   }
 }
+
+/** Token de cobro que envía el checkout. La pasarela es simulada y la aprobación la decide el backend. */
+export const TOKEN_PASARELA_APROBADO = 'tok_mock_aprobado';
 
 /**
  * Procesa un nuevo pago a través del checkout con la pasarela simulada.
@@ -421,9 +512,16 @@ export async function procesarPago(payload: ProcesarPagoPayload): Promise<Result
     };
   }
 
-  return httpClient.post<ResultadoPagoDTO>(PAGOS_ENDPOINTS.procesarCheckout, {
-    body: JSON.stringify(payload),
+  // Usuario y monto los define el backend (sesión y precio del plan o de la reserva).
+  const api = await httpClient.post<TransaccionApi>(PAGOS_ENDPOINTS.procesar, {
+    body: JSON.stringify({
+      concepto: conceptoParaApi(payload.concepto),
+      idSede: payload.idSede,
+      idMembresia: payload.idMembresia ?? undefined,
+      idReservaCancha: payload.idReservaCancha ?? undefined,
+    }),
   });
+  return resultadoDesde(api);
 }
 
 /**
@@ -436,7 +534,7 @@ export async function procesarPago(payload: ProcesarPagoPayload): Promise<Result
  */
 export async function reintentarPago(
   idTransaccion: number,
-  nuevoTokenPasarela: string = 'tok_mock_aprobado'
+  nuevoTokenPasarela: string = TOKEN_PASARELA_APROBADO
 ): Promise<ResultadoPagoDTO> {
   if (!idTransaccion || idTransaccion <= 0) {
     throw new Error('El identificador de la transacción debe ser un número positivo.');
@@ -500,9 +598,24 @@ export async function reintentarPago(
     };
   }
 
-  return httpClient.post<ResultadoPagoDTO>(PAGOS_ENDPOINTS.reintentar(idTransaccion), {
-    body: JSON.stringify({ tokenTransaccionPasarela: nuevoTokenPasarela }),
+  // ADR-004: el pago está desacoplado de la reserva, así que reintentar es un pago nuevo
+  // con la misma referencia (misma reserva o membresía) y el mismo concepto que el rechazado.
+  const original = await httpClient.get<TransaccionApi>(PAGOS_ENDPOINTS.detalle(idTransaccion));
+  if (original.estadoPago === 'CONFIRMADO') {
+    throw new AppError(
+      `La transacción ID ${idTransaccion} ya se encuentra confirmada. No se permite duplicar el cobro.`,
+      409
+    );
+  }
+  const api = await httpClient.post<TransaccionApi>(PAGOS_ENDPOINTS.procesar, {
+    body: JSON.stringify({
+      concepto: original.membresia ? 'MEMBRESIA' : 'RESERVA_CANCHA',
+      idSede: original.sede.idSede,
+      idMembresia: original.membresia?.idMembresia,
+      idReservaCancha: original.reservaCancha?.idReservaCancha,
+    }),
   });
+  return resultadoDesde(api);
 }
 
 /**
@@ -528,15 +641,24 @@ export async function descargarComprobantePdf(idComprobante: number): Promise<Bl
     });
   }
 
+  // El endpoint pide sesión: se descarga como blob con el token, no como link directo (SCRUM-99)
   const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api';
   const url = `${baseUrl}${PAGOS_ENDPOINTS.descargarComprobantePdf(idComprobante)}`;
+  const token = getAuthToken();
   const response = await fetch(url, {
     method: 'GET',
-    headers: { Accept: 'application/pdf' },
+    headers: {
+      Accept: 'application/pdf',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
 
   if (!response.ok) {
-    throw new Error(`Error ${response.status}: no se pudo descargar el comprobante en PDF`);
+    const mensaje =
+      response.status === 403
+        ? 'No tenés permisos para descargar este comprobante'
+        : `Error ${response.status}: no se pudo descargar el comprobante en PDF`;
+    throw new AppError(mensaje, response.status);
   }
 
   return response.blob();
