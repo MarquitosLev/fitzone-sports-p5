@@ -74,6 +74,7 @@ import {
   BotonDescargaPdf,
 } from '../components/pagos';
 import { LoginForm, RegistroForm } from '../components/auth';
+import { RoleMiddlewareDemo } from '../components/auth/RoleMiddlewareDemo';
 import type {
   TransaccionDTO,
   ComprobanteDTO,
@@ -272,6 +273,7 @@ export function PlaygroundPage() {
     { id: 'canchas', label: 'Canchas (RF-10/11)' },
     { id: 'pagos', label: 'Pagos y Comprobantes (RF-13/14)' },
     { id: 'auth', label: 'Autenticación (SCRUM-89)' },
+    { id: 'rutas', label: 'Rutas protegidas (SCRUM-92)' },
   ];
 
   // ── RF-06 Clases state ──────────────────────────────────────────────────────
@@ -3424,7 +3426,22 @@ export function PlaygroundPage() {
           </div>
         </section>
       )}
+
+      {/* 16. RUTAS PROTEGIDAS (SCRUM-92) */}
+      {shouldShow('rutas') && (
+        <section className="space-y-6">
+          <div>
+            <h2 className="text-xl font-black text-[#1B2A55] font-outfit">
+              16. RoleMiddleware — Rutas protegidas por rol (SCRUM-92)
+            </h2>
+            <p className="text-xs text-slate-500">
+              Componente reutilizable que protege las rutas de cada módulo según el rol o la
+              prestación del usuario logueado. Usa la misma matriz de permisos que el Sidebar.
+            </p>
+          </div>
+          <RoleMiddlewareDemo />
+        </section>
+      )}
     </div>
   );
 }
-
