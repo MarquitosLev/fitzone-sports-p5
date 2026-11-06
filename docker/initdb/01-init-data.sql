@@ -1,8 +1,24 @@
 -- FitZone Sports — Semilla Inicial de Datos de Prueba (SCRUM-94)
 -- Entorno local de PostgreSQL 16
+--
+-- Las tablas las crea Hibernate al arrancar el backend, no este script. Por eso:
+--   * En la primera inicialización del contenedor (volumen nuevo) las tablas todavía no existen:
+--     el script avisa y no inserta nada, y la semilla la carga DataInitializer al arrancar la app.
+--     Así Postgres termina su inicialización sin errores aunque las tablas no existan.
+--   * Para cargarla a mano con la app ya levantada al menos una vez:
+--     docker exec -i fitzone_postgres_local psql -U fitzone_user -d fitzone_db < docker/initdb/01-init-data.sql
+-- El orden de los INSERT respeta las FK (sedes y planes, después usuarios, membresías, canchas y clases).
 
 -- Extensiones
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+DO $seed$
+BEGIN
+IF to_regclass('public.fz_sedes') IS NULL THEN
+    RAISE NOTICE 'FitZone: las tablas no existen todavía; la semilla la carga DataInitializer al arrancar el backend';
+    RETURN;
+END IF;
+
 
 -- 1. Sedes
 INSERT INTO fz_sedes (id_sede, nombre, aforo_maximo, created_at, updated_at, created_by, updated_by, is_deleted)
@@ -50,3 +66,13 @@ VALUES
     (1, 1, 'Spinning Pro', (CURRENT_DATE + INTERVAL '1 day 18 hours'), 60, 20, 20, NOW(), NOW(), 'system', 'system', false),
     (2, 1, 'Yoga Integral (Completa)', (CURRENT_DATE + INTERVAL '2 days 10 hours'), 45, 1, 0, NOW(), NOW(), 'system', 'system', false)
 ON CONFLICT (id_clase) DO NOTHING;
+
+-- Los INSERT usan ids fijos: se adelantan las secuencias IDENTITY para que la app no repita ids
+PERFORM setval(pg_get_serial_sequence('fz_sedes', 'id_sede'), (SELECT max(id_sede) FROM fz_sedes));
+PERFORM setval(pg_get_serial_sequence('fz_pag_planes', 'id_plan'), (SELECT max(id_plan) FROM fz_pag_planes));
+PERFORM setval(pg_get_serial_sequence('fz_usr_usuarios', 'id_usuario'), (SELECT max(id_usuario) FROM fz_usr_usuarios));
+PERFORM setval(pg_get_serial_sequence('fz_pag_membresias', 'id_membresia'), (SELECT max(id_membresia) FROM fz_pag_membresias));
+PERFORM setval(pg_get_serial_sequence('fz_cch_canchas', 'id_cancha'), (SELECT max(id_cancha) FROM fz_cch_canchas));
+PERFORM setval(pg_get_serial_sequence('fz_cls_clases_grupales', 'id_clase'), (SELECT max(id_clase) FROM fz_cls_clases_grupales));
+END
+$seed$;
