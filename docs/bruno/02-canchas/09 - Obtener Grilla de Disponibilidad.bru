@@ -1,0 +1,15 @@
+meta {
+  name: 09 - Obtener Grilla de Disponibilidad
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/v1/canchas/1/disponibilidad?fecha=2026-10-25
+  body: none
+  auth: none
+}
+
+params:query {
+  fecha: 2026-10-25
+}

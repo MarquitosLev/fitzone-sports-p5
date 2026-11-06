@@ -1,0 +1,15 @@
+meta {
+  name: 14 - Descargar Comprobante PDF
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{baseUrl}}/v1/comprobantes/1/pdf
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
+}

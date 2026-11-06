@@ -1,0 +1,40 @@
+meta {
+  name: 12 - Error Gerente en Otra Sede (403)
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/v1/clases
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenGerente}}
+}
+
+body:json {
+  {
+    "idSede": 2,
+    "nombreActividad": "Spinning Power",
+    "fechaHoraInicio": "{{fechaInicio}}",
+    "duracionMinutos": 45,
+    "cupoMaximo": 1
+  }
+}
+
+script:pre-request {
+  const inicio = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19);
+  bru.setVar("fechaInicio", inicio);
+}
+
+tests {
+  test("responde 403", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+
+  test("usa el formato común de error", function () {
+    expect(res.getBody().codigo).to.equal("ACCESO_DENEGADO");
+  });
+}

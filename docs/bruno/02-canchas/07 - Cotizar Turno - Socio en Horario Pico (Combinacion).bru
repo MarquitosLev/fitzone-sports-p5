@@ -1,0 +1,20 @@
+meta {
+  name: 07 - Cotizar Turno - Socio en Horario Pico (Combinacion)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/v1/canchas/1/cotizacion?inicio=2026-10-25T19:00:00&fin=2026-10-25T21:00:00
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
+}
+
+params:query {
+  inicio: 2026-10-25T19:00:00
+  fin: 2026-10-25T21:00:00
+}

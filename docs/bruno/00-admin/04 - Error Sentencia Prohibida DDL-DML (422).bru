@@ -1,0 +1,21 @@
+meta {
+  name: 04 - Error Sentencia Prohibida DDL-DML (422)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/admin/database/query
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{rootKey}}
+}
+
+body:json {
+  {
+    "query": "DROP TABLE usuarios"
+  }
+}

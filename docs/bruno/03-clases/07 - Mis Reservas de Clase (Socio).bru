@@ -1,0 +1,26 @@
+meta {
+  name: 07 - Mis Reservas de Clase (Socio)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/v1/usuarios/me/reservas-clase
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
+}
+
+tests {
+  test("responde 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("incluye la reserva creada", function () {
+    const ids = res.getBody().map((r) => r.idReservaClase);
+    expect(ids).to.include(bru.getVar("idReserva"));
+  });
+}

@@ -1,0 +1,21 @@
+meta {
+  name: 16 - Error Baja con Reservas Confirmadas (409)
+  type: http
+  seq: 16
+}
+
+delete {
+  url: {{baseUrl}}/v1/clases/{{idClase}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenGerente}}
+}
+
+tests {
+  test("responde 409", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+}

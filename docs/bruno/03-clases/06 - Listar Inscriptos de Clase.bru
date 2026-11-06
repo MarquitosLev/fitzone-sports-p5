@@ -1,0 +1,28 @@
+meta {
+  name: 06 - Listar Inscriptos de Clase
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/v1/clases/{{idClase}}/reservas
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenRecepcion}}
+}
+
+tests {
+  test("responde 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("trae nombre y apellido, sin datos personales", function () {
+    const inscripto = res.getBody()[0];
+    expect(inscripto.nombre).to.be.a("string");
+    expect(inscripto.apellido).to.be.a("string");
+    expect(inscripto).to.not.have.property("dni");
+  });
+}

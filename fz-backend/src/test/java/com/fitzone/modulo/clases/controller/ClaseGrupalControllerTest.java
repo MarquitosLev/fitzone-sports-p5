@@ -1,0 +1,138 @@
+package com.fitzone.modulo.clases.controller;
+
+import com.fitzone.core.config.WebConfig;
+import com.fitzone.core.domain.enums.EstadoReservaClase;
+import com.fitzone.core.exception.ClaseCompletaException;
+import com.fitzone.core.exception.ConflictoException;
+import com.fitzone.core.exception.GlobalExceptionHandler;
+import com.fitzone.modulo.clases.models.ClaseGrupal;
+import com.fitzone.modulo.clases.models.InscriptoResponse;
+import com.fitzone.modulo.clases.models.ReservaClase;
+import com.fitzone.modulo.clases.service.ClaseGrupalService;
+import com.fitzone.modulo.clases.service.ReservaClaseService;
+import com.fitzone.modulo.usuarios.models.Usuario;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(ClaseGrupalController.class)
+@Import({WebConfig.class, GlobalExceptionHandler.class})
+@AutoConfigureMockMvc(addFilters = false)
+class ClaseGrupalControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private ClaseGrupalService claseGrupalService;
+
+    @MockitoBean
+    private ReservaClaseService reservaClaseService;
+
+    @MockitoBean
+    private com.fitzone.modulo.clases.service.ListaEsperaService listaEsperaService;
+
+    @Test
+    @DisplayName("POST /v1/clases/{id}/reservas responde 201 Created cuando la reserva es exitosa")
+    void reservar_retorna201() throws Exception {
+        ReservaClase reserva = ReservaClase.builder()
+                .idReservaClase(5L)
+                .clase(ClaseGrupal.builder().idClase(10L).build())
+                .usuario(Usuario.builder().idUsuario(1L).build())
+                .estado(EstadoReservaClase.CONFIRMADA)
+                .build();
+
+        when(reservaClaseService.reservar(10L)).thenReturn(reserva);
+
+        mockMvc.perform(post("/v1/clases/10/reservas"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.idReservaClase", is(5)))
+                .andExpect(jsonPath("$.estado", is("CONFIRMADA")));
+    }
+
+    @Test
+    @DisplayName("POST /v1/clases/{id}/reservas responde 409 con CLASE_COMPLETA cuando no hay cupo")
+    void reservar_sinCupo_retorna409ClaseCompleta() throws Exception {
+        when(reservaClaseService.reservar(eq(10L)))
+                .thenThrow(new ClaseCompletaException("No hay cupo disponible en la clase"));
+
+        mockMvc.perform(post("/v1/clases/10/reservas"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo", is("CLASE_COMPLETA")));
+    }
+
+    @Test
+    @DisplayName("POST /v1/clases/{id}/reservas responde 409 CONFLICTO cuando el socio ya tiene reserva confirmada")
+    void reservar_duplicada_retorna409() throws Exception {
+        when(reservaClaseService.reservar(eq(10L)))
+                .thenThrow(new ConflictoException("El socio ya posee una reserva confirmada"));
+
+        mockMvc.perform(post("/v1/clases/10/reservas"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo", is("CONFLICTO")));
+    }
+
+    @Test
+    @DisplayName("GET /v1/clases/{id}/reservas responde 200 OK con los socios inscriptos")
+    void listarInscriptos_retorna200() throws Exception {
+        InscriptoResponse inscripto = new InscriptoResponse(5L, 1L, "Juan", "Perez", EstadoReservaClase.CONFIRMADA);
+
+        when(reservaClaseService.listarInscriptos(10L)).thenReturn(List.of(inscripto));
+
+        mockMvc.perform(get("/v1/clases/10/reservas"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].idReservaClase", is(5)))
+                .andExpect(jsonPath("$[0].nombre", is("Juan")))
+                .andExpect(jsonPath("$[0].apellido", is("Perez")));
+    }
+
+    @Test
+    @DisplayName("POST /v1/clases/{id}/lista-espera responde 201 Created cuando se anota exitosamente")
+    void anotarseEnListaEspera_retorna201() throws Exception {
+        com.fitzone.modulo.clases.models.ListaEspera espera = com.fitzone.modulo.clases.models.ListaEspera.builder()
+                .idEspera(8L)
+                .ordenPosicion(1)
+                .build();
+
+        when(listaEsperaService.anotarse(eq(10L))).thenReturn(espera);
+
+        mockMvc.perform(post("/v1/clases/10/lista-espera"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.idEspera", is(8)))
+                .andExpect(jsonPath("$.ordenPosicion", is(1)));
+    }
+
+    @Test
+    @DisplayName("GET /v1/clases/{id}/lista-espera responde 200 OK con la cola ordenada")
+    void listarListaEspera_retorna200() throws Exception {
+        com.fitzone.modulo.clases.models.ListaEspera espera = com.fitzone.modulo.clases.models.ListaEspera.builder()
+                .idEspera(8L)
+                .ordenPosicion(1)
+                .build();
+
+        when(listaEsperaService.listarPorClase(10L)).thenReturn(List.of(espera));
+
+        mockMvc.perform(get("/v1/clases/10/lista-espera"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].idEspera", is(8)))
+                .andExpect(jsonPath("$[0].ordenPosicion", is(1)));
+    }
+}

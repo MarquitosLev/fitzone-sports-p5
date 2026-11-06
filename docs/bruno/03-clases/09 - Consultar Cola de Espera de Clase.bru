@@ -1,0 +1,21 @@
+meta {
+  name: 09 - Consultar Cola de Espera de Clase
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/v1/clases/{{idClaseCompleta}}/lista-espera
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenRecepcion}}
+}
+
+tests {
+  test("responde 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

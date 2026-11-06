@@ -1,0 +1,18 @@
+meta {
+  name: 08 - Registrar Ingreso por QR
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/v1/accesos/ingreso
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "tokenQr": "eyJ1c3VhcmlvSWQiOjF9...",
+    "idSede": 1
+  }
+}

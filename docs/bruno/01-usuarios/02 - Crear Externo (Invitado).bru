@@ -1,0 +1,22 @@
+meta {
+  name: 02 - Crear Externo (Invitado)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/usuarios
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "dni": "30999888",
+    "nombre": "Carlos",
+    "apellido": "Invitado",
+    "email": "carlos.externo@gmail.com",
+    "telefono": "+5491188887777",
+    "tipoUsuario": "EXTERNO"
+  }
+}

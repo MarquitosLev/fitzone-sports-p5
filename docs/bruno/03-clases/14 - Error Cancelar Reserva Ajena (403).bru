@@ -1,0 +1,25 @@
+meta {
+  name: 14 - Error Cancelar Reserva Ajena (403)
+  type: http
+  seq: 14
+}
+
+patch {
+  url: {{baseUrl}}/v1/reservas-clase/{{idReserva}}/cancelar
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenOtroSocio}}
+}
+
+tests {
+  test("responde 403", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+
+  test("usa el formato común de error", function () {
+    expect(res.getBody().codigo).to.equal("ACCESO_DENEGADO");
+  });
+}

@@ -1,0 +1,31 @@
+# 📚 Documentación Técnica y Guías del Proyecto FitZone Sports
+
+Esta carpeta contiene la documentación viva, las especificaciones de arquitectura y las directivas de trabajo del proyecto **FitZone Sports (P5 Grupo 5)**.
+
+---
+
+## 📑 Índice de Documentos
+
+1. **[AI_DEVELOPMENT_GUIDE.md](./AI_DEVELOPMENT_GUIDE.md)**  
+   **Guía Maestra y Contexto de Entrenamiento para IA:**  
+   Contiene el protocolo obligatorio de trabajo para asistentes de IA (pensar y armar planes antes de desarrollar, no inventar requisitos, política estricta de git), resumen exhaustivo de los 5 módulos del monolito modular, convenciones de código (Java 21, Spring Boot, PostgreSQL, React 19), arquitectura de roles con Supabase Auth y reglas de negocio críticas.
+
+2. **[Documentación de Infraestructura y Despliegue](../../Documentaciones/documentacion_completa_deploy_develop.md)**  
+   Guía de despliegue continuo en Vercel (Frontend), Render (Backend) y Supabase (PostgreSQL).
+
+3. **[Guía de Supabase Auth y Roles](../../Documentaciones/guia_supabase_auth_roles.md)**  
+   Manual paso a paso para la configuración del JWKS, API de login y consumo de endpoints con JWT.
+
+4. **[GUIA_SUPABASE_USUARIOS.md](./GUIA_SUPABASE_USUARIOS.md)**  
+   Tutorial práctico para la gestión de usuarios con Supabase Auth: obtención de service-role key, variables de entorno, flag `alta-por-email`, URLs de redirección, plantillas de correo, semilla del primer gerente y solución de problemas comunes.
+
+5. **[Colección de Bruno para Pruebas de API](./bruno/README.md)**  
+   Colección organizada por módulos (`01-usuarios/`, `02-canchas/`, etc.) y entornos (`local`, `dev`) para probar todos los endpoints REST directamente desde la aplicación Bruno.
+
+6. **[DER.md](./DER.md)**  
+   Diagrama entidad-relación de la base, con las claves foráneas y restricciones CHECK, y el [script para bases ya creadas](./sql/SCRUM-93-restricciones.sql).
+
+7. **[Kit de QA y desarrollo](./KIT_QA_DESARROLLO.md)**  
+   Guía interna del equipo: qué contiene el kit, cómo usar las [historias de usuario para QA](./HISTORIAS_DE_USUARIO.md) y el [backlog técnico](./BACKLOG_DESARROLLO.md).
+
+

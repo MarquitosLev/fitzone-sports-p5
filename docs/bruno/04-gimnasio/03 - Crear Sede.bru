@@ -1,0 +1,18 @@
+meta {
+  name: 03 - Crear Sede
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/sedes
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "nombre": "Sede Norte",
+    "aforoMaximo": 120
+  }
+}

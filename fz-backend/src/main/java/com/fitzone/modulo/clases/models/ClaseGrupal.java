@@ -1,0 +1,93 @@
+package com.fitzone.modulo.clases.models;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fitzone.core.domain.common.BaseEntity;
+import com.fitzone.modulo.gimnasio.models.Sede;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "fz_cls_clases_grupales")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ClaseGrupal extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_clase", nullable = false)
+    private Long idClase;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_sede", nullable = false, foreignKey = @ForeignKey(name = "fk_cls_clases_sedes"))
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) 
+    private Sede sede;
+
+    @NotBlank(message = "El nombre de la actividad es obligatorio")
+    @Column(name = "nombre_actividad", nullable = false, length = 100)
+    private String nombreActividad;
+
+    @NotNull(message = "La fecha y hora de inicio es obligatoria")
+    @Column(name = "fecha_hora_inicio", nullable = false)
+    private LocalDateTime fechaHoraInicio;
+
+    @NotNull(message = "La duración en minutos es obligatoria")
+    @Positive(message = "La duración en minutos debe ser mayor a 0")
+    @Column(name = "duracion_minutos", nullable = false)
+    private Integer duracionMinutos;
+
+    @NotNull(message = "El cupo máximo es obligatorio")
+    @Positive(message = "El cupo máximo debe ser mayor a 0")
+    @Column(name = "cupo_maximo", nullable = false)
+    private Integer cupoMaximo;
+
+    @Column(name = "cupo_disponible", nullable = false)
+    private Integer cupoDisponible;
+
+    // Estado del socio logueado sobre la clase: no se persiste y solo viaja cuando el servicio lo completa
+    // al armar la agenda. Sin NON_NULL, una reserva traería su clase con yaReservada=false.
+    @Transient
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Boolean yaReservada;
+
+    @Transient
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Integer posicionEspera;
+
+    @JsonProperty("idSede")
+    public void setIdSede(Long idSede) {
+        if (idSede != null) {
+            if (this.sede == null) {
+                this.sede = Sede.builder().idSede(idSede).build();
+            } else {
+                this.sede.setIdSede(idSede);
+            }
+        }
+    }
+}

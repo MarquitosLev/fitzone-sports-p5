@@ -1,0 +1,200 @@
+package com.fitzone.modulo.usuarios.controller;
+
+import com.fitzone.core.domain.enums.TipoUsuario;
+import com.fitzone.core.exception.AccesoDenegadoException;
+import com.fitzone.core.security.UsuarioActual;
+import com.fitzone.modulo.gimnasio.models.QrTokenResponse;
+import com.fitzone.modulo.gimnasio.service.AccesoService;
+import com.fitzone.modulo.canchas.models.ReservaCancha;
+import com.fitzone.modulo.canchas.service.CanchaService;
+import com.fitzone.modulo.usuarios.models.Membresia;
+import com.fitzone.modulo.usuarios.models.Usuario;
+import com.fitzone.modulo.usuarios.service.MembresiaService;
+import com.fitzone.modulo.usuarios.service.UsuarioService;
+import com.fitzone.modulo.pagos.models.Transaccion;
+import com.fitzone.modulo.pagos.service.PagoService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/usuarios")
+@RequiredArgsConstructor
+@Tag(name = "Usuarios", description = "Endpoints de registro, perfil, búsqueda y edición de usuarios")
+public class UsuarioController {
+
+    private final UsuarioService usuarioService;
+    private final MembresiaService membresiaService;
+    private final AccesoService accesoService;
+    private final CanchaService canchaService;
+    private final com.fitzone.modulo.clases.service.ReservaClaseService reservaClaseService;
+    private final com.fitzone.modulo.clases.service.ListaEsperaService listaEsperaService;
+    private final PagoService pagoService;
+    private final UsuarioActual usuarioActual;
+
+    @GetMapping("/me")
+    @Operation(summary = "Obtiene el perfil del usuario autenticado a partir del token JWT")
+    public Usuario obtenerMiPerfil() {
+        return usuarioActual.obtener();
+    }
+
+    @GetMapping("/me/reservas-clase")
+    @PreAuthorize("hasRole('SOCIO')")
+    @Operation(summary = "Obtiene las reservas de clases grupales del socio logueado")
+    public List<com.fitzone.modulo.clases.models.ReservaClase> obtenerMisReservasClase() {
+        return reservaClaseService.listarMias();
+    }
+
+    @GetMapping("/me/lista-espera")
+    @PreAuthorize("hasRole('SOCIO')")
+    @Operation(summary = "Obtiene las listas de espera en las que está anotado el socio logueado")
+    public List<com.fitzone.modulo.clases.models.ListaEspera> obtenerMisListasEspera() {
+        return listaEsperaService.listarMias();
+    }
+
+    @GetMapping("/me/reservas-cancha")
+    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
+    @Operation(summary = "Obtiene las reservas de cancha del usuario logueado, con la cancha y su sede")
+    public List<ReservaCancha> obtenerMisReservasCancha() {
+        return canchaService.listarMias();
+    }
+
+    @GetMapping("/me/pagos")
+    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
+    @Operation(summary = "Historial de pagos del usuario logueado, con el plan o la cancha de cada uno")
+    public List<Transaccion> obtenerMisPagos() {
+        return pagoService.listarMios();
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")
+    @Operation(summary = "Alta de un nuevo usuario (socio, externo, recepcionista o gerente)")
+    public Usuario crear(
+            @Valid @RequestBody Usuario usuario,
+            @AuthenticationPrincipal Jwt jwt) {
+        return usuarioService.crear(usuario, obtenerIdOperador(jwt));
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Detalle del perfil de un usuario por su ID interno")
+    public Usuario obtenerPorId(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        validarAccesoUsuario(id, jwt);
+        return usuarioService.obtenerPorId(id);
+    }
+
+    @GetMapping("/{id}/membresia")
+    @Operation(summary = "Obtiene la membresía vigente (activa o suspendida) de un usuario")
+    public Membresia obtenerMembresiaVigente(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        validarAccesoUsuario(id, jwt);
+        return membresiaService.obtenerVigentePorUsuario(id);
+    }
+
+    @GetMapping("/me/qr")
+    @PreAuthorize("hasRole('SOCIO')")
+    @Operation(summary = "Genera y obtiene el token QR dinámico vigente del socio autenticado en sesión (SCRUM-96)")
+    public QrTokenResponse obtenerMiQr(
+            @RequestHeader(value = "X-Usuario-Id", required = false) @Positive Long headerUsuarioId,
+            @RequestParam(value = "idUsuario", required = false) @Positive Long paramUsuarioId) {
+        Long fallbackId = headerUsuarioId != null ? headerUsuarioId : paramUsuarioId;
+        return accesoService.generarMiQr(fallbackId);
+    }
+
+    @GetMapping("/{id}/qr")
+    @Operation(summary = "Genera y obtiene el token QR dinámico vigente de un socio con los segundos restantes")
+    public QrTokenResponse obtenerQr(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        validarAccesoUsuario(id, jwt);
+        return accesoService.generarQr(id);
+    }
+
+    @GetMapping("/{id}/reservas-clase")
+    @Operation(summary = "Obtiene las reservas de clases grupales de un socio")
+    public List<com.fitzone.modulo.clases.models.ReservaClase> obtenerMisReservas(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        validarAccesoUsuario(id, jwt);
+        return reservaClaseService.listarPorUsuario(id);
+    }
+
+    @GetMapping("/{id}/reservas-cancha")
+    @Operation(summary = "Obtiene el listado de reservas de cancha realizadas por el usuario")
+    public List<ReservaCancha> listarReservasCancha(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        validarAccesoUsuario(id, jwt);
+        return canchaService.listarReservasPorUsuario(id);
+    }
+
+    @GetMapping("/{id}/pagos")
+    @Operation(summary = "Obtiene el historial de transacciones de pago de un usuario")
+    public List<Transaccion> listarPagos(
+            @PathVariable @Positive Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+        validarAccesoUsuario(id, jwt);
+        return pagoService.listarPorUsuario(id);
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")
+    @Operation(summary = "Búsqueda y listado de usuarios con filtros opcionales por DNI, tipo y/o sede")
+    public List<Usuario> buscar(
+            @Parameter(description = "DNI para filtrar usuarios de forma exacta") @RequestParam(required = false) String dni,
+            @Parameter(description = "Tipo de usuario (SOCIO, EXTERNO, RECEPCIONISTA, GERENTE)") @RequestParam(required = false) TipoUsuario tipo,
+            @Parameter(description = "ID de sede para filtrar usuarios") @RequestParam(required = false) @Positive Long idSede) {
+        return usuarioService.buscar(dni, tipo, idSede);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")
+    @Operation(summary = "Edición de datos de perfil de un usuario")
+    public Usuario actualizar(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody Usuario usuario,
+            @AuthenticationPrincipal Jwt jwt) {
+        return usuarioService.actualizar(id, usuario, obtenerIdOperador(jwt));
+    }
+
+    private Long obtenerIdOperador(Jwt jwt) {
+        if (jwt == null || jwt.getSubject() == null) {
+            return null;
+        }
+        return usuarioActual.obtener().getIdUsuario();
+    }
+
+    private void validarAccesoUsuario(Long idObjetivo, Jwt jwt) {
+        if (jwt == null || jwt.getSubject() == null) {
+            return;
+        }
+        Usuario solicitante = usuarioActual.obtener();
+        boolean esPersonal = solicitante.getTipoUsuario() == TipoUsuario.RECEPCIONISTA
+                || solicitante.getTipoUsuario() == TipoUsuario.GERENTE;
+        if (!esPersonal && !idObjetivo.equals(solicitante.getIdUsuario())) {
+            throw new AccesoDenegadoException("No tiene permisos para acceder a los recursos de otro usuario");
+        }
+    }
+}

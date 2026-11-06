@@ -1,0 +1,105 @@
+package com.fitzone.modulo.canchas.controller;
+
+import com.fitzone.modulo.canchas.dto.CotizacionDTO;
+import com.fitzone.modulo.canchas.models.Cancha;
+import com.fitzone.modulo.canchas.models.FranjaDisponibilidad;
+import com.fitzone.modulo.canchas.models.ReservaCancha;
+import com.fitzone.modulo.canchas.service.CanchaService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/canchas")
+@RequiredArgsConstructor
+@Tag(name = "Canchas", description = "Endpoints de gestión de canchas y mantenimiento")
+public class CanchaController {
+
+    private final CanchaService canchaService;
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('GERENTE')")
+    @Operation(summary = "Alta de una nueva cancha")
+    public Cancha crear(@Valid @RequestBody Cancha cancha) {
+        return canchaService.crear(cancha);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('GERENTE')")
+    @Operation(summary = "Edición de una cancha")
+    public Cancha actualizar(@PathVariable @Positive Long id, @Valid @RequestBody Cancha cancha) {
+        return canchaService.actualizar(id, cancha);
+    }
+
+    @GetMapping
+    @Operation(summary = "Listado de canchas de la sede (aislamiento por sede)")
+    public List<Cancha> listar(
+            @RequestParam @NotNull(message = "El idSede es obligatorio") @Positive Long idSede,
+            @RequestParam(required = false) String tipo) {
+        return canchaService.listar(idSede, tipo);
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Detalle de una cancha por ID")
+    public Cancha obtenerPorId(@PathVariable @Positive Long id) {
+        return canchaService.obtenerPorId(id);
+    }
+
+    @PatchMapping("/{id}/mantenimiento")
+    @PreAuthorize("hasRole('GERENTE')")
+    @Operation(summary = "Inhabilitar o habilitar una cancha por mantenimiento")
+    public Cancha cambiarMantenimiento(@PathVariable @Positive Long id, @RequestBody Map<String, Boolean> body) {
+        boolean enMantenimiento = body.getOrDefault("enMantenimiento", false);
+        return canchaService.cambiarMantenimiento(id, enMantenimiento);
+    }
+
+    @GetMapping("/{id}/cotizacion")
+    @Operation(summary = "Cotización y desglose dinámico del precio de un turno",
+            description = "Pública. Si se envía el token de un socio con membresía vigente, aplica el 15% de descuento.")
+    public CotizacionDTO cotizar(
+            @PathVariable @Positive Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fin) {
+        return canchaService.cotizar(id, inicio, fin);
+    }
+
+    @GetMapping("/{id}/disponibilidad")
+    @Operation(summary = "Grilla de disponibilidad horaria de una cancha para una fecha dada")
+    public List<FranjaDisponibilidad> obtenerDisponibilidad(
+            @PathVariable @Positive Long id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        return canchaService.obtenerDisponibilidad(id, fecha);
+    }
+
+    @PostMapping("/{id}/reservas")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
+    @Operation(summary = "Reserva de un turno en una cancha a nombre del usuario logueado")
+    public ReservaCancha reservar(
+            @PathVariable @Positive Long id,
+            @Valid @RequestBody ReservaCancha reserva) {
+        return canchaService.reservar(id, reserva);
+    }
+}
