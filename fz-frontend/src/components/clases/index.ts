@@ -11,3 +11,4 @@ export { CupoIndicator } from './CupoIndicator';
 export { ClaseCard } from './ClaseCard';
 export { ReservaClaseItem } from './ReservaClaseItem';
 export { PosicionEsperaBadge } from './PosicionEsperaBadge';
+export { InscriptosClase } from './InscriptosClase';
