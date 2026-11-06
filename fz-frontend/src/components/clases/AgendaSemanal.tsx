@@ -1,4 +1,4 @@
-import { Clock, Trash2, CalendarDays } from 'lucide-react';
+import { Clock, Trash2, CalendarDays, Users } from 'lucide-react';
 import type { ClaseGrupalDTO } from '../../types';
 import { CupoIndicator } from './CupoIndicator';
 import { parseLocalDateTime } from '../../utils/formatters';
@@ -7,6 +7,8 @@ interface AgendaSemanalProps {
   clases: ClaseGrupalDTO[];
   onEdit?: (clase: ClaseGrupalDTO) => void;
   onDelete?: (clase: ClaseGrupalDTO) => void;
+  /** Abre el detalle de inscriptos y lista de espera (GERENTE y RECEPCIONISTA). */
+  onVerInscriptos?: (clase: ClaseGrupalDTO) => void;
 }
 
 // Helper to get day name (Monday...Sunday) from ISO date string in local timezone
@@ -15,7 +17,10 @@ const getDayName = (iso: string) => {
   return date.toLocaleDateString('es-AR', { weekday: 'long' });
 };
 
-export function AgendaSemanal({ clases, onEdit, onDelete }: AgendaSemanalProps) {
+export function AgendaSemanal({ clases, onEdit, onDelete, onVerInscriptos }: AgendaSemanalProps) {
+  // Sin permiso de edición (recepcionista), el click en la tarjeta abre los inscriptos
+  const onClickTarjeta = onEdit ?? onVerInscriptos;
+
   // Group classes by day of week
   const days: Record<string, ClaseGrupalDTO[]> = {};
   clases.forEach((c) => {
@@ -80,7 +85,7 @@ export function AgendaSemanal({ clases, onEdit, onDelete }: AgendaSemanalProps) 
                   <div
                     key={c.idClase}
                     className="group relative bg-white border border-slate-200/90 hover:border-[#1B2A55] rounded-xl p-3 shadow-xs hover:shadow-card-hover transition-all duration-200 cursor-pointer flex flex-col justify-between"
-                    onClick={() => onEdit?.(c)}
+                    onClick={() => onClickTarjeta?.(c)}
                     data-testid={`clase-card-${c.idClase}`}
                   >
                     <div>
@@ -92,11 +97,28 @@ export function AgendaSemanal({ clases, onEdit, onDelete }: AgendaSemanalProps) 
                         >
                           {c.nombreActividad}
                         </h4>
+                        <div className="flex items-center gap-0.5 -mr-1 -mt-1 shrink-0">
+                        {onVerInscriptos && (
+                          <button
+                            type="button"
+                            title="Ver inscriptos y lista de espera"
+                            aria-label={`Ver inscriptos de ${c.nombreActividad}`}
+                            className="text-slate-300 hover:text-[#1B2A55] p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onVerInscriptos(c);
+                            }}
+                            data-testid={`btn-inscriptos-clase-${c.idClase}`}
+                          >
+                            <Users className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         {onDelete && (
                           <button
                             type="button"
                             title="Eliminar clase"
-                            className="text-slate-300 hover:text-[#E5484D] p-1 -mr-1 -mt-1 rounded-lg hover:bg-red-50 transition-colors"
+                            aria-label={`Eliminar ${c.nombreActividad}`}
+                            className="text-slate-300 hover:text-[#E5484D] p-1 rounded-lg hover:bg-red-50 transition-colors"
                             onClick={(e) => {
                               e.stopPropagation();
                               onDelete(c);
@@ -106,6 +128,7 @@ export function AgendaSemanal({ clases, onEdit, onDelete }: AgendaSemanalProps) 
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
+                        </div>
                       </div>
 
                       {/* Time and Duration Badge */}

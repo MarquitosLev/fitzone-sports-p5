@@ -53,5 +53,3 @@ export type { EmptyStateProps } from './EmptyState';
 export { StatCard } from './StatCard';
 export type { StatCardProps, StatCardColor, StatCardChangeType } from './StatCard';
 
-export { QRCodePass } from './QRCodePass';
-export type { QRCodePassProps, QRCodeUser } from './QRCodePass';

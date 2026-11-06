@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { RegistroForm } from '../components/auth';
+import { INICIO_POR_ROL } from '../components/layout/navegacion';
 import type { RegistroUsuarioDTO } from '../types';
 
 /**
@@ -18,7 +19,7 @@ export function RegistroPage() {
   // Si el usuario ya está autenticado, lo redirige automáticamente a su rol
   useEffect(() => {
     if (isAuthenticated && usuario) {
-      navigate(`/rol/${usuario.tipoUsuario.toLowerCase()}`, { replace: true });
+      navigate(INICIO_POR_ROL[usuario.tipoUsuario], { replace: true });
     }
   }, [isAuthenticated, usuario, navigate]);
 
@@ -27,7 +28,7 @@ export function RegistroPage() {
     setErrorMessage(null);
     try {
       const res = await register(datos);
-      navigate(`/rol/${res.usuario.tipoUsuario.toLowerCase()}`, { replace: true });
+      navigate(INICIO_POR_ROL[res.usuario.tipoUsuario], { replace: true });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al registrar el usuario';
       setErrorMessage(msg);

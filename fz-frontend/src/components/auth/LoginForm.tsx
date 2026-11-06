@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import { TextField, Button, Alert } from '../ui';
-import { TipoUsuarioBadge } from '../usuarios';
-import type { LoginCredentialsDTO, TipoUsuario } from '../../types';
+import type { LoginCredentialsDTO } from '../../types';
 
 export interface LoginFormProps {
   /** Callback invocado al enviar las credenciales validadas */
@@ -15,20 +14,7 @@ export interface LoginFormProps {
   onForgotPassword?: () => void;
   /** Callback para navegar hacia la vista de registro */
   onNavigateToRegister?: () => void;
-  /** Si debe mostrar la barra de autocompletado rápido por rol (desarrollo/mock) */
-  showQuickRoles?: boolean;
 }
-
-const QUICK_ROLES: Array<{
-  tipo: TipoUsuario;
-  label: string;
-  email: string;
-  password: string;
-}> = [
-  { tipo: 'SOCIO', label: 'Socio', email: 'socio@fitzone.com', password: 'password123' },
-  { tipo: 'RECEPCIONISTA', label: 'Recepcionista', email: 'recepcionista@fitzone.com', password: 'password123' },
-  { tipo: 'GERENTE', label: 'Gerente', email: 'gerente@fitzone.com', password: 'password123' },
-];
 
 /**
  * Formulario reutilizable de inicio de sesión (SCRUM-89).
@@ -40,7 +26,6 @@ export function LoginForm({
   errorMessage = null,
   onForgotPassword,
   onNavigateToRegister,
-  showQuickRoles = true,
 }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -73,12 +58,6 @@ export function LoginForm({
     });
   };
 
-  const handleQuickFill = (targetEmail: string, targetPass: string) => {
-    setEmail(targetEmail);
-    setPassword(targetPass);
-    setErrors({});
-  };
-
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5 w-full">
       {/* Banner de error si la autenticación falló */}
@@ -89,27 +68,6 @@ export function LoginForm({
           message={errorMessage}
           className="mb-2"
         />
-      )}
-
-      {/* Barra de autocompletado rápido por rol (Modo Mock / Dev) */}
-      {showQuickRoles && (
-        <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 space-y-2">
-          <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-            Acceso rápido de prueba por rol
-          </span>
-          <div className="grid grid-cols-3 gap-2">
-            {QUICK_ROLES.map((item) => (
-              <button
-                key={item.tipo}
-                type="button"
-                onClick={() => handleQuickFill(item.email, item.password)}
-                className="flex items-center justify-center p-2 rounded-xl bg-white border border-slate-200 hover:border-fitzone-navy hover:bg-slate-100/70 transition-all text-center cursor-pointer group"
-              >
-                <TipoUsuarioBadge tipo={item.tipo} size="xs" />
-              </button>
-            ))}
-          </div>
-        </div>
       )}
 
       {/* Campo: Correo Electrónico */}

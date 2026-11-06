@@ -3,8 +3,8 @@
  *
  * Muestra:
  * - Precio base de la cancha.
- * - Recargo por horario pico (+20%, 19:00 a 21:00 hs).
- * - Descuento por socio activo (-15%).
+ * - Recargo por horario pico, si la cotización lo trae.
+ * - Descuento de socio, si la cotización lo trae.
  * - Total a pagar con monto original tachado si aplica descuento.
  *
  * Reutilizable tanto en la pantalla de reserva de turno como en el checkout de pago (M5).
@@ -38,9 +38,9 @@ export function DesglosePrecio({
   precioBase: propPrecioBase,
   esPico: propEsPico,
   recargoPico: propRecargoPico,
-  porcentajeRecargoPico: propPorcentajeRecargoPico = 20,
+  porcentajeRecargoPico: propPorcentajeRecargoPico,
   descuentoSocio: propDescuentoSocio,
-  porcentajeDescuentoSocio: propPorcentajeDescuentoSocio = 15,
+  porcentajeDescuentoSocio: propPorcentajeDescuentoSocio,
   esSocio: propEsSocio,
   total: propTotal,
   variant = 'card',
@@ -51,17 +51,15 @@ export function DesglosePrecio({
   // Unifica valores desde cotizacion o props
   const precioBase = cotizacion?.precioBase ?? propPrecioBase ?? 0;
   const esPico = cotizacion?.esPico ?? propEsPico ?? false;
-  const recargoPico =
-    cotizacion?.recargoPico ??
-    propRecargoPico ??
-    (esPico ? Math.round(precioBase * (propPorcentajeRecargoPico / 100)) : 0);
+  // Los montos vienen de la cotización del backend; este componente no calcula precios
+  const recargoPico = cotizacion?.recargoPico ?? propRecargoPico ?? 0;
+  const porcentajeRecargo = cotizacion?.porcentajeRecargoPico ?? propPorcentajeRecargoPico ?? 0;
   const esSocio = cotizacion?.esSocio ?? propEsSocio ?? false;
 
   const subtotal = precioBase + recargoPico;
-  const descuentoSocio =
-    cotizacion?.descuentoSocio ??
-    propDescuentoSocio ??
-    (esSocio ? Math.round(subtotal * (propPorcentajeDescuentoSocio / 100)) : 0);
+  const descuentoSocio = cotizacion?.descuentoSocio ?? propDescuentoSocio ?? 0;
+  const porcentajeDescuento =
+    cotizacion?.porcentajeDescuentoSocio ?? propPorcentajeDescuentoSocio ?? 0;
 
   const total = cotizacion?.total ?? propTotal ?? subtotal - descuentoSocio;
 
@@ -99,11 +97,11 @@ export function DesglosePrecio({
           </span>
         </div>
 
-        {/* Recargo franja pico (+20%) */}
+        {/* Recargo franja pico */}
         {esPico && recargoPico > 0 && (
           <div className="flex items-center justify-between text-slate-700">
             <span className="flex items-center gap-1.5 font-medium text-fitzone-coral">
-              <span>Horario pico (19 a 21 hs) · +{propPorcentajeRecargoPico}%</span>
+              <span>Recargo horario pico{porcentajeRecargo > 0 ? ` · +${porcentajeRecargo}%` : ''}</span>
             </span>
             <span className="font-extrabold text-fitzone-coral font-outfit">
               {`+${formatearMonto(recargoPico)}`}
@@ -111,11 +109,11 @@ export function DesglosePrecio({
           </div>
         )}
 
-        {/* Descuento Socio Activo (-15%) */}
+        {/* Descuento socio */}
         {esSocio && descuentoSocio > 0 && (
           <div className="flex items-center justify-between text-[#2E9E5B] font-bold">
             <span className="flex items-center gap-1.5">
-              <span>Descuento socio activo · −{propPorcentajeDescuentoSocio}%</span>
+              <span>Descuento socio{porcentajeDescuento > 0 ? ` · −${porcentajeDescuento}%` : ''}</span>
             </span>
             <span className="font-black font-outfit">
               {`−${formatearMonto(descuentoSocio)}`}
@@ -144,9 +142,9 @@ export function DesglosePrecio({
         <div className="pt-2 text-[11px] text-slate-500 leading-relaxed flex items-start gap-1.5">
           <Info className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
           <span>
-            {esSocio
-              ? `El beneficio del 15% para socios se aplica sobre la tarifa calculada (${formatearMonto(subtotal)}).`
-              : 'Socios con cuota al día obtienen 15% de descuento adicional en todas las reservas.'}
+            {esSocio && descuentoSocio > 0
+              ? `El descuento de socio se aplica sobre la tarifa calculada (${formatearMonto(subtotal)}).`
+              : 'Los socios con la membresía vigente tienen descuento en las reservas.'}
           </span>
         </div>
       )}

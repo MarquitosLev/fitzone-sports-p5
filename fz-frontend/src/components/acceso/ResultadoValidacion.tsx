@@ -27,12 +27,12 @@ const DICCIONARIO_MOTIVOS: Record<MotivoRechazoAcceso, DetalleMotivo> = {
     sugerencia: 'Debe regularizar su cuota mensual en recepción antes de ingresar.',
   },
   YA_INGRESADO: {
-    titulo: 'Ingreso Previo Activo (RN-01)',
+    titulo: 'Ingreso Previo Activo',
     descripcion: 'Ya figura un ingreso registrado sin egreso para este usuario en las instalaciones.',
     sugerencia: 'Verificá si el socio olvidó registrar su salida del club o si prestó su pase.',
   },
   AFORO_COMPLETO: {
-    titulo: 'Aforo Completo en Sede (RF-05)',
+    titulo: 'Aforo Completo en Sede',
     descripcion: 'La sede ha alcanzado la capacidad máxima de personas autorizada por normativa.',
     sugerencia: 'El socio debe aguardar a que se registren egresos para habilitar su acceso.',
   },

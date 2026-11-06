@@ -40,7 +40,7 @@ describe('SCRUM-89: LoginPage Component & Role Redirection', () => {
     expect(screen.getByText('Recuperación de Contraseña')).toBeInTheDocument();
   });
 
-  it('autentica como SOCIO y redirige inmediatamente a /rol/socio (conexión SCRUM-90)', async () => {
+  it('autentica como SOCIO y redirige inmediatamente a /mi-qr', async () => {
     render(
       <MemoryRouter initialEntries={['/login']}>
         <AuthProvider>
@@ -49,16 +49,16 @@ describe('SCRUM-89: LoginPage Component & Role Redirection', () => {
       </MemoryRouter>
     );
 
-    // Click en chip de acceso rápido de SOCIO
-    fireEvent.click(screen.getByRole('button', { name: /socio/i }));
+    fireEvent.change(screen.getByLabelText(/correo electrónico/i), { target: { value: 'socio@fitzone.com' } });
+    fireEvent.change(screen.getByLabelText(/^contraseña/i), { target: { value: 'password123' } });
     fireEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/rol/socio', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/mi-qr', { replace: true });
     });
   });
 
-  it('autentica como GERENTE y redirige a /rol/gerente (conexión SCRUM-90)', async () => {
+  it('autentica como GERENTE y redirige a /acceso', async () => {
     render(
       <MemoryRouter initialEntries={['/login']}>
         <AuthProvider>
@@ -67,12 +67,12 @@ describe('SCRUM-89: LoginPage Component & Role Redirection', () => {
       </MemoryRouter>
     );
 
-    // Click en chip de acceso rápido de GERENTE
-    fireEvent.click(screen.getByRole('button', { name: /gerente/i }));
+    fireEvent.change(screen.getByLabelText(/correo electrónico/i), { target: { value: 'gerente@fitzone.com' } });
+    fireEvent.change(screen.getByLabelText(/^contraseña/i), { target: { value: 'password123' } });
     fireEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/rol/gerente', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/acceso', { replace: true });
     });
   });
 

@@ -5,7 +5,10 @@ import { CanchasPage } from './CanchasPage';
 import { SedeProvider } from '../context/SedeContext';
 import { ToastProvider } from '../context/ToastContext';
 import * as canchasService from '../services/canchasService';
-import type { CanchaDTO, SedeDTO, FranjaHorariaDTO, ReservaCanchaDTO } from '../types';
+import * as pagosService from '../services/pagosService';
+import { AuthContext } from '../context/AuthContext';
+import type { AuthContextType } from '../context/AuthContext';
+import type { CanchaDTO, SedeDTO, FranjaHorariaDTO, ReservaCanchaDTO, TransaccionDTO, UsuarioDTO } from '../types';
 
 const mockSede: SedeDTO = {
   idSede: 1,
@@ -76,8 +79,32 @@ const mockReservas: ReservaCanchaDTO[] = [
   },
 ];
 
-function renderWithProviders(ui: React.ReactElement) {
-  return render(
+const socio: UsuarioDTO = {
+  idUsuario: 2,
+  authId: 'auth-2',
+  dni: '30000000',
+  nombre: 'Socio',
+  apellido: 'Prueba',
+  email: 'socio@fitzone.com',
+  telefono: '1100000000',
+  fotoUrl: null,
+  tipoUsuario: 'SOCIO',
+  idSede: null,
+};
+
+const sesionSocio: AuthContextType = {
+  usuario: socio,
+  token: 'token',
+  isAuthenticated: true,
+  isLoading: false,
+  login: async () => ({ token: 'token', usuario: socio }),
+  register: async () => ({ token: 'token', usuario: socio }),
+  logout: () => {},
+};
+
+/** Reservar exige la sesión de un socio o externo: el turno queda a su nombre. */
+function renderWithProviders(ui: React.ReactElement, conSesionSocio = false) {
+  const pagina = (
     <MemoryRouter>
       <ToastProvider>
         <SedeProvider sedes={[mockSede]} sedeInicial={mockSede}>
@@ -85,6 +112,9 @@ function renderWithProviders(ui: React.ReactElement) {
         </SedeProvider>
       </ToastProvider>
     </MemoryRouter>
+  );
+  return render(
+    conSesionSocio ? <AuthContext.Provider value={sesionSocio}>{pagina}</AuthContext.Provider> : pagina
   );
 }
 
@@ -101,7 +131,7 @@ describe('CanchasPage (Integración)', () => {
 
   // ── RF-10 / RF-11: Flujo de Reserva de Canchas ─────────────────────────────
   it('permite ver horarios libres, cotización con franja pico y descuento socio, y abrir confirmación', async () => {
-    renderWithProviders(<CanchasPage initialTab="reservar" fechaInicial="2026-10-25" />);
+    renderWithProviders(<CanchasPage initialTab="reservar" fechaInicial="2026-10-25" />, true);
 
     // Verificar que renderiza el encabezado de reserva
     expect(screen.getByText(/reserva de canchas deportivas/i)).toBeInTheDocument();
@@ -141,7 +171,7 @@ describe('CanchasPage (Integración)', () => {
       new Error('El horario ya fue tomado por otro usuario')
     );
 
-    renderWithProviders(<CanchasPage initialTab="reservar" fechaInicial="2026-10-25" />);
+    renderWithProviders(<CanchasPage initialTab="reservar" fechaInicial="2026-10-25" />, true);
 
     await waitFor(() => {
       expect(screen.getByText('18:00 – 19:00')).toBeInTheDocument();
@@ -211,8 +241,15 @@ describe('CanchasPage (Integración)', () => {
       ...mockReservas[0],
       idReservaCancha: 2040,
       estado: 'CONFIRMADA',
+      // Turno futuro: una reserva paga y ya jugada pasa a FINALIZADA
+      fechaHoraInicio: '2099-01-10T19:00:00',
+      fechaHoraFin: '2099-01-10T20:00:00',
     };
     vi.spyOn(canchasService, 'listarMisReservas').mockResolvedValueOnce([reservaConfirmada]);
+    // Está confirmada porque tiene un pago aprobado
+    vi.spyOn(pagosService, 'listarMisPagos').mockResolvedValueOnce([
+      { reservaCanchaId: 2040, estadoPago: 'CONFIRMADO' } as TransaccionDTO,
+    ]);
     const spyCancelar = vi.spyOn(canchasService, 'cancelarReserva').mockResolvedValueOnce({
       ...reservaConfirmada,
       estado: 'CANCELADA',

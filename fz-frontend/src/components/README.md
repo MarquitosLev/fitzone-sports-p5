@@ -24,7 +24,6 @@ Todos los componentes son **puramente presentacionales** (controlados al 100% po
 13. [`Spinner`](#13-spinner) — Indicador animado de carga asíncrona
 14. [`EmptyState`](#14-emptystate) — Vista de feedback para listas vacías
 15. [`StatCard`](#15-statcard) — Métrica visual o tarjeta de KPI
-16. [`QRCodePass`](#16-qrcodepass) — Pase de acceso digital con QR dinámico
 
 ---
 
@@ -377,15 +376,3 @@ Tarjeta de métricas clave (KPI) para paneles y dashboards (aforo, ingresos, res
   - `trendUp`: `boolean`.
   - `icon`: Componente icono.
   - `badge`: `string`.
-
----
-
-## 16. QRCodePass
-
-Componente para credencial deportiva digital con generación de QR en tiempo real, rotación de seguridad con temporizador (ciclos de 60 segundos) y modo degradado para socios vencidos u offline.
-
-- **Archivo:** [`QRCodePass.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/QRCodePass.jsx)
-- **Props:**
-  - `user`: `{ name: string, memberId: string, plan: string, validUntil: string }`.
-  - `sede`: `string`. Nombre de la sede operativa.
-  - `isExpired`: `boolean`. Si es `true`, bloquea el código visual y muestra alerta de regularización.

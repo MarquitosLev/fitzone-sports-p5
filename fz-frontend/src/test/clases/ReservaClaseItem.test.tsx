@@ -54,7 +54,7 @@ describe('ReservaClaseItem Component', () => {
     const btn = screen.getByRole('button', { name: /cancelar reserva de yoga flow/i });
     expect(btn).toBeInTheDocument();
     expect(btn).not.toBeDisabled();
-    expect(screen.queryByText(/cancelación disponible hasta 2 hs antes/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/se cancela hasta 2 hs antes/i)).not.toBeInTheDocument();
   });
 
   it('abre el ConfirmDialog al hacer click en Cancelar y dispara onCancelar al confirmar', () => {
@@ -87,7 +87,7 @@ describe('ReservaClaseItem Component', () => {
 
     const btn = screen.getByRole('button', { name: /cancelar reserva de yoga flow/i });
     expect(btn).toBeDisabled();
-    expect(screen.getByText(/cancelación disponible hasta 2 hs antes/i)).toBeInTheDocument();
+    expect(screen.getByText(/se cancela hasta 2 hs antes/i)).toBeInTheDocument();
   });
 
   it('no ofrece botón de cancelación y muestra "Sin acciones" si el estado es CANCELADA', () => {

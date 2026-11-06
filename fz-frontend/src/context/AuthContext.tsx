@@ -10,7 +10,10 @@ import {
   registrarUsuario,
   cerrarSesion,
   obtenerSesionActual,
+  obtenerUsuarioActual,
 } from '../services/authService';
+import { AppError } from '../services/httpClient';
+import { USE_MOCK } from '../config';
 
 export interface AuthContextType {
   usuario: UsuarioDTO | null;
@@ -29,25 +32,59 @@ export interface AuthProviderProps {
 }
 
 /**
- * Proveedor del contexto de autenticación (SCRUM-89).
+ * Proveedor del contexto de autenticación (SCRUM-89 / SCRUM-92).
  * Mantiene la sesión global del usuario y el token sincronizado.
+ *
+ * Al arrancar:
+ *   1. Restaura la sesión guardada en localStorage (para no parpadear).
+ *   2. Con la API real, confirma el usuario con `GET /v1/usuarios/me`.
+ *      Mientras tanto `isLoading` queda en true, así las rutas protegidas
+ *      esperan en vez de mostrar contenido con un token que podría estar vencido.
+ *   3. Si el backend responde 401, la sesión se descarta (el httpClient además
+ *      redirige a /login). Otros errores (red caída) conservan la sesión guardada.
  */
 export function AuthProvider({ children }: AuthProviderProps) {
   const [usuario, setUsuario] = useState<UsuarioDTO | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Inicializa la sesión almacenada en el arranque
+  // Inicializa la sesión almacenada en el arranque y la valida contra /v1/usuarios/me
   useEffect(() => {
-    try {
-      const sesion = obtenerSesionActual();
-      if (sesion) {
-        setUsuario(sesion.usuario);
-        setToken(sesion.token);
-      }
-    } finally {
+    let activo = true;
+    const sesion = obtenerSesionActual();
+
+    if (!sesion) {
       setIsLoading(false);
+      return;
     }
+
+    setUsuario(sesion.usuario);
+    setToken(sesion.token);
+
+    if (USE_MOCK) {
+      setIsLoading(false);
+      return;
+    }
+
+    obtenerUsuarioActual()
+      .then((usuarioActual) => {
+        if (activo) setUsuario(usuarioActual);
+      })
+      .catch((err: unknown) => {
+        if (!activo) return;
+        if (err instanceof AppError && err.status === 401) {
+          cerrarSesion();
+          setUsuario(null);
+          setToken(null);
+        }
+      })
+      .finally(() => {
+        if (activo) setIsLoading(false);
+      });
+
+    return () => {
+      activo = false;
+    };
   }, []);
 
   const login = useCallback(async (credentials: LoginCredentialsDTO): Promise<AuthResponseDTO> => {

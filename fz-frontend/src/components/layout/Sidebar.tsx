@@ -7,40 +7,12 @@
  */
 
 import { NavLink, useNavigate } from 'react-router-dom';
-import {
-  Users,
-  CreditCard,
-  DoorOpen,
-  Dumbbell,
-  Layers,
-  DollarSign,
-  LogOut,
-  ChevronRight,
-  Shield,
-  QrCode,
-} from 'lucide-react';
+import { LogOut, LogIn, ChevronRight } from 'lucide-react';
 import { useSede } from '../../context/SedeContext';
 import { useAuth } from '../../context/AuthContext';
 import { usePrestacionesUsuario } from '../../hooks/usePrestaciones';
-import type { Prestacion } from '../../types';
-
-// Definición de las rutas del panel de gestión con su prestación requerida
-const NAV_ITEMS: ReadonlyArray<{
-  id: string;
-  label: string;
-  icon: typeof Users;
-  to: string;
-  prestacion?: Prestacion;
-}> = [
-  { id: 'usuarios',    label: 'Usuarios',        icon: Users,      to: '/usuarios',    prestacion: 'USUARIOS_ADMIN' },
-  { id: 'membresias',  label: 'Membresías',      icon: CreditCard, to: '/membresias',  prestacion: 'USUARIOS_ADMIN' },
-  { id: 'acceso',      label: 'Control Acceso',  icon: DoorOpen,   to: '/acceso',      prestacion: 'ACCESO_AFORO_VIEW' },
-  { id: 'mi-qr',       label: 'Mi Pase QR',      icon: QrCode,     to: '/mi-qr',       prestacion: 'ACCESO_MI_QR' },
-  { id: 'clases',      label: 'Clases Grupales', icon: Dumbbell,   to: '/clases',      prestacion: 'CLASES_VER' },
-  { id: 'canchas',     label: 'Canchas',         icon: Layers,     to: '/canchas',     prestacion: 'CANCHAS_VER' },
-  { id: 'pagos',       label: 'Pagos',           icon: DollarSign, to: '/pagos',       prestacion: 'PAGOS_VER_HISTORIAL' },
-  { id: 'roles',       label: 'Roles y Accesos', icon: Shield,     to: '/admin/roles', prestacion: 'ROLES_GESTIONAR' },
-];
+import { NAV_ITEMS, RUTAS_PUBLICAS } from './navegacion';
+import type { NavItem } from './navegacion';
 
 export interface SidebarProps {
   mobileOpen?: boolean;
@@ -53,18 +25,25 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const { sedeActiva } = useSede();
   const misPrestaciones = usePrestacionesUsuario();
 
-  // Visitante sin sesión ve catálogo público (/canchas y /clases); usuario con sesión ve según prestaciones
-  const itemsVisibles = NAV_ITEMS.filter((item) => {
+  // Visitante sin sesión ve solo lo público (canchas); usuario con sesión ve según prestaciones
+  const modulosVisibles = NAV_ITEMS.filter((item) => {
     if (!usuario) {
-      return item.to === '/canchas' || item.to === '/clases';
+      return RUTAS_PUBLICAS.includes(item.to);
     }
     return !item.prestacion || misPrestaciones.includes(item.prestacion);
   });
+
+  const itemsVisibles: NavItem[] = modulosVisibles;
 
   const handleLogout = () => {
     if (onCloseMobile) onCloseMobile();
     logout();
     navigate('/login', { replace: true });
+  };
+
+  const handleLogin = () => {
+    if (onCloseMobile) onCloseMobile();
+    navigate('/login');
   };
 
   // Contenido de navegación reutilizable tanto para desktop como para mobile drawer
@@ -125,14 +104,25 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
 
       {/* Footer del Sidebar */}
       <div className="pt-4 border-t border-slate-100 space-y-2">
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-fitzone-red hover:bg-rose-50 transition-colors cursor-pointer"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Cerrar sesión</span>
-        </button>
+        {usuario ? (
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-fitzone-red hover:bg-rose-50 transition-colors cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Cerrar sesión</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleLogin}
+            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-fitzone-navy hover:bg-slate-100 transition-colors cursor-pointer"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>Iniciar sesión</span>
+          </button>
+        )}
         <div className="text-[11px] text-slate-400 px-3 text-center">
           FitZone Sports · Portal de Gestión
         </div>

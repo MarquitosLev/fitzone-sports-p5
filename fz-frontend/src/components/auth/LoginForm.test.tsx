@@ -9,7 +9,6 @@ describe('SCRUM-89: LoginForm Component', () => {
         onSubmit={vi.fn()}
         onForgotPassword={vi.fn()}
         onNavigateToRegister={vi.fn()}
-        showQuickRoles={true}
       />
     );
 
@@ -48,15 +47,11 @@ describe('SCRUM-89: LoginForm Component', () => {
     expect(handleSubmit).not.toHaveBeenCalled();
   });
 
-  it('autocompleta credenciales al hacer clic en un rol rápido', () => {
-    render(<LoginForm onSubmit={vi.fn()} showQuickRoles={true} />);
+  it('no ofrece accesos de prueba por rol', () => {
+    render(<LoginForm onSubmit={vi.fn()} />);
 
-    // Hacemos clic en el botón de Gerente
-    const gerenteBtn = screen.getByRole('button', { name: /gerente/i });
-    fireEvent.click(gerenteBtn);
-
-    expect(screen.getByLabelText(/correo electrónico/i)).toHaveValue('gerente@fitzone.com');
-    expect(screen.getByLabelText(/^contraseña/i)).toHaveValue('password123');
+    expect(screen.queryByText(/acceso rápido/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /gerente/i })).not.toBeInTheDocument();
   });
 
   it('invoca onSubmit con los datos válidos al enviar', async () => {

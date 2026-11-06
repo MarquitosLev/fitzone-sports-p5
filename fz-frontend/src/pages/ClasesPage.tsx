@@ -1,13 +1,16 @@
 /**
- * ClasesPage.tsx — Módulo Clases Grupales (RF-06 + RF-08 / SCRUM-83).
+ * ClasesPage.tsx — Módulo Clases Grupales (RF-06 + RF-08 / SCRUM-83 / SCRUM-102).
  *
  * Tabs disponibles:
- * 1. "Clases Disponibles" (vista SOCIO): lista de ClaseCard con reserva/lista de espera.
- * 2. "Mis Reservas" (vista SOCIO): lista de ReservaClaseItem con cancelación.
- * 3. "Agenda (Admin)": AgendaSemanal para GERENTE/RECEPCIONISTA — intacta.
+ * 1. "Clases Disponibles" (SOCIO): ClaseCard con el estado que devuelve la agenda
+ *    del backend (`yaReservada`, `posicionEspera`): reservar, anotarse o salir de la espera.
+ * 2. "Mis Reservas" (SOCIO): `GET /v1/usuarios/me/reservas-clase`, con cancelación.
+ * 3. "Agenda (Admin)": prestación CLASES_ADMIN. El backend solo permite alta, edición
+ *    y baja al GERENTE; RECEPCIONISTA ve la agenda con inscriptos y lista de espera.
  *
- * Socio mock: idUsuario = 2 (Valentina García, membresía ACTIVO),
- * alineado con membresiasService.ts. Filtra clases por sedeActiva de SedeContext.
+ * El socio siempre sale del token: los servicios no reciben `idUsuario`.
+ * Los errores del backend ya los muestra httpClient como toast; acá solo se
+ * notifican los errores que no vienen del backend y se deja fijo el bloqueo del moroso.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -19,29 +22,26 @@ import {
   crearClase,
   actualizarClase,
   eliminarClase,
-  listarReservasSocio,
-  listarEsperaSocio,
+  listarMisReservas,
+  listarMiListaEspera,
   reservarClase,
   anotarseEnEspera,
+  salirDeEspera,
   cancelarReservaClase,
 } from '../services/clasesService';
+import { AppError } from '../services/httpClient';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { useTienePrestacion } from '../hooks/usePrestaciones';
-import type { ClaseGrupalDTO, ReservaClaseDTO, ListaEsperaDTO } from '../types';
+import type { ClaseGrupalDTO, ClaseGrupalRequest, ReservaClaseDTO, ListaEsperaDTO } from '../types';
 import { formatearFechaHora } from '../utils/formatters';
 import { AgendaSemanal } from '../components/clases/AgendaSemanal';
 import { ClaseForm } from '../components/clases/ClaseForm';
 import type { ClaseFormPayload } from '../components/clases/ClaseForm';
 import { ClaseCard } from '../components/clases/ClaseCard';
 import { ReservaClaseItem } from '../components/clases/ReservaClaseItem';
-import { USE_MOCK } from '../config';
-
-// ── Modo Mock / Socio de prueba ──────────────────────────────────────────────
-// Flag centralizado: si es true, opera con datos en memoria y socio demo.
-// En producción (false), no se usa ningún mock y se requiere sesión real.
-const SOCIO_MOCK_ID = 2; // Valentina García (membresía ACTIVO) para modo mock
+import { InscriptosClase } from '../components/clases/InscriptosClase';
 
 // Column definition kept for reference (not rendered, but exported for type safety)
 export const CLASES_COLUMNS: Column<ClaseGrupalDTO>[] = [
@@ -70,20 +70,22 @@ export const CLASES_COLUMNS: Column<ClaseGrupalDTO>[] = [
 // ── Tipos de tab ──────────────────────────────────────────────────────────────
 type TabClases = 'disponibles' | 'mis-reservas' | 'agenda-admin';
 
+/** Código de error del backend cuando el socio no tiene membresía activa (moroso). */
+const CODIGO_MEMBRESIA_INACTIVA = 'MEMBRESIA_INACTIVA';
+
 export function ClasesPage() {
   const { sedeActiva } = useSede();
   const { addToast } = useToast();
 
-  // ── Tab activo ────────────────────────────────────────────────────────────
+  // ── Permisos ──────────────────────────────────────────────────────────────
   const { usuario } = useAuth();
-  const puedeAdminClases = useTienePrestacion('CLASES_ADMIN');
-  const socioIdActual: number | null = USE_MOCK
-    ? SOCIO_MOCK_ID
-    : usuario?.tipoUsuario === 'SOCIO'
-      ? usuario.idUsuario
-      : null;
+  // CLASES_ADMIN abre la agenda administrativa (GERENTE y RECEPCIONISTA)...
+  const puedeVerAgendaAdmin = useTienePrestacion('CLASES_ADMIN');
+  // ...pero el backend solo permite alta, edición y baja al GERENTE.
+  const puedeGestionarClases = puedeVerAgendaAdmin && usuario?.tipoUsuario === 'GERENTE';
+  const esSocio = usuario?.tipoUsuario === 'SOCIO';
   const [activeTab, setActiveTab] = useState<TabClases>(
-    puedeAdminClases ? 'agenda-admin' : 'disponibles'
+    puedeVerAgendaAdmin ? 'agenda-admin' : 'disponibles'
   );
 
   // ── Data: clases, reservas del socio y lista de espera ───────────────────
@@ -92,6 +94,8 @@ export function ClasesPage() {
   const [esperaSocio, setEsperaSocio] = useState<ListaEsperaDTO[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Motivo por el que el backend bloquea las reservas del socio (moroso). */
+  const [motivoBloqueo, setMotivoBloqueo] = useState<string | null>(null);
 
   // ── Estados de acción (loading individuales para evitar colisión de IDs) ───
   const [claseLoadingId, setClaseLoadingId] = useState<number | null>(null);
@@ -108,94 +112,113 @@ export function ClasesPage() {
   const [claseToDelete, setClaseToDelete] = useState<ClaseGrupalDTO | undefined>(undefined);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // ── Carga de datos: clases + reservas/espera del socio ───────────────────
-  const cargarDatos = useCallback(async () => {
+  // ── Inscriptos y lista de espera (admin) ─────────────────────────────────
+  const [claseInscriptos, setClaseInscriptos] = useState<ClaseGrupalDTO | undefined>(undefined);
+
+  // ── Carga de datos: agenda + reservas/espera del socio ───────────────────
+  // `silencioso` recarga sin el spinner de pantalla completa (después de una acción).
+  const cargarDatos = useCallback(async (silencioso = false) => {
     if (!sedeActiva) return;
-    let cancelled = false;
-    setLoading(true);
+    if (!silencioso) setLoading(true);
     setError(null);
     try {
-      // Cargamos clases de la sede, y solo consultamos reservas si hay un socio disponible
       const [resultClases, resultReservas, resultEspera] = await Promise.all([
         listarClases(sedeActiva.idSede),
-        socioIdActual ? listarReservasSocio(socioIdActual) : Promise.resolve([]),
-        socioIdActual ? listarEsperaSocio(socioIdActual) : Promise.resolve([]),
+        esSocio ? listarMisReservas() : Promise.resolve<ReservaClaseDTO[]>([]),
+        esSocio ? listarMiListaEspera() : Promise.resolve<ListaEsperaDTO[]>([]),
       ]);
-      if (!cancelled) {
-        setClases(resultClases);
-        setReservasSocio(resultReservas);
-        setEsperaSocio(resultEspera);
-      }
+      setClases(resultClases);
+      setReservasSocio(resultReservas);
+      setEsperaSocio(resultEspera);
     } catch (err: unknown) {
-      if (!cancelled) setError(err instanceof Error ? err.message : 'Error al cargar los datos de clases');
+      setError(err instanceof Error ? err.message : 'Error al cargar los datos de clases');
     } finally {
-      if (!cancelled) setLoading(false);
+      if (!silencioso) setLoading(false);
     }
-    return () => { cancelled = true; };
-  }, [sedeActiva, socioIdActual]);
+  }, [sedeActiva, esSocio]);
 
   useEffect(() => {
     void cargarDatos();
   }, [cargarDatos]);
 
-  // ── Helpers: lookups de estado del socio respecto a cada clase ───────────
-  /** Devuelve la reserva CONFIRMADA del socio para una clase, si existe. */
-  const getReserva = (idClase: number): ReservaClaseDTO | undefined =>
-    reservasSocio.find((r) => r.clase.idClase === idClase && r.estado === 'CONFIRMADA');
+  /**
+   * Notifica un error de acción. Un AppError ya lo mostró httpClient con el
+   * mensaje del backend (48 hs, 2 hs, sin cupo...), así que no se duplica el toast.
+   * Si es el bloqueo del moroso, además se deja el motivo fijo en pantalla.
+   */
+  const notificarError = (titulo: string, err: unknown, porDefecto: string) => {
+    if (err instanceof AppError) {
+      if (err.backendResponse?.codigo === CODIGO_MEMBRESIA_INACTIVA) {
+        setMotivoBloqueo(err.backendResponse.mensaje);
+      }
+      return;
+    }
+    addToast({ type: 'error', title: titulo, message: err instanceof Error ? err.message : porDefecto });
+  };
 
-  /** Devuelve la entrada en lista de espera del socio para una clase, si existe. */
+  /** Entrada en lista de espera del socio para una clase (para salir con su id). */
   const getEspera = (idClase: number): ListaEsperaDTO | undefined =>
     esperaSocio.find((e) => e.clase.idClase === idClase);
 
   // ── Acciones SOCIO ────────────────────────────────────────────────────────
 
+  const avisarSoloSocios = () =>
+    addToast({
+      type: 'warning',
+      title: 'Solo para socios',
+      message: 'Las reservas de clases son para socios con membresía activa.',
+    });
+
   const handleReservar = async (idClase: number) => {
-    if (!socioIdActual) {
-      addToast({
-        type: 'warning',
-        title: 'Inicio de sesión requerido',
-        message: 'Debés iniciar sesión como socio para poder reservar una clase.',
-      });
-      return;
-    }
+    if (!esSocio) return avisarSoloSocios();
     setClaseLoadingId(idClase);
     try {
-      const nuevaReserva = await reservarClase(idClase, socioIdActual);
-      setReservasSocio((prev) => [...prev, nuevaReserva]);
-      // Actualizar cupoDisponible en la lista local
-      setClases((prev) =>
-        prev.map((c) =>
-          c.idClase === idClase ? { ...c, cupoDisponible: Math.max(0, c.cupoDisponible - 1) } : c
-        )
-      );
+      await reservarClase(idClase);
       addToast({ type: 'success', title: 'Reserva confirmada', message: '¡Tu lugar fue reservado exitosamente!' });
+      await cargarDatos(true);
     } catch (err: unknown) {
-      // httpClient ya muestra toast de error si los PRs del backend están activos.
-      // En modo mock también mostramos el error aquí.
-      const msg = err instanceof Error ? err.message : 'No se pudo reservar la clase';
-      addToast({ type: 'error', title: 'Error al reservar', message: msg });
+      notificarError('Error al reservar', err, 'No se pudo reservar la clase');
     } finally {
       setClaseLoadingId(null);
     }
   };
 
   const handleAnotarseEnEspera = async (idClase: number) => {
-    if (!socioIdActual) {
+    if (!esSocio) return avisarSoloSocios();
+    setClaseLoadingId(idClase);
+    try {
+      const nuevaEspera = await anotarseEnEspera(idClase);
       addToast({
-        type: 'warning',
-        title: 'Inicio de sesión requerido',
-        message: 'Debés iniciar sesión como socio para anotarte en la lista de espera.',
+        type: 'info',
+        title: 'Anotado en lista de espera',
+        message: `Estás en la posición #${nuevaEspera.ordenPosicion}. Te avisaremos cuando se libere un cupo.`,
       });
+      await cargarDatos(true);
+    } catch (err: unknown) {
+      notificarError('Error al anotarse', err, 'No se pudo anotar en la lista de espera');
+    } finally {
+      setClaseLoadingId(null);
+    }
+  };
+
+  const handleSalirDeEspera = async (idClase: number) => {
+    const espera = getEspera(idClase);
+    if (!espera) {
+      // La agenda dice que está en espera pero no tenemos su id: recargamos
+      await cargarDatos(true);
       return;
     }
     setClaseLoadingId(idClase);
     try {
-      const nuevaEspera = await anotarseEnEspera(idClase, socioIdActual);
-      setEsperaSocio((prev) => [...prev, nuevaEspera]);
-      addToast({ type: 'info', title: 'Anotado en lista de espera', message: `Estás en la posición #${nuevaEspera.ordenPosicion}. Te avisaremos cuando se libere un cupo.` });
+      await salirDeEspera(espera.idEspera);
+      addToast({
+        type: 'info',
+        title: 'Saliste de la lista de espera',
+        message: `Ya no estás en la cola de "${espera.clase.nombreActividad}".`,
+      });
+      await cargarDatos(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'No se pudo anotar en la lista de espera';
-      addToast({ type: 'error', title: 'Error', message: msg });
+      notificarError('Error', err, 'No se pudo salir de la lista de espera');
     } finally {
       setClaseLoadingId(null);
     }
@@ -205,27 +228,10 @@ export function ClasesPage() {
     setReservaLoadingId(idReservaClase);
     try {
       await cancelarReservaClase(idReservaClase);
-      // Actualizamos el estado local: cambiamos el estado de la reserva a CANCELADA
-      setReservasSocio((prev) =>
-        prev.map((r) =>
-          r.idReservaClase === idReservaClase ? { ...r, estado: 'CANCELADA' as const } : r
-        )
-      );
-      // Liberamos el cupo en la clase correspondiente
-      const reservaCancelada = reservasSocio.find((r) => r.idReservaClase === idReservaClase);
-      if (reservaCancelada) {
-        setClases((prev) =>
-          prev.map((c) =>
-            c.idClase === reservaCancelada.clase.idClase
-              ? { ...c, cupoDisponible: c.cupoDisponible + 1 }
-              : c
-          )
-        );
-      }
       addToast({ type: 'info', title: 'Reserva cancelada', message: 'Tu lugar fue liberado para el próximo socio en lista de espera.' });
+      await cargarDatos(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'No se pudo cancelar la reserva';
-      addToast({ type: 'error', title: 'Error al cancelar', message: msg });
+      notificarError('Error al cancelar', err, 'No se pudo cancelar la reserva');
     } finally {
       setReservaLoadingId(null);
     }
@@ -237,29 +243,32 @@ export function ClasesPage() {
   const handleCloseForm = () => { setShowForm(false); setSelectedClase(undefined); setFormError(null); };
 
   const handleSubmitForm = async (payload: ClaseFormPayload) => {
+    const idSede = selectedClase?.sede.idSede ?? sedeActiva?.idSede;
+    if (!idSede) {
+      setFormError('Seleccioná una sede antes de programar la clase');
+      return;
+    }
+    const datos: ClaseGrupalRequest = {
+      idSede,
+      nombreActividad: payload.nombreActividad,
+      fechaHoraInicio: payload.fechaHoraInicio,
+      duracionMinutos: payload.duracionMinutos,
+      cupoMaximo: payload.cupoMaximo,
+    };
     setFormLoading(true);
     setFormError(null);
     try {
       if (selectedClase) {
-        const claseActualizada: ClaseGrupalDTO = { ...selectedClase, ...payload, sede: selectedClase.sede };
-        const updated = await actualizarClase(claseActualizada);
-        setClases((prev) => prev.map((c) => (c.idClase === updated.idClase ? updated : c)));
+        const updated = await actualizarClase(selectedClase.idClase, datos);
         addToast({ type: 'success', title: 'Clase actualizada', message: `"${updated.nombreActividad}" fue actualizada correctamente.` });
       } else {
-        const nuevaClase: Omit<ClaseGrupalDTO, 'idClase'> = {
-          nombreActividad: payload.nombreActividad,
-          fechaHoraInicio: payload.fechaHoraInicio,
-          duracionMinutos: payload.duracionMinutos,
-          cupoMaximo: payload.cupoMaximo,
-          cupoDisponible: payload.cupoMaximo,
-          sede: sedeActiva!,
-        };
-        const creada = await crearClase(nuevaClase);
-        setClases((prev) => [...prev, creada]);
+        const creada = await crearClase(datos);
         addToast({ type: 'success', title: 'Clase programada', message: `"${creada.nombreActividad}" fue programada exitosamente.` });
       }
       handleCloseForm();
+      await cargarDatos(true);
     } catch (e: unknown) {
+      // El formulario muestra el mensaje del backend (ej. cupo por debajo de las reservas)
       setFormError(e instanceof Error ? e.message : 'Error al guardar la clase');
     } finally {
       setFormLoading(false);
@@ -275,18 +284,13 @@ export function ClasesPage() {
       setClases((prev) => prev.filter((c) => c.idClase !== claseToDelete.idClase));
       addToast({ type: 'info', title: 'Clase eliminada', message: `"${claseToDelete.nombreActividad}" fue eliminada de la agenda.` });
     } catch (e: unknown) {
-      addToast({ type: 'error', title: 'Error al eliminar', message: e instanceof Error ? e.message : 'No se pudo eliminar la clase.' });
+      notificarError('Error al eliminar', e, 'No se pudo eliminar la clase.');
     } finally {
       setDeleteLoading(false);
       setShowConfirm(false);
       setClaseToDelete(undefined);
     }
   };
-
-  // ── Datos derivados para "Mis Reservas" ───────────────────────────────────
-  // Mostramos todas las reservas (incluyendo CANCELADA, ASISTIO, NO_ASISTIO)
-  // para que el socio pueda ver su historial
-  const reservasParaMostrar = reservasSocio;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -303,33 +307,13 @@ export function ClasesPage() {
           </div>
         </div>
 
-        {/* Botón "Nueva clase" solo visible en el tab Admin */}
-        {activeTab === 'agenda-admin' && puedeAdminClases && (
+        {/* Botón "Nueva clase": solo GERENTE, en el tab Admin */}
+        {activeTab === 'agenda-admin' && puedeGestionarClases && (
           <Button id="btn-programar-nueva-clase" variant="coral" onClick={handleOpenNew}>
             Programar Nueva Clase
           </Button>
         )}
       </div>
-
-      {/* ── Banner de Modo Mock (visible cuando USE_MOCK=true) ─────── */}
-      {USE_MOCK && (
-        <div
-          data-testid="banner-mock-mode"
-          className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-xs"
-        >
-          <div className="flex items-center gap-2">
-            <span className="font-bold uppercase tracking-wider text-[10px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full shrink-0">
-              Modo Mock
-            </span>
-            <span>
-              Operando con datos simulados (Socio demo: <strong>Valentina García</strong> · ID #{SOCIO_MOCK_ID}).
-            </span>
-          </div>
-          <span className="text-[11px] text-amber-700 font-mono shrink-0">
-            USE_MOCK=true
-          </span>
-        </div>
-      )}
 
       {/* ── Tab selector ───────────────────────────────────────────────────── */}
       <div className="flex bg-slate-100 p-1 rounded-2xl w-fit gap-1">
@@ -361,7 +345,7 @@ export function ClasesPage() {
           </span>
         </button>
 
-        {puedeAdminClases && (
+        {puedeVerAgendaAdmin && (
         <button
           id="tab-agenda-admin"
           onClick={() => setActiveTab('agenda-admin')}
@@ -387,10 +371,19 @@ export function ClasesPage() {
 
       {/* ────────────────────────────────────────────────────────────────────
           TAB 1: CLASES DISPONIBLES (SOCIO)
-          Muestra ClaseCard por cada clase con estado del socio calculado.
+          El estado de cada tarjeta viene de la agenda (yaReservada, posicionEspera).
       ──────────────────────────────────────────────────────────────────── */}
       {!loading && activeTab === 'disponibles' && (
         <>
+          {motivoBloqueo && (
+            <Alert
+              type="warning"
+              title="No podés reservar clases"
+              message={`${motivoBloqueo}. Regularizá tu membresía en recepción para volver a reservar.`}
+              onClose={() => setMotivoBloqueo(null)}
+            />
+          )}
+
           {clases.length === 0 ? (
             <EmptyState
               icon={Dumbbell}
@@ -399,22 +392,16 @@ export function ClasesPage() {
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {clases.map((clase) => {
-                const reserva = getReserva(clase.idClase);
-                const espera = getEspera(clase.idClase);
-                return (
-                  <ClaseCard
-                    key={clase.idClase}
-                    clase={clase}
-                    estaReservada={Boolean(reserva)}
-                    estaEnEspera={Boolean(espera)}
-                    ordenEnEspera={espera?.ordenPosicion}
-                    isLoading={claseLoadingId === clase.idClase}
-                    onReservar={() => void handleReservar(clase.idClase)}
-                    onAnotarEnEspera={() => void handleAnotarseEnEspera(clase.idClase)}
-                  />
-                );
-              })}
+              {clases.map((clase) => (
+                <ClaseCard
+                  key={clase.idClase}
+                  clase={clase}
+                  isLoading={claseLoadingId === clase.idClase}
+                  onReservar={() => void handleReservar(clase.idClase)}
+                  onAnotarEnEspera={() => void handleAnotarseEnEspera(clase.idClase)}
+                  onSalirDeEspera={esSocio ? () => void handleSalirDeEspera(clase.idClase) : undefined}
+                />
+              ))}
             </div>
           )}
 
@@ -432,17 +419,17 @@ export function ClasesPage() {
 
       {/* ────────────────────────────────────────────────────────────────────
           TAB 2: MIS RESERVAS (SOCIO)
-          Muestra ReservaClaseItem por cada reserva.
+          Todas las reservas (incluye CANCELADA, ASISTIO, NO_ASISTIO) como historial.
       ──────────────────────────────────────────────────────────────────── */}
       {!loading && activeTab === 'mis-reservas' && (
         <>
-          {!socioIdActual ? (
+          {!esSocio ? (
             <EmptyState
               icon={ClipboardList}
               title="Iniciá sesión como socio"
               description="Necesitás una cuenta de socio activa para ver y gestionar tus reservas de clases."
             />
-          ) : reservasParaMostrar.length === 0 ? (
+          ) : reservasSocio.length === 0 ? (
             <EmptyState
               icon={ClipboardList}
               title="Sin reservas aún"
@@ -452,33 +439,30 @@ export function ClasesPage() {
             />
           ) : (
             <div className="space-y-3">
-              {reservasParaMostrar.map((reserva) => {
-                // La lista de espera del socio es para otra clase; acá mostramos
-                // la del item si el socio también está esperando en esa misma clase
-                const espera = getEspera(reserva.clase.idClase);
-                return (
-                  <ReservaClaseItem
-                    key={reserva.idReservaClase}
-                    reserva={reserva}
-                    listaEspera={espera}
-                    isLoading={reservaLoadingId === reserva.idReservaClase}
-                    onCancelar={(id) => void handleCancelarReserva(id)}
-                  />
-                );
-              })}
+              {reservasSocio.map((reserva) => (
+                <ReservaClaseItem
+                  key={reserva.idReservaClase}
+                  reserva={reserva}
+                  listaEspera={getEspera(reserva.clase.idClase)}
+                  isLoading={reservaLoadingId === reserva.idReservaClase}
+                  onCancelar={(id) => void handleCancelarReserva(id)}
+                />
+              ))}
             </div>
           )}
         </>
       )}
 
       {/* ────────────────────────────────────────────────────────────────────
-          TAB 3: AGENDA ADMIN (AgendaSemanal — intacta)
+          TAB 3: AGENDA ADMIN
+          GERENTE edita y elimina; GERENTE y RECEPCIONISTA ven inscriptos y espera.
       ──────────────────────────────────────────────────────────────────── */}
       {!loading && activeTab === 'agenda-admin' && (
         <AgendaSemanal
           clases={clases}
-          onEdit={handleOpenEdit}
-          onDelete={handleRequestDelete}
+          onEdit={puedeGestionarClases ? handleOpenEdit : undefined}
+          onDelete={puedeGestionarClases ? handleRequestDelete : undefined}
+          onVerInscriptos={setClaseInscriptos}
         />
       )}
 
@@ -502,6 +486,18 @@ export function ClasesPage() {
         />
       </Modal>
 
+      {/* ── Modal: Inscriptos y lista de espera (admin) ────────────────────── */}
+      <Modal
+        isOpen={Boolean(claseInscriptos)}
+        onClose={() => setClaseInscriptos(undefined)}
+        title={claseInscriptos?.nombreActividad ?? 'Inscriptos'}
+        subtitle="Inscriptos y lista de espera"
+        icon={Dumbbell}
+        size="md"
+      >
+        {claseInscriptos && <InscriptosClase clase={claseInscriptos} />}
+      </Modal>
+
       {/* ── Confirm Delete Dialog (admin) ──────────────────────────────────── */}
       <ConfirmDialog
         isOpen={showConfirm}
@@ -510,7 +506,7 @@ export function ClasesPage() {
         title="Eliminar Clase"
         description={
           claseToDelete
-            ? `¿Estás seguro de que querés eliminar "${claseToDelete.nombreActividad}"? Esta acción no se puede deshacer y se cancelarán todas las reservas asociadas.`
+            ? `¿Estás seguro de que querés eliminar "${claseToDelete.nombreActividad}"? Esta acción no se puede deshacer y no está permitida si la clase tiene reservas confirmadas.`
             : '¿Estás seguro de que querés eliminar esta clase?'
         }
         confirmText="Sí, eliminar clase"

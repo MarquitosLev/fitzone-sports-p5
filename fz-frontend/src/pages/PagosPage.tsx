@@ -25,7 +25,7 @@ import {
   BotonDescargaPdf,
 } from '../components/pagos';
 import {
-  listarPagos,
+  TOKEN_PASARELA_APROBADO,
   listarMisPagos,
   procesarPago,
   reintentarPago,
@@ -40,7 +40,6 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { AppError } from '../services/httpClient';
-import { USE_MOCK } from '../config';
 import type {
   TransaccionDTO,
   ComprobanteDTO,
@@ -51,7 +50,7 @@ import type {
 } from '../types';
 import { formatearFechaHora, formatearMonto, toLocalISOString } from '../utils/formatters';
 
-interface ItemCobroDemo {
+interface ItemCobro {
   id: string;
   detalle: DetalleItemPago;
   monto: number;
@@ -66,7 +65,7 @@ interface ItemCobroDemo {
  * Con la API real, lo que el usuario logueado puede pagar: sus reservas futuras sin un pago
  * confirmado y, si es socio, su membresía (pagarla la renueva). El monto es el del servidor.
  */
-async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobroDemo[]> {
+async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobro[]> {
   const [reservas, pagos] = await Promise.all([listarMisReservas(), listarMisPagos()]);
   const pagadas = new Set(
     pagos.filter((p) => p.estadoPago === 'CONFIRMADO').map((p) => p.reservaCanchaId)
@@ -75,7 +74,7 @@ async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobroDemo
   const ahora = toLocalISOString(new Date());
   const concepto = usuario.tipoUsuario === 'EXTERNO' ? 'RESERVA_EXTERNO' : 'RESERVA_SOCIO';
 
-  const items: ItemCobroDemo[] = reservas
+  const items: ItemCobro[] = reservas
     .filter((r) => !pagadas.has(r.idReservaCancha) && r.fechaHoraInicio > ahora)
     .map((r) => ({
       id: `reserva-${r.idReservaCancha}`,
@@ -117,77 +116,6 @@ async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobroDemo
   return items;
 }
 
-/** Socio de demo del modo mock (sin sesión real). */
-const ID_SOCIO_DEMO = 1;
-
-const ITEMS_COBRO_DEMO: ItemCobroDemo[] = [
-  {
-    id: 'cancha-padel-1',
-    monto: 6800,
-    concepto: 'RESERVA_SOCIO',
-    idReservaCancha: 101,
-    detalle: {
-      tipo: 'CANCHA',
-      titulo: 'Pádel · Cancha 1 — Horario Pico',
-      subtitulo: 'Sede FitZone Palermo',
-      canchaNombre: 'Cancha 1 (Pádel Cristal)',
-      deporte: 'Padel',
-      fecha: '20/10/2026',
-      horario: '19:00 a 20:00 hs',
-      cotizacion: {
-        precioBase: 6667,
-        esPico: true,
-        recargoPico: 1333,
-        porcentajeRecargoPico: 20,
-        descuentoSocio: 1200,
-        porcentajeDescuentoSocio: 15,
-        esSocio: true,
-        total: 6800,
-      },
-    },
-  },
-  {
-    id: 'membresia-trimestral',
-    monto: 38000,
-    concepto: 'MEMBRESIA_SOCIO',
-    idMembresia: 201,
-    detalle: {
-      tipo: 'MEMBRESIA',
-      titulo: 'Renovación Membresía · Plan Trimestral',
-      subtitulo: 'Acceso Total Multi-Sede',
-      planNombre: 'Plan Trimestral FitZone',
-      duracionMeses: 3,
-      fechaInicio: '01/11/2026',
-      fechaVencimiento: '31/01/2027',
-    },
-  },
-  {
-    id: 'cancha-futbol-5',
-    monto: 13600,
-    concepto: 'RESERVA_SOCIO',
-    idReservaCancha: 102,
-    detalle: {
-      tipo: 'CANCHA',
-      titulo: 'Fútbol 5 · Cancha Techada',
-      subtitulo: 'Sede FitZone Belgrano',
-      canchaNombre: 'Cancha Central Sintética',
-      deporte: 'Futbol 5',
-      fecha: '22/10/2026',
-      horario: '21:00 a 22:00 hs',
-      cotizacion: {
-        precioBase: 16000,
-        esPico: false,
-        recargoPico: 0,
-        porcentajeRecargoPico: 0,
-        descuentoSocio: 2400,
-        porcentajeDescuentoSocio: 15,
-        esSocio: true,
-        total: 13600,
-      },
-    },
-  },
-];
-
 export function PagosPage() {
   const { sedeActiva } = useSede();
   const { addToast } = useToast();
@@ -196,22 +124,19 @@ export function PagosPage() {
   const idReservaPedida = Number(searchParams.get('reserva')) || null;
 
   // Con la API real solo pagan socios y externos lo propio; el cobro en mostrador es otra historia
-  const puedePagar = USE_MOCK || usuario?.tipoUsuario === 'SOCIO' || usuario?.tipoUsuario === 'EXTERNO';
+  const puedePagar = usuario?.tipoUsuario === 'SOCIO' || usuario?.tipoUsuario === 'EXTERNO';
 
   // Control de pestañas principales: 'checkout' o 'historial'
   const [activeTab, setActiveTab] = useState<'checkout' | 'historial'>('checkout');
 
-  // Ítems a cobrar: fijos en mock, los pendientes reales del usuario con la API
-  const [itemsCobro, setItemsCobro] = useState<ItemCobroDemo[]>(USE_MOCK ? ITEMS_COBRO_DEMO : []);
-  const [loadingItems, setLoadingItems] = useState(!USE_MOCK);
+  // Ítems a cobrar: los pendientes del usuario logueado
+  const [itemsCobro, setItemsCobro] = useState<ItemCobro[]>([]);
+  const [loadingItems, setLoadingItems] = useState(true);
 
   // Estado del flujo de checkout
-  const [selectedDemoItem, setSelectedDemoItem] = useState<ItemCobroDemo | null>(
-    USE_MOCK ? ITEMS_COBRO_DEMO[0]! : null
-  );
+  const [itemSeleccionado, setItemSeleccionado] = useState<ItemCobro | null>(null);
 
   useEffect(() => {
-    if (USE_MOCK) return;
     if (!usuario || !puedePagar) {
       setLoadingItems(false);
       return;
@@ -223,7 +148,7 @@ export function PagosPage() {
         if (cancelado) return;
         setItemsCobro(items);
         const pedido = items.find((i) => i.idReservaCancha === idReservaPedida);
-        setSelectedDemoItem(pedido ?? items[0] ?? null);
+        setItemSeleccionado(pedido ?? items[0] ?? null);
       })
       .catch(() => {
         if (!cancelado) setItemsCobro([]);
@@ -249,12 +174,10 @@ export function PagosPage() {
   const [vistaModo, setVistaModo] = useState<'tarjetas' | 'tabla'>('tarjetas');
   const [comprobantesMap, setComprobantesMap] = useState<Record<number, ComprobanteDTO>>({});
 
-  // Historial: en mock, el de la sede; con la API real, los pagos propios del socio o externo.
-  // El historial por sede para el personal todavía no tiene endpoint (DEV-M5-03).
-  const cargarHistorial = async (idSede: number): Promise<TransaccionDTO[]> => {
-    if (USE_MOCK) return listarPagos(idSede);
-    return puedePagar ? listarMisPagos() : [];
-  };
+  // Historial: los pagos propios del socio o externo. El historial por sede para el
+  // personal todavía no tiene endpoint.
+  const cargarHistorial = async (): Promise<TransaccionDTO[]> =>
+    puedePagar ? listarMisPagos() : [];
 
   // Carga de transacciones
   const cargarTransacciones = async () => {
@@ -262,7 +185,7 @@ export function PagosPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await cargarHistorial(sedeActiva.idSede);
+      const data = await cargarHistorial();
       setTransacciones(data);
 
       // Precargamos comprobantes para las confirmadas
@@ -290,7 +213,7 @@ export function PagosPage() {
       setLoading(true);
       setError(null);
       try {
-        const data = await cargarHistorial(sedeActiva.idSede);
+        const data = await cargarHistorial();
         if (cancelled) return;
         setTransacciones(data);
 
@@ -322,28 +245,27 @@ export function PagosPage() {
     };
   }, [sedeActiva, puedePagar]);
 
-  // Con la API real httpClient ya avisó el error del backend: no se duplica el toast
+  // httpClient ya avisó los errores del backend: no se duplica el toast
   const avisarError = (titulo: string, err: unknown, porDefecto: string) => {
-    if (!USE_MOCK && err instanceof AppError) return;
+    if (err instanceof AppError) return;
     addToast({ type: 'error', title: titulo, message: err instanceof Error ? err.message : porDefecto });
   };
 
   // Manejo de confirmación de pago en checkout
-  const handleConfirmarPago = async (tokenPasarela: string) => {
-    if (!sedeActiva || !selectedDemoItem) return;
+  const handleConfirmarPago = async () => {
+    if (!sedeActiva || !itemSeleccionado || !usuario) return;
     setIsProcessing(true);
     try {
       const payload: ProcesarPagoPayload = {
-        idSede: selectedDemoItem.idSede ?? sedeActiva.idSede,
-        // Con la API real el backend usa la sesión; en mock, el socio de demo
-        idUsuario: usuario?.idUsuario ?? ID_SOCIO_DEMO,
-        concepto: selectedDemoItem.concepto,
-        monto: selectedDemoItem.monto,
-        tokenTransaccionPasarela: tokenPasarela,
-        idReservaCancha: selectedDemoItem.idReservaCancha,
-        idMembresia: selectedDemoItem.idMembresia,
+        idSede: itemSeleccionado.idSede ?? sedeActiva.idSede,
+        idUsuario: usuario.idUsuario,
+        concepto: itemSeleccionado.concepto,
+        monto: itemSeleccionado.monto,
+        tokenTransaccionPasarela: TOKEN_PASARELA_APROBADO,
+        idReservaCancha: itemSeleccionado.idReservaCancha,
+        idMembresia: itemSeleccionado.idMembresia,
         tipoComprobante: 'FACTURA_B',
-        detalleItem: selectedDemoItem.detalle,
+        detalleItem: itemSeleccionado.detalle,
       };
 
       const res = await procesarPago(payload);
@@ -366,8 +288,8 @@ export function PagosPage() {
 
       // Refrescamos el historial en segundo plano y, si se pagó, sacamos el ítem de los pendientes
       void cargarTransacciones();
-      if (res.aprobado && !USE_MOCK) {
-        setItemsCobro((prev) => prev.filter((i) => i.id !== selectedDemoItem.id));
+      if (res.aprobado) {
+        setItemsCobro((prev) => prev.filter((i) => i.id !== itemSeleccionado.id));
       }
     } catch (err: unknown) {
       avisarError('Error de Procesamiento', err, 'No se pudo comunicar con la pasarela.');
@@ -383,7 +305,7 @@ export function PagosPage() {
 
     setIsProcessing(true);
     try {
-      const res = await reintentarPago(idToRetry, 'tok_mock_aprobado');
+      const res = await reintentarPago(idToRetry);
       setResultadoPago(res);
       setCheckoutStep('resultado');
 
@@ -410,7 +332,7 @@ export function PagosPage() {
     try {
       const comp = comprobantesMap[transaccion.idTransaccion];
       const idComp = comp?.idComprobante || transaccion.idTransaccion;
-      const numFactura = comp?.numeroFactura || `FAC-0001-${transaccion.idTransaccion}`;
+      const numFactura = comp?.numeroFactura || String(transaccion.idTransaccion);
 
       const blob = await descargarComprobantePdf(idComp);
       descargarBlobEnNavegador(blob, `comprobante-${numFactura}.pdf`);
@@ -570,11 +492,11 @@ export function PagosPage() {
             <div className="flex justify-center py-16">
               <Spinner size="lg" />
             </div>
-          ) : checkoutStep === 'formulario' && !selectedDemoItem ? (
+          ) : checkoutStep === 'formulario' && !itemSeleccionado ? (
             <div className="p-8 text-center bg-slate-50 rounded-3xl border border-slate-200/70 text-slate-500 text-xs">
               No tenés reservas ni membresías pendientes de pago.
             </div>
-          ) : checkoutStep === 'formulario' && selectedDemoItem ? (
+          ) : checkoutStep === 'formulario' && itemSeleccionado ? (
             <div className="space-y-6">
               {/* Selector de ítem pendiente de pago */}
               <div className="space-y-3">
@@ -583,11 +505,11 @@ export function PagosPage() {
                 </span>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {itemsCobro.map((item) => {
-                    const isSelected = selectedDemoItem.id === item.id;
+                    const isSelected = itemSeleccionado.id === item.id;
                     return (
                       <div
                         key={item.id}
-                        onClick={() => setSelectedDemoItem(item)}
+                        onClick={() => setItemSeleccionado(item)}
                         className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
                           isSelected
                             ? 'border-fitzone-navy bg-fitzone-navy/5 shadow-xs'
@@ -622,11 +544,10 @@ export function PagosPage() {
                   2. Revisá el resumen y confirmá el arancel:
                 </span>
                 <ResumenPago
-                  detalle={selectedDemoItem.detalle}
-                  montoTotal={selectedDemoItem.monto}
+                  detalle={itemSeleccionado.detalle}
+                  montoTotal={itemSeleccionado.monto}
                   isProcessing={isProcessing}
                   onConfirmarPago={handleConfirmarPago}
-                  permitirSimularRechazo={true}
                 />
               </div>
             </div>
@@ -750,7 +671,7 @@ export function PagosPage() {
             </div>
           </div>
 
-          {!USE_MOCK && !puedePagar && (
+          {!puedePagar && (
             <Alert
               type="info"
               title="Historial por sede no disponible"
