@@ -2,6 +2,7 @@ package com.fitzone.modulo.usuarios.controller;
 
 import com.fitzone.core.domain.enums.TipoUsuario;
 import com.fitzone.core.exception.AccesoDenegadoException;
+import com.fitzone.core.security.UsuarioActual;
 import com.fitzone.modulo.gimnasio.models.QrTokenResponse;
 import com.fitzone.modulo.gimnasio.service.AccesoService;
 import com.fitzone.modulo.canchas.models.ReservaCancha;
@@ -34,7 +35,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -47,13 +47,28 @@ public class UsuarioController {
     private final AccesoService accesoService;
     private final CanchaService canchaService;
     private final com.fitzone.modulo.clases.service.ReservaClaseService reservaClaseService;
+    private final com.fitzone.modulo.clases.service.ListaEsperaService listaEsperaService;
     private final PagoService pagoService;
+    private final UsuarioActual usuarioActual;
 
     @GetMapping("/me")
     @Operation(summary = "Obtiene el perfil del usuario autenticado a partir del token JWT")
-    public Usuario obtenerMiPerfil(@AuthenticationPrincipal Jwt jwt) {
-        UUID authId = UUID.fromString(jwt.getSubject());
-        return usuarioService.obtenerPorAuthId(authId);
+    public Usuario obtenerMiPerfil() {
+        return usuarioActual.obtener();
+    }
+
+    @GetMapping("/me/reservas-clase")
+    @PreAuthorize("hasRole('SOCIO')")
+    @Operation(summary = "Obtiene las reservas de clases grupales del socio logueado")
+    public List<com.fitzone.modulo.clases.models.ReservaClase> obtenerMisReservasClase() {
+        return reservaClaseService.listarMias();
+    }
+
+    @GetMapping("/me/lista-espera")
+    @PreAuthorize("hasRole('SOCIO')")
+    @Operation(summary = "Obtiene las listas de espera en las que está anotado el socio logueado")
+    public List<com.fitzone.modulo.clases.models.ListaEspera> obtenerMisListasEspera() {
+        return listaEsperaService.listarMias();
     }
 
     @PostMapping
@@ -154,14 +169,14 @@ public class UsuarioController {
         if (jwt == null || jwt.getSubject() == null) {
             return null;
         }
-        return usuarioService.obtenerPorAuthId(UUID.fromString(jwt.getSubject())).getIdUsuario();
+        return usuarioActual.obtener().getIdUsuario();
     }
 
     private void validarAccesoUsuario(Long idObjetivo, Jwt jwt) {
         if (jwt == null || jwt.getSubject() == null) {
             return;
         }
-        Usuario solicitante = usuarioService.obtenerPorAuthId(UUID.fromString(jwt.getSubject()));
+        Usuario solicitante = usuarioActual.obtener();
         boolean esPersonal = solicitante.getTipoUsuario() == TipoUsuario.RECEPCIONISTA
                 || solicitante.getTipoUsuario() == TipoUsuario.GERENTE;
         if (!esPersonal && !idObjetivo.equals(solicitante.getIdUsuario())) {

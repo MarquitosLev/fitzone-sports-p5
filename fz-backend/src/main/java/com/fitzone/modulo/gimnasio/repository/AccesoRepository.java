@@ -15,6 +15,9 @@ import java.util.Optional;
 @Repository
 public interface AccesoRepository extends JpaRepository<Acceso, Long> {
 
+    // Indica si algún acceso físico quedó vinculado a una reserva de la clase
+    boolean existsByReservaClase_Clase_IdClase(Long idClase);
+
     // Buscar si un usuario tiene un acceso activo (ingresó pero no egresó )
     Optional<Acceso> findByUsuario_IdUsuarioAndFechaHoraEgresoIsNull(Long idUsuario);
 

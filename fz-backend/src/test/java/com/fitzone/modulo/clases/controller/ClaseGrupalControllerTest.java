@@ -1,14 +1,13 @@
 package com.fitzone.modulo.clases.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fitzone.core.config.WebConfig;
 import com.fitzone.core.domain.enums.EstadoReservaClase;
 import com.fitzone.core.exception.ClaseCompletaException;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.GlobalExceptionHandler;
 import com.fitzone.modulo.clases.models.ClaseGrupal;
+import com.fitzone.modulo.clases.models.InscriptoResponse;
 import com.fitzone.modulo.clases.models.ReservaClase;
-import com.fitzone.modulo.clases.models.ReservaClaseRequest;
 import com.fitzone.modulo.clases.service.ClaseGrupalService;
 import com.fitzone.modulo.clases.service.ReservaClaseService;
 import com.fitzone.modulo.usuarios.models.Usuario;
@@ -18,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -41,9 +39,6 @@ class ClaseGrupalControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
     @MockitoBean
     private ClaseGrupalService claseGrupalService;
 
@@ -56,7 +51,6 @@ class ClaseGrupalControllerTest {
     @Test
     @DisplayName("POST /v1/clases/{id}/reservas responde 201 Created cuando la reserva es exitosa")
     void reservar_retorna201() throws Exception {
-        ReservaClaseRequest request = new ReservaClaseRequest(1L);
         ReservaClase reserva = ReservaClase.builder()
                 .idReservaClase(5L)
                 .clase(ClaseGrupal.builder().idClase(10L).build())
@@ -64,38 +58,21 @@ class ClaseGrupalControllerTest {
                 .estado(EstadoReservaClase.CONFIRMADA)
                 .build();
 
-        when(reservaClaseService.reservar(10L, 1L)).thenReturn(reserva);
+        when(reservaClaseService.reservar(10L)).thenReturn(reserva);
 
-        mockMvc.perform(post("/v1/clases/10/reservas")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(post("/v1/clases/10/reservas"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.idReservaClase", is(5)))
                 .andExpect(jsonPath("$.estado", is("CONFIRMADA")));
     }
 
     @Test
-    @DisplayName("POST /v1/clases/{id}/reservas responde 400 Bad Request cuando el body es inválido")
-    void reservar_bodyInvalido_retorna400() throws Exception {
-        ReservaClaseRequest requestInvalido = new ReservaClaseRequest(null);
-
-        mockMvc.perform(post("/v1/clases/10/reservas")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestInvalido)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.codigo", is("VALIDACION")));
-    }
-
-    @Test
     @DisplayName("POST /v1/clases/{id}/reservas responde 409 con CLASE_COMPLETA cuando no hay cupo")
     void reservar_sinCupo_retorna409ClaseCompleta() throws Exception {
-        ReservaClaseRequest request = new ReservaClaseRequest(1L);
-        when(reservaClaseService.reservar(eq(10L), eq(1L)))
+        when(reservaClaseService.reservar(eq(10L)))
                 .thenThrow(new ClaseCompletaException("No hay cupo disponible en la clase"));
 
-        mockMvc.perform(post("/v1/clases/10/reservas")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(post("/v1/clases/10/reservas"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo", is("CLASE_COMPLETA")));
     }
@@ -103,13 +80,10 @@ class ClaseGrupalControllerTest {
     @Test
     @DisplayName("POST /v1/clases/{id}/reservas responde 409 CONFLICTO cuando el socio ya tiene reserva confirmada")
     void reservar_duplicada_retorna409() throws Exception {
-        ReservaClaseRequest request = new ReservaClaseRequest(1L);
-        when(reservaClaseService.reservar(eq(10L), eq(1L)))
+        when(reservaClaseService.reservar(eq(10L)))
                 .thenThrow(new ConflictoException("El socio ya posee una reserva confirmada"));
 
-        mockMvc.perform(post("/v1/clases/10/reservas")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(post("/v1/clases/10/reservas"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo", is("CONFLICTO")));
     }
@@ -117,33 +91,29 @@ class ClaseGrupalControllerTest {
     @Test
     @DisplayName("GET /v1/clases/{id}/reservas responde 200 OK con los socios inscriptos")
     void listarInscriptos_retorna200() throws Exception {
-        ReservaClase reserva = ReservaClase.builder()
-                .idReservaClase(5L)
-                .estado(EstadoReservaClase.CONFIRMADA)
-                .build();
+        InscriptoResponse inscripto = new InscriptoResponse(5L, 1L, "Juan", "Perez", EstadoReservaClase.CONFIRMADA);
 
-        when(reservaClaseService.listarInscriptos(10L)).thenReturn(List.of(reserva));
+        when(reservaClaseService.listarInscriptos(10L)).thenReturn(List.of(inscripto));
 
         mockMvc.perform(get("/v1/clases/10/reservas"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].idReservaClase", is(5)));
+                .andExpect(jsonPath("$[0].idReservaClase", is(5)))
+                .andExpect(jsonPath("$[0].nombre", is("Juan")))
+                .andExpect(jsonPath("$[0].apellido", is("Perez")));
     }
 
     @Test
     @DisplayName("POST /v1/clases/{id}/lista-espera responde 201 Created cuando se anota exitosamente")
     void anotarseEnListaEspera_retorna201() throws Exception {
-        ReservaClaseRequest request = new ReservaClaseRequest(1L);
         com.fitzone.modulo.clases.models.ListaEspera espera = com.fitzone.modulo.clases.models.ListaEspera.builder()
                 .idEspera(8L)
                 .ordenPosicion(1)
                 .build();
 
-        when(listaEsperaService.anotarse(eq(10L), eq(1L))).thenReturn(espera);
+        when(listaEsperaService.anotarse(eq(10L))).thenReturn(espera);
 
-        mockMvc.perform(post("/v1/clases/10/lista-espera")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(post("/v1/clases/10/lista-espera"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.idEspera", is(8)))
                 .andExpect(jsonPath("$.ordenPosicion", is(1)));

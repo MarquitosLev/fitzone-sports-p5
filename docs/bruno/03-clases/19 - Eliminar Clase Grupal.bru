@@ -1,0 +1,21 @@
+meta {
+  name: 19 - Eliminar Clase Grupal
+  type: http
+  seq: 19
+}
+
+delete {
+  url: {{baseUrl}}/v1/clases/{{idClase}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenGerente}}
+}
+
+tests {
+  test("responde 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

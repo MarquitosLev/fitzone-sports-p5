@@ -54,6 +54,8 @@ public class SecurityConfig {
                         .requestMatchers("/v1/auth/**", "/v1/planes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/sedes", "/v1/sedes/*").permitAll()
                         .requestMatchers("/v1/usuarios/**", "/v1/membresias/**", "/v1/accesos/**", "/v1/sedes/**").authenticated()
+                        .requestMatchers("/v1/usuarios/**", "/v1/membresias/**").authenticated()
+                        .requestMatchers("/v1/clases/**", "/v1/reservas-clase/**", "/v1/lista-espera/**").authenticated()
                         .requestMatchers("/v1/**").permitAll()
                         // Endpoint administrativo protegido internamente con Bearer Root Key
                         .requestMatchers("/admin/database/**").permitAll()

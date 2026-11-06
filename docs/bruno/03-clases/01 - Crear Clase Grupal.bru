@@ -7,15 +7,34 @@ meta {
 post {
   url: {{baseUrl}}/v1/clases
   body: json
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenGerente}}
 }
 
 body:json {
   {
     "idSede": 1,
     "nombreActividad": "Spinning Power",
-    "fechaHoraInicio": "2026-10-25T18:00:00",
+    "fechaHoraInicio": "{{fechaInicio}}",
     "duracionMinutos": 45,
-    "cupoMaximo": 20
+    "cupoMaximo": 1
   }
+}
+
+script:pre-request {
+  const inicio = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19);
+  bru.setVar("fechaInicio", inicio);
+}
+
+script:post-response {
+  bru.setVar("idClase", res.getBody().idClase);
+}
+
+tests {
+  test("responde 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
 }

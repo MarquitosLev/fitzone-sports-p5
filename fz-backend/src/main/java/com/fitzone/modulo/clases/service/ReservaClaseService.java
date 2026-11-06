@@ -3,13 +3,16 @@ package com.fitzone.modulo.clases.service;
 import com.fitzone.core.domain.enums.EstadoMembresia;
 import com.fitzone.core.domain.enums.EstadoReservaClase;
 import com.fitzone.core.domain.enums.TipoUsuario;
+import com.fitzone.core.exception.AccesoDenegadoException;
 import com.fitzone.core.exception.ClaseCompletaException;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.MembresiaInactivaException;
 import com.fitzone.core.exception.RecursoNoEncontradoException;
 import com.fitzone.core.exception.ReglaNegocioException;
+import com.fitzone.core.security.UsuarioActual;
 import com.fitzone.modulo.clases.event.CupoLiberadoEvent;
 import com.fitzone.modulo.clases.models.ClaseGrupal;
+import com.fitzone.modulo.clases.models.InscriptoResponse;
 import com.fitzone.modulo.clases.models.ReservaClase;
 import com.fitzone.modulo.clases.repository.ClaseGrupalRepository;
 import com.fitzone.modulo.clases.repository.ReservaClaseRepository;
@@ -37,14 +40,15 @@ public class ReservaClaseService {
     private final MembresiaRepository membresiaRepository;
     private final ListaEsperaService listaEsperaService;
     private final ApplicationEventPublisher eventPublisher;
+    private final UsuarioActual usuarioActual;
 
     @Transactional
-    public ReservaClase reservar(Long idClase, Long idUsuario) {
+    public ReservaClase reservar(Long idClase) {
         ClaseGrupal clase = claseGrupalRepository.findByIdWithLock(idClase)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Clase grupal", idClase));
 
-        Usuario usuario = usuarioRepository.findById(idUsuario)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario", idUsuario));
+        Usuario usuario = usuarioActual.obtener();
+        Long idUsuario = usuario.getIdUsuario();
 
         if (usuario.getTipoUsuario() != TipoUsuario.SOCIO) {
             throw new ReglaNegocioException("Solo los socios pueden reservar una clase");
@@ -91,15 +95,22 @@ public class ReservaClaseService {
 
     @Transactional
     public ReservaClase cancelar(Long idReservaClase) {
-        ReservaClase reserva = reservaClaseRepository.findById(idReservaClase)
+        ReservaClase reserva = reservaClaseRepository.findByIdWithLock(idReservaClase)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Reserva", idReservaClase));
+
+        if (!reserva.getUsuario().getIdUsuario().equals(usuarioActual.obtener().getIdUsuario())) {
+            throw new AccesoDenegadoException("Solo podés cancelar tus propias reservas");
+        }
 
         if (reserva.getEstado() == EstadoReservaClase.CANCELADA) {
             throw new ReglaNegocioException("La reserva ya se encuentra cancelada");
         }
 
         LocalDateTime ahora = LocalDateTime.now();
-        ClaseGrupal clase = reserva.getClase();
+        // Mismo bloqueo que reservar, para que el cupo no se calcule con una reserva a medio confirmar
+        Long idClase = reserva.getClase().getIdClase();
+        ClaseGrupal clase = claseGrupalRepository.findByIdWithLock(idClase)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Clase grupal", idClase));
         if (ahora.isAfter(clase.getFechaHoraInicio().minusHours(2))) {
             throw new ReglaNegocioException("La cancelación solo está permitida hasta 2 horas antes del inicio de la clase");
         }
@@ -125,10 +136,17 @@ public class ReservaClaseService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReservaClase> listarInscriptos(Long idClase) {
-        if (!claseGrupalRepository.existsById(idClase)) {
-            throw new RecursoNoEncontradoException("Clase grupal", idClase);
-        }
-        return reservaClaseRepository.findByClase_IdClaseAndEstado(idClase, EstadoReservaClase.CONFIRMADA);
+    public List<ReservaClase> listarMias() {
+        return reservaClaseRepository.findByUsuario_IdUsuario(usuarioActual.obtener().getIdUsuario());
+    }
+
+    @Transactional(readOnly = true)
+    public List<InscriptoResponse> listarInscriptos(Long idClase) {
+        ClaseGrupal clase = claseGrupalRepository.findById(idClase)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Clase grupal", idClase));
+        usuarioActual.validarSede(clase.getSede().getIdSede());
+        return reservaClaseRepository.findByClase_IdClaseAndEstado(idClase, EstadoReservaClase.CONFIRMADA).stream()
+                .map(InscriptoResponse::desde)
+                .toList();
     }
 }

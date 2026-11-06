@@ -48,3 +48,10 @@ docs/bruno/
    - `baseUrl`: Prefijo de la API (`http://localhost:8080/api`).
    - `idOperador`: ID del usuario que realiza la acción (por defecto `1` para el Gerente inicial).
    - `rootKey`: Clave secreta administrativa para consultas de mantenimiento a la base de datos (por defecto `fitzone-local-root-key-2026` en local).
+   - `tokenGerente`, `tokenRecepcion`, `tokenSocio` y `tokenOtroSocio`: JWT por rol que usa `03-clases`. `tokenOtroSocio` debe ser de un socio distinto a `tokenSocio`. No se commitean: cargalos en Bruno al probar, con el `token` que devuelve `POST /v1/auth/login` para cada usuario de `docs/DATOS_DE_PRUEBA.md`.
+
+---
+
+## 🔁 Colección de clases
+
+`03-clases` es un recorrido encadenado: corré la carpeta entera y en orden, porque cada request guarda los ids que usan los siguientes. Crea su propia clase con fecha futura, valida cada respuesta con tests y al final borra lo que creó.

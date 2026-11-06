@@ -3,10 +3,12 @@ package com.fitzone.modulo.clases.service;
 import com.fitzone.core.domain.enums.EstadoMembresia;
 import com.fitzone.core.domain.enums.EstadoReservaClase;
 import com.fitzone.core.domain.enums.TipoUsuario;
+import com.fitzone.core.exception.AccesoDenegadoException;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.MembresiaInactivaException;
 import com.fitzone.core.exception.RecursoNoEncontradoException;
 import com.fitzone.core.exception.ReglaNegocioException;
+import com.fitzone.core.security.UsuarioActual;
 import com.fitzone.modulo.clases.models.ClaseGrupal;
 import com.fitzone.modulo.clases.models.ListaEspera;
 import com.fitzone.modulo.clases.repository.ClaseGrupalRepository;
@@ -14,7 +16,6 @@ import com.fitzone.modulo.clases.repository.ListaEsperaRepository;
 import com.fitzone.modulo.clases.repository.ReservaClaseRepository;
 import com.fitzone.modulo.usuarios.models.Usuario;
 import com.fitzone.modulo.usuarios.repository.MembresiaRepository;
-import com.fitzone.modulo.usuarios.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,16 +34,17 @@ public class ListaEsperaService {
     private final ListaEsperaRepository listaEsperaRepository;
     private final ClaseGrupalRepository claseGrupalRepository;
     private final ReservaClaseRepository reservaClaseRepository;
-    private final UsuarioRepository usuarioRepository;
     private final MembresiaRepository membresiaRepository;
+    private final UsuarioActual usuarioActual;
 
     @Transactional
-    public ListaEspera anotarse(Long idClase, Long idUsuario) {
-        ClaseGrupal clase = claseGrupalRepository.findById(idClase)
+    public ListaEspera anotarse(Long idClase) {
+        // El bloqueo evita que dos pedidos simultáneos dupliquen al socio o repitan la posición
+        ClaseGrupal clase = claseGrupalRepository.findByIdWithLock(idClase)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Clase grupal", idClase));
 
-        Usuario usuario = usuarioRepository.findById(idUsuario)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario", idUsuario));
+        Usuario usuario = usuarioActual.obtener();
+        Long idUsuario = usuario.getIdUsuario();
 
         if (usuario.getTipoUsuario() != TipoUsuario.SOCIO) {
             throw new ReglaNegocioException("Solo los socios pueden anotarse en la lista de espera");
@@ -90,27 +92,44 @@ public class ListaEsperaService {
         ListaEspera espera = listaEsperaRepository.findById(idEspera)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Inscripción en lista de espera", idEspera));
 
+        if (!espera.getUsuario().getIdUsuario().equals(usuarioActual.obtener().getIdUsuario())) {
+            throw new AccesoDenegadoException("Solo podés salir de tus propias listas de espera");
+        }
+
+        // Mismo bloqueo que anotarse, para que la cola no se reordene mientras otro socio toma su posición
         Long idClase = espera.getClase().getIdClase();
-        listaEsperaRepository.delete(espera);
-        reacomodarPosiciones(idClase);
-        log.info("Inscripción en lista de espera {} eliminada y posiciones reacomodadas para clase {}", idEspera, idClase);
+        claseGrupalRepository.findByIdWithLock(idClase)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Clase grupal", idClase));
+        quitarDeLaCola(espera);
     }
 
     @Transactional(readOnly = true)
     public List<ListaEspera> listarPorClase(Long idClase) {
-        if (!claseGrupalRepository.existsById(idClase)) {
-            throw new RecursoNoEncontradoException("Clase grupal", idClase);
-        }
+        ClaseGrupal clase = claseGrupalRepository.findById(idClase)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Clase grupal", idClase));
+        usuarioActual.validarSede(clase.getSede().getIdSede());
         return listaEsperaRepository.findByClase_IdClaseOrderByOrdenPosicionAsc(idClase);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ListaEspera> listarMias() {
+        return listaEsperaRepository.findByUsuario_IdUsuario(usuarioActual.obtener().getIdUsuario());
     }
 
     @Transactional
     public void removerSocioSiEstaEnEspera(Long idClase, Long idUsuario) {
         Optional<ListaEspera> enEspera = listaEsperaRepository.findByClase_IdClaseAndUsuario_IdUsuario(idClase, idUsuario);
         if (enEspera.isPresent()) {
-            salir(enEspera.get().getIdEspera());
+            quitarDeLaCola(enEspera.get());
             log.info("Socio {} removido de la lista de espera de clase {} al concretar su reserva", idUsuario, idClase);
         }
+    }
+
+    private void quitarDeLaCola(ListaEspera espera) {
+        Long idClase = espera.getClase().getIdClase();
+        listaEsperaRepository.delete(espera);
+        reacomodarPosiciones(idClase);
+        log.info("Inscripción en lista de espera {} eliminada y posiciones reacomodadas para clase {}", espera.getIdEspera(), idClase);
     }
 
     private void reacomodarPosiciones(Long idClase) {
