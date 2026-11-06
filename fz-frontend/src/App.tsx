@@ -18,6 +18,7 @@ import { useState, useEffect } from 'react';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { SedeProvider } from './context/SedeContext';
 import { AppLayout } from './components/layout/AppLayout';
+import { INICIO_POR_ROL } from './components/layout/navegacion';
 import { AppProvider } from './context/AppContext';
 import { PlaygroundPage } from './pages/PlaygroundPage';
 import { UsuariosPage } from './pages/UsuariosPage';
@@ -60,7 +61,12 @@ function HttpErrorConnector({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Registramos el callback UNA SOLA VEZ al montar la app.
     // Ahora el httpClient puede disparar toasts sin saber nada de React.
-    registerHttpErrorHandler((message) => {
+    registerHttpErrorHandler((message, status) => {
+      if (status === 403) {
+        // Sesión válida pero sin permiso: aviso, sin romper la pantalla (SCRUM-92)
+        addToast({ type: 'warning', title: 'Sin permiso', message });
+        return;
+      }
       addToast({ type: 'error', title: 'Error de servidor', message });
     });
   }, [addToast]);
@@ -68,24 +74,14 @@ function HttpErrorConnector({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Inicio según el rol (SCRUM-92). Visitantes sin sesión y roles sin inicio propio
+ * van al catálogo público de canchas.
+ */
 function IndexRedirect() {
   const { usuario } = useAuth();
-  if (!usuario) {
-    return <Navigate to="/canchas" replace />;
-  }
-  if (usuario?.tipoUsuario === 'SOCIO') {
-    return <Navigate to="/rol/socio" replace />;
-  }
-  if (usuario?.tipoUsuario === 'EXTERNO') {
-    return <Navigate to="/rol/externo" replace />;
-  }
-  if (usuario?.tipoUsuario === 'RECEPCIONISTA') {
-    return <Navigate to="/rol/recepcionista" replace />;
-  }
-  if (usuario?.tipoUsuario === 'GERENTE') {
-    return <Navigate to="/rol/gerente" replace />;
-  }
-  return <Navigate to="/canchas" replace />;
+  const destino = usuario ? INICIO_POR_ROL[usuario.tipoUsuario] : undefined;
+  return <Navigate to={destino ?? '/canchas'} replace />;
 }
 
 export default function App() {
@@ -151,9 +147,13 @@ export default function App() {
                 */}
                 <Route path="/" element={<AppLayout />}>
                   <Route index element={<IndexRedirect />} />
-                  {/* Catálogo público: /canchas y /clases son accesibles para visitantes anónimos */}
+                  {/* Catálogo público: ver canchas y disponibilidad no exige sesión (SCRUM-91) */}
                   <Route path="canchas" element={<CanchasPage />} />
-                  <Route path="clases" element={<ClasesPage />} />
+
+                  {/* Clases: la agenda exige sesión de SOCIO, RECEPCIONISTA o GERENTE (M3) */}
+                  <Route element={<RoleMiddleware prestacionRequerida="CLASES_VER" />}>
+                    <Route path="clases" element={<ClasesPage />} />
+                  </Route>
 
                   {/* Mi Pase QR (Socio) */}
                   <Route element={<RoleMiddleware prestacionRequerida="ACCESO_MI_QR" />}>

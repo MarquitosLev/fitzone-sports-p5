@@ -27,22 +27,36 @@ export const CATALOGO_PRESTACIONES: MetadataPrestacion[] = [
   { clave: PRESTACIONES.PAGOS_VER_HISTORIAL, nombre: 'Ver Historial Pagos', modulo: 'Pagos', descripcion: 'Consultar transacciones y comprobantes emitidos' },
 ];
 
+/**
+ * Prestaciones que el backend reserva al socio (`@PreAuthorize("hasRole('SOCIO')")`):
+ * pase QR propio (GET /v1/usuarios/me/qr), reservas/lista de espera de clases y el
+ * descuento de socio. El gerente no las tiene para que el menú no le ofrezca
+ * pantallas que el backend le rechazaría con 403 (SCRUM-92).
+ */
+export const PRESTACIONES_EXCLUSIVAS_SOCIO: Prestacion[] = [
+  PRESTACIONES.ACCESO_MI_QR,
+  PRESTACIONES.CLASES_RESERVAR,
+  PRESTACIONES.CANCHAS_DESCUENTO_SOCIO,
+];
+
 export const ROLES_BASE_SISTEMA: RolDTO[] = [
   {
     codigo: 'GERENTE',
     nombre: 'Gerente General',
     descripcion: 'Control total de operaciones, sedes, personal y políticas de acceso.',
     esSistema: true,
-    prestaciones: Object.values(PRESTACIONES),
+    prestaciones: Object.values(PRESTACIONES).filter(
+      (p) => !PRESTACIONES_EXCLUSIVAS_SOCIO.includes(p)
+    ),
   },
   {
     codigo: 'RECEPCIONISTA',
     nombre: 'Recepcionista',
     descripcion: 'Operador de sede: cobros, molinete, registro de socios y turnos.',
     esSistema: true,
+    // Sin CANCHAS_ADMIN: el ABM de canchas es solo del GERENTE (SCRUM-91)
     prestaciones: [
       PRESTACIONES.CANCHAS_VER,
-      PRESTACIONES.CANCHAS_ADMIN,
       PRESTACIONES.CLASES_VER,
       PRESTACIONES.CLASES_ADMIN,
       PRESTACIONES.ACCESO_ESCANEAR,
@@ -72,9 +86,10 @@ export const ROLES_BASE_SISTEMA: RolDTO[] = [
     nombre: 'Cliente Externo / Invitado',
     descripcion: 'Usuario no socio: consulta pública y checkout de canchas.',
     esSistema: true,
+    // Sin clases: la agenda de M3 no admite EXTERNO. Pagos y comprobantes sí (SCRUM-91)
     prestaciones: [
       PRESTACIONES.CANCHAS_VER,
-      PRESTACIONES.CLASES_VER,
+      PRESTACIONES.PAGOS_VER_HISTORIAL,
     ],
   },
 ];

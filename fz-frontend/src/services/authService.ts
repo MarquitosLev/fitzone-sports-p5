@@ -14,7 +14,8 @@ export const AUTH_ENDPOINTS = {
   LOGIN: '/v1/auth/login',
   REGISTRO: '/v1/auth/registro',
   LOGOUT: '/v1/auth/logout',
-  ME: '/v1/auth/me',
+  /** Perfil del usuario dueño del token (UsuarioController#obtenerMiPerfil). */
+  ME: '/v1/usuarios/me',
 } as const;
 
 export const AUTH_STORAGE_KEY = 'fitzone_auth_session';
@@ -246,6 +247,34 @@ export async function registrarUsuario(
 
   persistSession(response);
   return response;
+}
+
+/**
+ * Consulta el perfil del usuario logueado (`GET /v1/usuarios/me`) y actualiza
+ * la sesión guardada con esos datos (rol, sede, nombre).
+ *
+ * Sirve para dos cosas al arrancar la app:
+ *   - Validar que el token guardado sigue vigente: si venció, el backend
+ *     responde 401 y el httpClient cierra la sesión y manda a /login.
+ *   - Tomar los datos frescos del backend (por ejemplo, si cambió el rol).
+ *
+ * En modo mock devuelve el usuario de la sesión guardada, sin red.
+ */
+export async function obtenerUsuarioActual(): Promise<UsuarioDTO> {
+  const sesion = obtenerSesionActual();
+
+  if (USE_MOCK) {
+    if (!sesion) {
+      throw new AppError('No hay una sesión activa.', 401);
+    }
+    return { ...sesion.usuario };
+  }
+
+  const usuario = await httpClient.get<UsuarioDTO>(AUTH_ENDPOINTS.ME);
+  if (sesion) {
+    persistSession({ token: sesion.token, usuario });
+  }
+  return usuario;
 }
 
 /**

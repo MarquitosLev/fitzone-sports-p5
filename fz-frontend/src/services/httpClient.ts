@@ -91,18 +91,28 @@ function buildUserMessage(response: BackendErrorResponse): string {
 // Leemos la URL base del .env (Vite expone las variables VITE_* en import.meta.env)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api';
 
+/**
+ * Mensaje que ve el usuario cuando el backend responde 403 (tiene sesión,
+ * pero su rol no puede hacer esa operación). La pantalla no se rompe: se
+ * muestra un toast y el servicio recibe un AppError con status 403.
+ */
+export const MENSAJE_SIN_PERMISO = 'No tenés permiso para realizar esta acción.';
+
+/** Firma del callback global de errores HTTP. `status` permite distinguir 401/403 del resto. */
+export type HttpErrorHandler = (message: string, status: number) => void;
+
 // Callback opcional para disparar toasts de error globalmente.
 // Se registra una sola vez en App.tsx cuando se monta el ToastProvider.
-let _onError: ((message: string) => void) | null = null;
+let _onError: HttpErrorHandler | null = null;
 
 /**
  * Registra el callback que se llama cuando ocurre un error HTTP.
  * Llamar a esta función en App.tsx con `addToast` del ToastContext.
  *
  * Ejemplo:
- *   registerHttpErrorHandler((msg) => addToast({ type: 'error', title: 'Error', message: msg }));
+ *   registerHttpErrorHandler((msg, status) => addToast({ type: status === 403 ? 'warning' : 'error', message: msg }));
  */
-export function registerHttpErrorHandler(handler: (message: string) => void): void {
+export function registerHttpErrorHandler(handler: HttpErrorHandler): void {
   _onError = handler;
 }
 
@@ -173,13 +183,20 @@ async function httpRequest<T>(
     backendError = undefined;
   }
 
-  const userMessage = backendError
-    ? buildUserMessage(backendError)
-    : `Error ${response.status}: ${response.statusText}`;
+  // 403: el usuario está logueado pero su rol no alcanza. No cerramos sesión:
+  // avisamos "sin permiso" y dejamos que la pantalla siga funcionando.
+  let userMessage: string;
+  if (response.status === 403) {
+    userMessage = MENSAJE_SIN_PERMISO;
+  } else {
+    userMessage = backendError
+      ? buildUserMessage(backendError)
+      : `Error ${response.status}: ${response.statusText}`;
+  }
 
   // Disparamos el toast de error si hay un handler registrado
   if (_onError) {
-    _onError(userMessage);
+    _onError(userMessage, response.status);
   }
 
   throw new AppError(userMessage, response.status, backendError);
