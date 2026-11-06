@@ -7,5 +7,9 @@ meta {
 get {
   url: {{baseUrl}}/v1/pagos/1
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
 }

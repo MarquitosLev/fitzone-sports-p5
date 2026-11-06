@@ -18,9 +18,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/pagos")
+@PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO', 'RECEPCIONISTA', 'GERENTE')")
 @RequiredArgsConstructor
 @Tag(name = "Pagos", description = "Endpoints de procesamiento de pagos y consulta de transacciones")
 public class PagoController {

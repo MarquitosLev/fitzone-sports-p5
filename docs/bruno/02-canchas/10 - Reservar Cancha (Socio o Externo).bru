@@ -7,7 +7,11 @@ meta {
 post {
   url: {{baseUrl}}/v1/canchas/1/reservas
   body: json
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
 }
 
 body:json {

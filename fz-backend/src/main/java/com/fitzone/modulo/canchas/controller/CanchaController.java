@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,12 +40,14 @@ public class CanchaController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('GERENTE')")
     @Operation(summary = "Alta de una nueva cancha")
     public Cancha crear(@Valid @RequestBody Cancha cancha) {
         return canchaService.crear(cancha);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('GERENTE')")
     @Operation(summary = "Edición de una cancha")
     public Cancha actualizar(@PathVariable @Positive Long id, @Valid @RequestBody Cancha cancha) {
         return canchaService.actualizar(id, cancha);
@@ -65,6 +68,7 @@ public class CanchaController {
     }
 
     @PatchMapping("/{id}/mantenimiento")
+    @PreAuthorize("hasRole('GERENTE')")
     @Operation(summary = "Inhabilitar o habilitar una cancha por mantenimiento")
     public Cancha cambiarMantenimiento(@PathVariable @Positive Long id, @RequestBody Map<String, Boolean> body) {
         boolean enMantenimiento = body.getOrDefault("enMantenimiento", false);
@@ -91,6 +95,7 @@ public class CanchaController {
 
     @PostMapping("/{id}/reservas")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO', 'RECEPCIONISTA', 'GERENTE')")
     @Operation(summary = "Reserva de un turno en una cancha")
     public ReservaCancha reservar(
             @PathVariable @Positive Long id,

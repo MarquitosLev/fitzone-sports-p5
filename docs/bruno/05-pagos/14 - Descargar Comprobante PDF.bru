@@ -7,5 +7,9 @@ meta {
 get {
   url: {{baseUrl}}/v1/comprobantes/1/pdf
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
 }

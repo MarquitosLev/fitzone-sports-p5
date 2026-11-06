@@ -2,6 +2,7 @@ package com.fitzone.modulo.usuarios.service;
 
 import com.fitzone.core.domain.enums.TipoUsuario;
 import com.fitzone.core.exception.AccesoDenegadoException;
+import com.fitzone.core.exception.AccesoNoAutorizadoException;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.RecursoNoEncontradoException;
 import com.fitzone.core.exception.ReglaNegocioException;
@@ -27,6 +28,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -184,13 +186,8 @@ class UsuarioServiceTest {
     }
 
     @Test
-    @DisplayName("Alta con idOperador nulo: realiza fallback al operador del sistema (1L)")
-    void crear_idOperadorNulo_usaOperadorPorDefecto() {
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(operadorRecepcionista));
-        when(usuarioRepository.existsByDni("66666667")).thenReturn(false);
-        when(supabaseAuthClient.isAltaPorEmail()).thenReturn(true);
-        when(supabaseAuthClient.invitarUsuario(eq("test2@fitzone.com"), anyMap())).thenReturn(UUID.randomUUID());
-
+    @DisplayName("Alta sin operador lanza AccesoNoAutorizadoException y no crea nada")
+    void crear_idOperadorNulo_lanzaNoAutorizado() {
         Usuario socio = Usuario.builder()
                 .dni("66666667")
                 .nombre("Test2")
@@ -199,12 +196,18 @@ class UsuarioServiceTest {
                 .tipoUsuario(TipoUsuario.SOCIO)
                 .build();
 
-        when(usuarioRepository.saveAndFlush(any(Usuario.class))).thenAnswer(i -> i.getArgument(0));
+        assertThatThrownBy(() -> usuarioService.crear(socio, null))
+                .isInstanceOf(AccesoNoAutorizadoException.class);
+        verifyNoInteractions(supabaseAuthClient);
+        verify(usuarioRepository, never()).saveAndFlush(any(Usuario.class));
+    }
 
-        Usuario creado = usuarioService.crear(socio, null);
-
-        assertThat(creado).isNotNull();
-        verify(usuarioRepository).findById(1L);
+    @Test
+    @DisplayName("Edición sin operador lanza AccesoNoAutorizadoException")
+    void actualizar_idOperadorNulo_lanzaNoAutorizado() {
+        assertThatThrownBy(() -> usuarioService.actualizar(3L, Usuario.builder().build(), null))
+                .isInstanceOf(AccesoNoAutorizadoException.class);
+        verify(usuarioRepository, never()).save(any(Usuario.class));
     }
 
     @Test

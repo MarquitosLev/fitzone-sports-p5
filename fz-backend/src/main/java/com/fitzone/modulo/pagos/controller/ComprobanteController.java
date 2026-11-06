@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/comprobantes")
+@PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO', 'RECEPCIONISTA', 'GERENTE')")
 @RequiredArgsConstructor
 @Tag(name = "Comprobantes", description = "Endpoints de descarga y visualización de comprobantes oficiales de pago en PDF")
 public class ComprobanteController {
