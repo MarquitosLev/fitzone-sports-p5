@@ -9,6 +9,7 @@ import com.fitzone.modulo.usuarios.models.Usuario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -20,11 +21,15 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Check;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "fz_gym_accesos")
+// Un ingreso se asocia como mucho a una reserva: de clase o de cancha, nunca a las dos.
+@Check(name = "ck_gym_accesos_una_reserva",
+        constraints = "id_reserva_clase IS NULL OR id_reserva_cancha IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -38,23 +43,23 @@ public class Acceso extends BaseEntity {
     private Long idAcceso;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_usuario", nullable = false)
+    @JoinColumn(name = "id_usuario", nullable = false, foreignKey = @ForeignKey(name = "fk_gym_accesos_usuarios"))
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Usuario usuario;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_sede", nullable = false)
+    @JoinColumn(name = "id_sede", nullable = false, foreignKey = @ForeignKey(name = "fk_gym_accesos_sedes"))
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Sede sede;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_reserva_clase")
+    @JoinColumn(name = "id_reserva_clase", foreignKey = @ForeignKey(name = "fk_gym_accesos_reservas_clase"))
     @JsonIgnore
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ReservaClase reservaClase;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_reserva_cancha")
+    @JoinColumn(name = "id_reserva_cancha", foreignKey = @ForeignKey(name = "fk_gym_accesos_reservas_cancha"))
     @JsonIgnore
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ReservaCancha reservaCancha;

@@ -1,21 +1,28 @@
 package com.fitzone.modulo.usuarios.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fitzone.core.domain.common.BaseEntity;
 import com.fitzone.core.domain.enums.TipoUsuario;
+import com.fitzone.modulo.gimnasio.models.Sede;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -81,6 +88,16 @@ public class Usuario extends BaseEntity {
 
     @Column(name = "id_sede")
     private Long idSede;
+
+    // Solo existe para que Hibernate cree la FK de id_sede; el valor se lee y se escribe con idSede.
+    // Ninguna respuesta necesita la sede completa del usuario, por eso queda sin getter ni setter.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_sede", insertable = false, updatable = false,
+            foreignKey = @ForeignKey(name = "fk_usr_usuarios_sedes"))
+    @JsonIgnore
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private Sede sede;
 
     /**
      * Contraseña inicial usada exclusivamente cuando fitzone.supabase.alta-por-email=false.
