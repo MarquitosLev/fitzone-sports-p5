@@ -94,7 +94,9 @@ class PagoServiceTest {
         sede = Sede.builder().idSede(10L).nombre("Sede Central").build();
         plan = Plan.builder().idPlan(2).nombre("Plan Full").precioBase(new BigDecimal("30000.00")).duracionMeses(1).build();
         membresia = Membresia.builder().idMembresia(20L).usuario(usuario).plan(plan).build();
-        reservaCancha = ReservaCancha.builder().idReservaCancha(30L).usuario(usuario).precioFinal(new BigDecimal("12000.00")).build();
+        reservaCancha = ReservaCancha.builder().idReservaCancha(30L).usuario(usuario)
+                .cancha(Cancha.builder().idCancha(5L).sede(sede).build())
+                .precioFinal(new BigDecimal("12000.00")).build();
     }
 
     @Test
@@ -107,7 +109,6 @@ class PagoServiceTest {
                 .build();
 
         when(usuarioActual.obtener()).thenReturn(usuario);
-        when(sedeRepository.findById(10L)).thenReturn(Optional.of(sede));
         when(reservaCanchaRepository.findById(30L)).thenReturn(Optional.of(reservaCancha));
         when(transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(30L, EstadoPago.CONFIRMADO))
                 .thenReturn(false);
@@ -137,7 +138,6 @@ class PagoServiceTest {
                 .build();
 
         when(usuarioActual.obtener()).thenReturn(usuario);
-        when(sedeRepository.findById(10L)).thenReturn(Optional.of(sede));
         when(reservaCanchaRepository.findById(30L)).thenReturn(Optional.of(reservaCancha));
         when(transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(30L, EstadoPago.CONFIRMADO))
                 .thenReturn(false);
@@ -164,7 +164,6 @@ class PagoServiceTest {
                 .build();
 
         when(usuarioActual.obtener()).thenReturn(usuario);
-        when(sedeRepository.findById(10L)).thenReturn(Optional.of(sede));
         when(reservaCanchaRepository.findById(30L)).thenReturn(Optional.of(reservaCancha));
         when(transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(30L, EstadoPago.CONFIRMADO))
                 .thenReturn(true);
