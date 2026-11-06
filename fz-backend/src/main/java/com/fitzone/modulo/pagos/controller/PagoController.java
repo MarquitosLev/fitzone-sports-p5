@@ -32,7 +32,9 @@ public class PagoController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Procesamiento de un pago simulado a través de la pasarela")
+    // Se paga solo lo propio; el cobro del personal para otro usuario es la historia de cobro en mostrador
+    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
+    @Operation(summary = "Pago simulado de una membresía o reserva propia del usuario logueado")
     public Transaccion procesarPago(@Valid @RequestBody PagoRequest request) {
         return pagoService.procesarPago(request);
     }

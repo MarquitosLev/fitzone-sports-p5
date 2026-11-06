@@ -37,6 +37,7 @@ public class ComprobanteService {
 
     private final ComprobanteRepository comprobanteRepository;
     private final TransaccionRepository transaccionRepository;
+    private final AccesoPagos accesoPagos;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -70,14 +71,18 @@ public class ComprobanteService {
 
     @Transactional(readOnly = true)
     public Comprobante obtenerPorId(Long idComprobante) {
-        return comprobanteRepository.findById(idComprobante)
+        Comprobante comprobante = comprobanteRepository.findById(idComprobante)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Comprobante", idComprobante));
+        // Solo el dueño del pago o el personal de esa sede (también protege la descarga del PDF)
+        accesoPagos.validarLectura(comprobante.getTransaccion());
+        return comprobante;
     }
 
     @Transactional(readOnly = true)
     public Comprobante obtenerPorIdTransaccion(Long idTransaccion) {
         Transaccion transaccion = transaccionRepository.findById(idTransaccion)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Transacción", idTransaccion));
+        accesoPagos.validarLectura(transaccion);
 
         if (transaccion.getEstadoPago() != EstadoPago.CONFIRMADO) {
             throw new ReglaNegocioException("La transacción no se encuentra confirmada y no posee comprobante");

@@ -78,6 +78,13 @@ public class UsuarioController {
         return canchaService.listarMias();
     }
 
+    @GetMapping("/me/pagos")
+    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
+    @Operation(summary = "Historial de pagos del usuario logueado, con el plan o la cancha de cada uno")
+    public List<Transaccion> obtenerMisPagos() {
+        return pagoService.listarMios();
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")

@@ -116,9 +116,11 @@ En Swagger: hacé `POST /v1/auth/login`, copiá el `token` y cargalo en **Author
 | M4 Cotización con descuento de socio (token opcional) | Sin descuento | 15% si la membresía está vigente | Sin descuento | Sin descuento | Sin descuento |
 | M4 Alta, edición y mantenimiento de canchas | — | — | — | — | Su sede |
 | M4 Reservar un turno (a nombre del logueado) y `/usuarios/me/reservas-cancha` | — | Sí | Sí | — | — |
-| M5 Pagos y comprobantes | — | Sí | Sí | Sí | Sí |
+| M5 Pagar (`POST /pagos`), solo membresías y reservas propias | — | Sí | Sí | — | — |
+| M5 Ver un pago, su comprobante y el PDF | — | Los propios | Los propios | Su sede | Su sede |
+| M5 `/usuarios/me/pagos` | — | Sí | Sí | — | — |
 
-La pertenencia (pagar o ver solo lo propio, el personal solo su sede en canchas y pagos) se valida en el servicio con `UsuarioActual` en SCRUM-98 y SCRUM-99.
+La pertenencia se valida en el servicio: `UsuarioActual` para lo propio y `AccesoPagos` (`modulo/pagos/service`) para leer pagos y comprobantes. El monto lo calcula siempre el servidor (precio del plan o precio congelado de la reserva) y un `idUsuario` en el body se ignora.
 
 #### Matriz de permisos de Clases (M3)
 

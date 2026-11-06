@@ -2,9 +2,12 @@ package com.fitzone.modulo.pagos.service;
 
 import com.fitzone.core.domain.enums.EstadoPago;
 import com.fitzone.core.domain.enums.TipoOrigenTransaccion;
+import com.fitzone.core.exception.AccesoDenegadoException;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.PeticionInvalidaException;
 import com.fitzone.core.exception.RecursoNoEncontradoException;
+import com.fitzone.core.security.UsuarioActual;
+import com.fitzone.modulo.canchas.models.Cancha;
 import com.fitzone.modulo.canchas.models.ReservaCancha;
 import com.fitzone.modulo.canchas.repository.ReservaCanchaRepository;
 import com.fitzone.modulo.gimnasio.models.Sede;
@@ -38,6 +41,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,6 +73,12 @@ class PagoServiceTest {
     @Mock
     private ComprobanteService comprobanteService;
 
+    @Mock
+    private UsuarioActual usuarioActual;
+
+    @Mock
+    private AccesoPagos accesoPagos;
+
     @InjectMocks
     private PagoService pagoService;
 
@@ -84,21 +94,21 @@ class PagoServiceTest {
         sede = Sede.builder().idSede(10L).nombre("Sede Central").build();
         plan = Plan.builder().idPlan(2).nombre("Plan Full").precioBase(new BigDecimal("30000.00")).duracionMeses(1).build();
         membresia = Membresia.builder().idMembresia(20L).usuario(usuario).plan(plan).build();
-        reservaCancha = ReservaCancha.builder().idReservaCancha(30L).usuario(usuario).precioFinal(new BigDecimal("12000.00")).build();
+        reservaCancha = ReservaCancha.builder().idReservaCancha(30L).usuario(usuario)
+                .cancha(Cancha.builder().idCancha(5L).sede(sede).build())
+                .precioFinal(new BigDecimal("12000.00")).build();
     }
 
     @Test
     @DisplayName("procesarPago con RESERVA_CANCHA aprobado guarda transacción CONFIRMADO")
     void procesarPago_reservaCancha_aprobado() {
         PagoRequest request = PagoRequest.builder()
-                .idUsuario(1L)
                 .idSede(10L)
                 .concepto(TipoOrigenTransaccion.RESERVA_CANCHA)
                 .idReservaCancha(30L)
                 .build();
 
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
-        when(sedeRepository.findById(10L)).thenReturn(Optional.of(sede));
+        when(usuarioActual.obtener()).thenReturn(usuario);
         when(reservaCanchaRepository.findById(30L)).thenReturn(Optional.of(reservaCancha));
         when(transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(30L, EstadoPago.CONFIRMADO))
                 .thenReturn(false);
@@ -121,15 +131,13 @@ class PagoServiceTest {
     @DisplayName("procesarPago con forzarRechazo=true guarda transacción RECHAZADO")
     void procesarPago_reservaCancha_rechazado() {
         PagoRequest request = PagoRequest.builder()
-                .idUsuario(1L)
                 .idSede(10L)
                 .concepto(TipoOrigenTransaccion.RESERVA_CANCHA)
                 .idReservaCancha(30L)
                 .forzarRechazo(true)
                 .build();
 
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
-        when(sedeRepository.findById(10L)).thenReturn(Optional.of(sede));
+        when(usuarioActual.obtener()).thenReturn(usuario);
         when(reservaCanchaRepository.findById(30L)).thenReturn(Optional.of(reservaCancha));
         when(transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(30L, EstadoPago.CONFIRMADO))
                 .thenReturn(false);
@@ -150,14 +158,12 @@ class PagoServiceTest {
     @DisplayName("procesarPago para reserva de cancha ya pagada lanza ConflictoException (409)")
     void procesarPago_reservaCancha_duplicada_lanzaConflicto() {
         PagoRequest request = PagoRequest.builder()
-                .idUsuario(1L)
                 .idSede(10L)
                 .concepto(TipoOrigenTransaccion.RESERVA_CANCHA)
                 .idReservaCancha(30L)
                 .build();
 
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
-        when(sedeRepository.findById(10L)).thenReturn(Optional.of(sede));
+        when(usuarioActual.obtener()).thenReturn(usuario);
         when(reservaCanchaRepository.findById(30L)).thenReturn(Optional.of(reservaCancha));
         when(transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(30L, EstadoPago.CONFIRMADO))
                 .thenReturn(true);
@@ -174,13 +180,12 @@ class PagoServiceTest {
     @DisplayName("procesarPago con MEMBRESIA aprobado renueva automáticamente la membresía")
     void procesarPago_membresia_aprobado_renueva() {
         PagoRequest request = PagoRequest.builder()
-                .idUsuario(1L)
                 .idSede(10L)
                 .concepto(TipoOrigenTransaccion.MEMBRESIA)
                 .idMembresia(20L)
                 .build();
 
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioActual.obtener()).thenReturn(usuario);
         when(sedeRepository.findById(10L)).thenReturn(Optional.of(sede));
         when(membresiaRepository.findById(20L)).thenReturn(Optional.of(membresia));
         when(pasarelaPago.cobrar(eq(new BigDecimal("30000.00")), anyString(), eq(false)))
@@ -200,14 +205,12 @@ class PagoServiceTest {
     @DisplayName("procesarPago con MEMBRESIA pero omitiendo idMembresia lanza PeticionInvalidaException (400)")
     void procesarPago_membresiaSinIdMembresia_lanzaPeticionInvalida() {
         PagoRequest request = PagoRequest.builder()
-                .idUsuario(1L)
                 .idSede(10L)
                 .concepto(TipoOrigenTransaccion.MEMBRESIA)
                 .idMembresia(null)
                 .build();
 
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
-        when(sedeRepository.findById(10L)).thenReturn(Optional.of(sede));
+        when(usuarioActual.obtener()).thenReturn(usuario);
 
         assertThatThrownBy(() -> pagoService.procesarPago(request))
                 .isInstanceOf(PeticionInvalidaException.class)
@@ -220,15 +223,13 @@ class PagoServiceTest {
     @DisplayName("procesarPago con MEMBRESIA e idReservaCancha presente lanza PeticionInvalidaException (400)")
     void procesarPago_membresiaConIdReserva_lanzaPeticionInvalida() {
         PagoRequest request = PagoRequest.builder()
-                .idUsuario(1L)
                 .idSede(10L)
                 .concepto(TipoOrigenTransaccion.MEMBRESIA)
                 .idMembresia(20L)
                 .idReservaCancha(30L)
                 .build();
 
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
-        when(sedeRepository.findById(10L)).thenReturn(Optional.of(sede));
+        when(usuarioActual.obtener()).thenReturn(usuario);
 
         assertThatThrownBy(() -> pagoService.procesarPago(request))
                 .isInstanceOf(PeticionInvalidaException.class)
@@ -238,19 +239,78 @@ class PagoServiceTest {
     }
 
     @Test
-    @DisplayName("procesarPago con usuario inexistente lanza RecursoNoEncontradoException (404)")
-    void procesarPago_usuarioInexistente_lanzaRecursoNoEncontrado() {
+    @DisplayName("procesarPago de la membresía de otro usuario lanza AccesoDenegadoException (403) sin cobrar")
+    void procesarPago_membresiaAjena_lanzaAccesoDenegado() {
         PagoRequest request = PagoRequest.builder()
-                .idUsuario(999L)
                 .idSede(10L)
                 .concepto(TipoOrigenTransaccion.MEMBRESIA)
                 .idMembresia(20L)
                 .build();
+        Usuario otro = Usuario.builder().idUsuario(2L).build();
 
-        when(usuarioRepository.findById(999L)).thenReturn(Optional.empty());
+        when(usuarioActual.obtener()).thenReturn(otro);
+        when(membresiaRepository.findById(20L)).thenReturn(Optional.of(membresia));
 
         assertThatThrownBy(() -> pagoService.procesarPago(request))
-                .isInstanceOf(RecursoNoEncontradoException.class);
+                .isInstanceOf(AccesoDenegadoException.class);
+        verify(pasarelaPago, never()).cobrar(any(), any(), anyBoolean());
+        verify(transaccionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("procesarPago de la reserva de otro usuario lanza AccesoDenegadoException (403) sin cobrar")
+    void procesarPago_reservaAjena_lanzaAccesoDenegado() {
+        PagoRequest request = PagoRequest.builder()
+                .concepto(TipoOrigenTransaccion.RESERVA_CANCHA)
+                .idReservaCancha(30L)
+                .build();
+        Usuario otro = Usuario.builder().idUsuario(2L).build();
+
+        when(usuarioActual.obtener()).thenReturn(otro);
+        when(reservaCanchaRepository.findById(30L)).thenReturn(Optional.of(reservaCancha));
+
+        assertThatThrownBy(() -> pagoService.procesarPago(request))
+                .isInstanceOf(AccesoDenegadoException.class);
+        verify(pasarelaPago, never()).cobrar(any(), any(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("procesarPago de una reserva usa la sede de la cancha aunque el request indique otra")
+    void procesarPago_reserva_usaSedeDeLaCancha() {
+        Sede sedeCancha = Sede.builder().idSede(1L).nombre("Sede Norte").build();
+        reservaCancha.setCancha(Cancha.builder().idCancha(5L).sede(sedeCancha).build());
+        PagoRequest request = PagoRequest.builder()
+                .idSede(10L)
+                .concepto(TipoOrigenTransaccion.RESERVA_CANCHA)
+                .idReservaCancha(30L)
+                .build();
+
+        when(usuarioActual.obtener()).thenReturn(usuario);
+        when(reservaCanchaRepository.findById(30L)).thenReturn(Optional.of(reservaCancha));
+        when(pasarelaPago.cobrar(any(), anyString(), eq(false)))
+                .thenReturn(new RespuestaPasarela(true, "tok_ok", "Pago aprobado"));
+        when(transaccionRepository.save(any(Transaccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaccion resultado = pagoService.procesarPago(request);
+
+        assertThat(resultado.getSede()).isEqualTo(sedeCancha);
+        verify(sedeRepository, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("procesarPago de membresía sin idSede lanza PeticionInvalidaException (400)")
+    void procesarPago_membresiaSinSede_lanzaPeticionInvalida() {
+        PagoRequest request = PagoRequest.builder()
+                .concepto(TipoOrigenTransaccion.MEMBRESIA)
+                .idMembresia(20L)
+                .build();
+
+        when(usuarioActual.obtener()).thenReturn(usuario);
+        when(membresiaRepository.findById(20L)).thenReturn(Optional.of(membresia));
+
+        assertThatThrownBy(() -> pagoService.procesarPago(request))
+                .isInstanceOf(PeticionInvalidaException.class)
+                .hasMessageContaining("idSede");
     }
 
     @Test
@@ -262,6 +322,7 @@ class PagoServiceTest {
         Transaccion resultado = pagoService.obtenerPorId(50L);
 
         assertThat(resultado.getIdTransaccion()).isEqualTo(50L);
+        verify(accesoPagos).validarLectura(t);
     }
 
     @Test
@@ -294,5 +355,26 @@ class PagoServiceTest {
 
         assertThatThrownBy(() -> pagoService.listarPorUsuario(999L))
                 .isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    @Test
+    @DisplayName("obtenerPorId de un pago ajeno propaga el 403 de AccesoPagos")
+    void obtenerPorId_ajeno_lanzaAccesoDenegado() {
+        Transaccion t = Transaccion.builder().idTransaccion(50L).build();
+        when(transaccionRepository.findById(50L)).thenReturn(Optional.of(t));
+        doThrow(new AccesoDenegadoException("No tiene permisos")).when(accesoPagos).validarLectura(t);
+
+        assertThatThrownBy(() -> pagoService.obtenerPorId(50L))
+                .isInstanceOf(AccesoDenegadoException.class);
+    }
+
+    @Test
+    @DisplayName("listarMios devuelve el historial del usuario logueado")
+    void listarMios_usaUsuarioDelToken() {
+        Transaccion t = Transaccion.builder().idTransaccion(50L).usuario(usuario).build();
+        when(usuarioActual.obtener()).thenReturn(usuario);
+        when(transaccionRepository.findConDetalleByUsuario(1L)).thenReturn(List.of(t));
+
+        assertThat(pagoService.listarMios()).containsExactly(t);
     }
 }

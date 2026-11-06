@@ -43,6 +43,9 @@ class ComprobanteServiceTest {
     @Mock
     private TransaccionRepository transaccionRepository;
 
+    @Mock
+    private AccesoPagos accesoPagos;
+
     @InjectMocks
     private ComprobanteService comprobanteService;
 
