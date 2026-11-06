@@ -33,6 +33,8 @@ import {
 } from '../../services/canchasService';
 import { useSede } from '../../context/SedeContext';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
+import { USE_MOCK } from '../../config';
 import { AppError } from '../../services/httpClient';
 import type {
   CanchaDTO,
@@ -91,8 +93,14 @@ export function ReservaCanchaView({
   const [cotizacion, setCotizacion] = useState<CotizacionReservaDTO | null>(null);
   const [loadingCotizacion, setLoadingCotizacion] = useState(false);
 
-  // Perfil del usuario (toggle interactivo para simular socio vs externo)
-  const [esSocio, setEsSocio] = useState<boolean>(true);
+  // Perfil del usuario: con la API real sale de la sesión (el backend aplica el descuento);
+  // en modo mock queda el toggle para simular socio vs externo.
+  const { usuario } = useAuth();
+  const [esSocioSimulado, setEsSocio] = useState<boolean>(true);
+  const esSocio = USE_MOCK ? esSocioSimulado : usuario?.tipoUsuario === 'SOCIO';
+  // Reservan socios y externos con sesión (SCRUM-98); el personal no reserva a su nombre
+  const puedeReservar =
+    USE_MOCK || usuario?.tipoUsuario === 'SOCIO' || usuario?.tipoUsuario === 'EXTERNO';
 
   // Modal de Confirmación
   const [modalConfirmacionOpen, setModalConfirmacionOpen] = useState(false);
@@ -182,14 +190,27 @@ export function ReservaCanchaView({
         const coti = await cotizarTurno(
           canchaSeleccionada.idCancha,
           turnoSeleccionado.horaInicio,
-          esSocio
+          esSocio,
+          fechaSeleccionada,
+          turnoSeleccionado.horaFin
         );
         if (!cancelado) {
           setCotizacion(coti);
         }
       } catch {
-        // Fallback local en caso de error de red
-        if (!cancelado) {
+        if (cancelado) return;
+        if (!USE_MOCK) {
+          // Con la API real el precio sale solo del servidor: sin cotización no se puede confirmar
+          setCotizacion(null);
+          addToast({
+            type: 'error',
+            title: 'No se pudo cotizar el turno',
+            message: 'Intentá de nuevo en unos segundos.',
+          });
+          return;
+        }
+        // Fallback local del modo mock
+        {
           const esPico = turnoSeleccionado.esPico;
           const recargo = esPico ? Math.round(canchaSeleccionada.precioBaseHora * 0.2) : 0;
           const sub = canchaSeleccionada.precioBaseHora + recargo;
@@ -214,7 +235,7 @@ export function ReservaCanchaView({
     return () => {
       cancelado = true;
     };
-  }, [canchaSeleccionada, turnoSeleccionado, esSocio]);
+  }, [canchaSeleccionada, turnoSeleccionado, esSocio, fechaSeleccionada, addToast]);
 
   // Canchas filtradas por deporte
   const canchasFiltradas = useMemo(() => {
@@ -258,12 +279,17 @@ export function ReservaCanchaView({
           fecha: fechaSeleccionada,
           horaInicio: turnoSeleccionado.horaInicio,
           horaFin: turnoSeleccionado.horaFin,
-          esSocio,
-          idUsuario: esSocio ? 1 : undefined,
-          nombreInvitado: esSocio ? undefined : 'Cliente Externo',
-          emailInvitado: esSocio ? undefined : 'externo@email.com',
+          // Identidad y perfil solo se envían en mock: la API real usa el usuario de la sesión
+          ...(USE_MOCK
+            ? {
+                esSocio,
+                idUsuario: esSocio ? 1 : undefined,
+                nombreInvitado: esSocio ? undefined : 'Cliente Externo',
+                emailInvitado: esSocio ? undefined : 'externo@email.com',
+              }
+            : {}),
         },
-        simularConflicto409
+        USE_MOCK && simularConflicto409
       );
 
       setModalConfirmacionOpen(false);
@@ -352,6 +378,7 @@ export function ReservaCanchaView({
               Mis Reservas
             </Button>
           )}
+          {USE_MOCK && (
           <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl text-xs font-bold">
           <button
             type="button"
@@ -374,8 +401,21 @@ export function ReservaCanchaView({
             <span>Cliente Externo</span>
           </button>
         </div>
+          )}
       </div>
     </div>
+
+      {!puedeReservar && (
+        <Alert
+          type="info"
+          title={usuario ? 'Las reservas son para socios y clientes' : 'Iniciá sesión para reservar'}
+          message={
+            usuario
+              ? 'Con tu rol podés consultar la disponibilidad, pero el turno se reserva desde la cuenta del socio o cliente.'
+              : 'Podés ver turnos y precios sin sesión. Para confirmar un turno, iniciá sesión con tu cuenta.'
+          }
+        />
+      )}
 
       {/* Alerta de Conflicto 409 si ocurrió */}
       {errorConflicto && (
@@ -572,6 +612,7 @@ export function ReservaCanchaView({
               variant="coral"
               size="lg"
               isLoading={loadingCotizacion}
+              disabled={!puedeReservar}
               onClick={handleAbrirConfirmacion}
               className="w-full sm:w-auto shadow-md"
             >
@@ -627,7 +668,8 @@ export function ReservaCanchaView({
             />
           )}
 
-          {/* Controles de Simulación de Conflicto 409 (útil para validación) */}
+          {/* Controles de Simulación de Conflicto 409 (solo modo mock) */}
+          {USE_MOCK && (
           <div className="p-3 bg-amber-50/70 border border-amber-200/60 rounded-xl text-xs flex items-center justify-between">
             <span className="text-amber-900 font-medium">
               Simular conflicto de horario tomado (409)
@@ -640,6 +682,7 @@ export function ReservaCanchaView({
               className="rounded text-fitzone-coral focus:ring-fitzone-coral cursor-pointer"
             />
           </div>
+          )}
 
           {/* Acciones */}
           <div className="pt-2 flex flex-col-reverse sm:flex-row items-center gap-2.5">

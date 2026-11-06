@@ -22,7 +22,11 @@ import {
   FileText,
 } from 'lucide-react';
 import { Button, StatusBadge, ConfirmDialog, Spinner, EmptyState, Alert } from '../ui';
-import { listarMisReservas, cancelarReserva } from '../../services/canchasService';
+import {
+  listarMisReservas,
+  cancelarReserva,
+  CANCELACION_DISPONIBLE,
+} from '../../services/canchasService';
 import { useToast } from '../../context/ToastContext';
 import type { ReservaCanchaDTO } from '../../types';
 import { formatearMonto } from '../../utils/formatters';
@@ -393,14 +397,16 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
                           >
                             Ir a Pagar
                           </Button>
-                          <Button
-                            type="button"
-                            variant="danger"
-                            size="sm"
-                            onClick={() => setReservaACancelar(b)}
-                          >
-                            Cancelar
-                          </Button>
+                          {CANCELACION_DISPONIBLE && (
+                            <Button
+                              type="button"
+                              variant="danger"
+                              size="sm"
+                              onClick={() => setReservaACancelar(b)}
+                            >
+                              Cancelar
+                            </Button>
+                          )}
                         </>
                       )}
 
@@ -415,14 +421,16 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
                           >
                             Ver comprobante
                           </Button>
-                          <Button
-                            type="button"
-                            variant="danger"
-                            size="sm"
-                            onClick={() => setReservaACancelar(b)}
-                          >
-                            Cancelar
-                          </Button>
+                          {CANCELACION_DISPONIBLE && (
+                            <Button
+                              type="button"
+                              variant="danger"
+                              size="sm"
+                              onClick={() => setReservaACancelar(b)}
+                            >
+                              Cancelar
+                            </Button>
+                          )}
                         </>
                       )}
 
