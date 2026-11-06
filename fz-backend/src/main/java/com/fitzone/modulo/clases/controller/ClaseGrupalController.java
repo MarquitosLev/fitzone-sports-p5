@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +36,7 @@ public class ClaseGrupalController {
     private final com.fitzone.modulo.clases.service.ListaEsperaService listaEsperaService;
 
     @PostMapping
+    @PreAuthorize("hasRole('GERENTE')")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Alta de una nueva clase grupal")
     public ClaseGrupal crear(@Valid @RequestBody ClaseGrupal clase) {
@@ -42,12 +44,14 @@ public class ClaseGrupalController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('GERENTE')")
     @Operation(summary = "Edición de una clase grupal")
     public ClaseGrupal actualizar(@PathVariable @Positive Long id, @Valid @RequestBody ClaseGrupal clase) {
         return claseGrupalService.actualizar(id, clase);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('GERENTE')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Baja de una clase grupal (no permitida si tiene reservas confirmadas)")
     public void eliminar(@PathVariable @Positive Long id) {
@@ -55,6 +59,7 @@ public class ClaseGrupalController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('SOCIO', 'RECEPCIONISTA', 'GERENTE')")
     @Operation(summary = "Agenda de clases grupales de una sede con cupo disponible calculado")
     public List<ClaseGrupal> listar(
             @RequestParam @NotNull(message = "El idSede es obligatorio") @Positive Long idSede,
@@ -64,36 +69,37 @@ public class ClaseGrupalController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SOCIO', 'RECEPCIONISTA', 'GERENTE')")
     @Operation(summary = "Detalle de una clase grupal con cupo disponible calculado")
     public ClaseGrupal obtenerPorId(@PathVariable @Positive Long id) {
         return claseGrupalService.obtenerPorId(id);
     }
 
     @PostMapping("/{id}/reservas")
+    @PreAuthorize("hasRole('SOCIO')")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Reserva de cupo en una clase grupal para un socio")
-    public com.fitzone.modulo.clases.models.ReservaClase reservar(
-            @PathVariable @Positive Long id,
-            @Valid @RequestBody com.fitzone.modulo.clases.models.ReservaClaseRequest request) {
-        return reservaClaseService.reservar(id, request.getIdUsuario());
+    @Operation(summary = "Reserva de cupo en una clase grupal para el socio logueado")
+    public com.fitzone.modulo.clases.models.ReservaClase reservar(@PathVariable @Positive Long id) {
+        return reservaClaseService.reservar(id);
     }
 
     @GetMapping("/{id}/reservas")
+    @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")
     @Operation(summary = "Lista de socios inscriptos con reserva confirmada en una clase grupal")
-    public List<com.fitzone.modulo.clases.models.ReservaClase> listarInscriptos(@PathVariable @Positive Long id) {
+    public List<com.fitzone.modulo.clases.models.InscriptoResponse> listarInscriptos(@PathVariable @Positive Long id) {
         return reservaClaseService.listarInscriptos(id);
     }
 
     @PostMapping("/{id}/lista-espera")
+    @PreAuthorize("hasRole('SOCIO')")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Anotarse en la lista de espera de una clase completa")
-    public com.fitzone.modulo.clases.models.ListaEspera anotarseEnListaEspera(
-            @PathVariable @Positive Long id,
-            @Valid @RequestBody com.fitzone.modulo.clases.models.ReservaClaseRequest request) {
-        return listaEsperaService.anotarse(id, request.getIdUsuario());
+    @Operation(summary = "Anota al socio logueado en la lista de espera de una clase completa")
+    public com.fitzone.modulo.clases.models.ListaEspera anotarseEnListaEspera(@PathVariable @Positive Long id) {
+        return listaEsperaService.anotarse(id);
     }
 
     @GetMapping("/{id}/lista-espera")
+    @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")
     @Operation(summary = "Obtiene la cola de espera ordenada por turno (FIFO) de una clase grupal")
     public List<com.fitzone.modulo.clases.models.ListaEspera> listarListaEspera(@PathVariable @Positive Long id) {
         return listaEsperaService.listarPorClase(id);

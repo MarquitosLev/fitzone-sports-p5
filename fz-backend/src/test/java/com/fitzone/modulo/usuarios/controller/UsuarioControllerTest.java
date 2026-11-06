@@ -52,6 +52,12 @@ class UsuarioControllerTest {
     private com.fitzone.modulo.clases.service.ReservaClaseService reservaClaseService;
 
     @MockitoBean
+    private com.fitzone.modulo.clases.service.ListaEsperaService listaEsperaService;
+
+    @MockitoBean
+    private com.fitzone.core.security.UsuarioActual usuarioActual;
+
+    @MockitoBean
     private com.fitzone.modulo.gimnasio.service.AccesoService accesoService;
 
     @MockitoBean

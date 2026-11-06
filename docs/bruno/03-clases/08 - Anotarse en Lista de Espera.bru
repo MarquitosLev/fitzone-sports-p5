@@ -1,0 +1,25 @@
+meta {
+  name: 08 - Anotarse en Lista de Espera
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/v1/clases/{{idClaseCompleta}}/lista-espera
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
+}
+
+script:post-response {
+  bru.setVar("idEspera", res.getBody().idEspera);
+}
+
+tests {
+  test("responde 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}

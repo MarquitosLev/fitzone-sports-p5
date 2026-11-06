@@ -1,0 +1,29 @@
+meta {
+  name: 05 - Reservar Clase
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/v1/clases/{{idClase}}/reservas
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
+}
+
+script:post-response {
+  bru.setVar("idReserva", res.getBody().idReservaClase);
+}
+
+tests {
+  test("responde 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("queda confirmada", function () {
+    expect(res.getBody().estado).to.equal("CONFIRMADA");
+  });
+}

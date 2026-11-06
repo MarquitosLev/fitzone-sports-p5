@@ -5,17 +5,32 @@ meta {
 }
 
 put {
-  url: {{baseUrl}}/v1/clases/1
+  url: {{baseUrl}}/v1/clases/{{idClase}}
   body: json
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenGerente}}
 }
 
 body:json {
   {
     "idSede": 1,
     "nombreActividad": "Spinning Avanzado",
-    "fechaHoraInicio": "2026-10-25T19:00:00",
-    "duracionMinutos": 50,
-    "cupoMaximo": 25
+    "fechaHoraInicio": "{{fechaInicio}}",
+    "duracionMinutos": 45,
+    "cupoMaximo": 1
   }
+}
+
+script:pre-request {
+  const inicio = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19);
+  bru.setVar("fechaInicio", inicio);
+}
+
+tests {
+  test("responde 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
 }
