@@ -54,7 +54,7 @@ export function UsuarioForm({
     telefono: '',
     fotoUrl: '',
     tipoUsuario: 'SOCIO',
-    idSede: sedeActiva?.idSede ?? 1,
+    idSede: sedeActiva?.idSede ?? null,
     password: '',
   });
 
@@ -74,7 +74,7 @@ export function UsuarioForm({
         telefono: valoresIniciales.telefono || '',
         fotoUrl: valoresIniciales.fotoUrl || '',
         tipoUsuario: valoresIniciales.tipoUsuario || 'SOCIO',
-        idSede: valoresIniciales.idSede ?? (sedeActiva?.idSede || 1),
+        idSede: valoresIniciales.idSede ?? sedeActiva?.idSede ?? null,
         password: '',
       });
     } else {
@@ -86,7 +86,7 @@ export function UsuarioForm({
         telefono: '',
         fotoUrl: '',
         tipoUsuario: 'SOCIO',
-        idSede: sedeActiva?.idSede || 1,
+        idSede: sedeActiva?.idSede ?? null,
         password: '',
       });
     }
@@ -165,12 +165,12 @@ export function UsuarioForm({
     if (!validateForm()) return;
 
     try {
-      // Aseguramos que si no requiere selector de sede, use la sede activa actual o por defecto
+      // Si el rol no requiere selector de sede, usa la sede activa (o ninguna)
       const payload: UsuarioFormData = {
         ...formData,
         idSede: requiereAsignacionSede
           ? Number(formData.idSede)
-          : Number(formData.idSede || sedeActiva?.idSede || 1),
+          : (formData.idSede ? Number(formData.idSede) : (sedeActiva?.idSede ?? null)),
       };
 
       if (!payload.password?.trim()) {

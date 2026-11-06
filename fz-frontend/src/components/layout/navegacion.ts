@@ -27,14 +27,14 @@ export interface NavItem {
 export const RUTAS_PUBLICAS: readonly string[] = ['/canchas'];
 
 /**
- * Inicio de cada rol (mismas rutas que IndexRedirect en App.tsx).
- * Es a donde vuelve alguien que entra por URL a una sección de otro rol.
+ * Pantalla de inicio de cada rol: a donde llega después del login y a donde vuelve
+ * si entra por URL a una sección de otro rol.
  */
 export const INICIO_POR_ROL: Record<TipoUsuario, string> = {
-  SOCIO: '/rol/socio',
-  EXTERNO: '/rol/externo',
-  RECEPCIONISTA: '/rol/recepcionista',
-  GERENTE: '/rol/gerente',
+  SOCIO: '/mi-qr',
+  EXTERNO: '/canchas',
+  RECEPCIONISTA: '/acceso',
+  GERENTE: '/acceso',
 };
 
 /**

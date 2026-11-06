@@ -1,11 +1,11 @@
 import { PRESTACIONES } from '../types/rol';
-import type { Prestacion, RolDTO, CrearRolDTO, MetadataPrestacion } from '../types/rol';
+import type { Prestacion, RolDTO, MetadataPrestacion } from '../types/rol';
 
 export const CATALOGO_PRESTACIONES: MetadataPrestacion[] = [
   // Canchas
   { clave: PRESTACIONES.CANCHAS_VER, nombre: 'Ver Canchas', modulo: 'Canchas', descripcion: 'Visualizar canchas y turnos disponibles' },
   { clave: PRESTACIONES.CANCHAS_ADMIN, nombre: 'Administrar Canchas', modulo: 'Canchas', descripcion: 'Crear, editar canchas y modificar tarifas' },
-  { clave: PRESTACIONES.CANCHAS_DESCUENTO_SOCIO, nombre: 'Descuento Socio', modulo: 'Canchas', descripcion: 'Aplicación automática del 15% de descuento en reservas' },
+  { clave: PRESTACIONES.CANCHAS_DESCUENTO_SOCIO, nombre: 'Descuento Socio', modulo: 'Canchas', descripcion: 'Descuento de socio en las reservas de cancha' },
 
   // Clases
   { clave: PRESTACIONES.CLASES_VER, nombre: 'Ver Clases', modulo: 'Clases', descripcion: 'Explorar cronograma de clases grupales' },
@@ -94,27 +94,12 @@ export const ROLES_BASE_SISTEMA: RolDTO[] = [
   },
 ];
 
-const STORAGE_KEY_ROLES = 'fitzone_custom_roles';
-
-function cargarRolesPersonalizados(): RolDTO[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_ROLES);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function guardarRolesPersonalizados(roles: RolDTO[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY_ROLES, JSON.stringify(roles));
-  } catch {
-    // Si falla el almacenamiento, continúa en memoria
-  }
-}
-
+/**
+ * Roles del sistema. La matriz es fija y sigue los @PreAuthorize del backend: no hay roles
+ * personalizados porque el backend solo reconoce los cuatro tipos de usuario.
+ */
 export function listarRoles(): RolDTO[] {
-  return [...ROLES_BASE_SISTEMA, ...cargarRolesPersonalizados()];
+  return ROLES_BASE_SISTEMA;
 }
 
 export function obtenerRolPorCodigo(codigo: string): RolDTO | undefined {
@@ -125,31 +110,4 @@ export function obtenerRolPorCodigo(codigo: string): RolDTO | undefined {
 export function obtenerPrestacionesPorRol(codigo: string): Prestacion[] {
   const rol = obtenerRolPorCodigo(codigo);
   return rol ? rol.prestaciones : [];
-}
-
-export function crearRolPersonalizado(datos: CrearRolDTO): RolDTO {
-  const codigo = datos.codigo.trim().toUpperCase().replace(/\s+/g, '_');
-  const existentes = listarRoles();
-  if (existentes.some((r) => r.codigo === codigo)) {
-    throw new Error(`Ya existe un rol con el código "${codigo}".`);
-  }
-
-  const nuevoRol: RolDTO = {
-    codigo,
-    nombre: datos.nombre.trim(),
-    descripcion: datos.descripcion.trim(),
-    esSistema: false,
-    prestaciones: datos.prestaciones,
-  };
-
-  const personalizados = cargarRolesPersonalizados();
-  personalizados.push(nuevoRol);
-  guardarRolesPersonalizados(personalizados);
-  return nuevoRol;
-}
-
-export function eliminarRolPersonalizado(codigo: string): void {
-  const norm = codigo.toUpperCase();
-  const personalizados = cargarRolesPersonalizados().filter((r) => r.codigo !== norm);
-  guardarRolesPersonalizados(personalizados);
 }

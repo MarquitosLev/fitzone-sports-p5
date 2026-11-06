@@ -1,4 +1,3 @@
-import { useState, useId } from 'react';
 import { ShieldCheck, Lock, CheckCircle2, AlertCircle, Calendar, Clock, MapPin, Sparkles } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, Button, Badge } from '../ui';
 import { DesglosePrecio } from '../canchas/DesglosePrecio';
@@ -12,12 +11,10 @@ export interface ResumenPagoProps {
   montoTotal: number;
   /** Indica si la operación está siendo procesada en la pasarela */
   isProcessing?: boolean;
-  /** Callback al presionar el botón "Pagar", recibe el token generado por la pasarela simulada */
-  onConfirmarPago: (tokenPasarela: string) => void | Promise<void>;
+  /** Callback al presionar el botón "Pagar" */
+  onConfirmarPago: () => void | Promise<void>;
   /** Mensaje de error general si falló la invocación */
   error?: string | null;
-  /** Habilita selector para simular aprobación o rechazo en modo demo */
-  permitirSimularRechazo?: boolean;
   /** Clase CSS adicional para el contenedor */
   className?: string;
 }
@@ -28,18 +25,13 @@ export function ResumenPago({
   isProcessing = false,
   onConfirmarPago,
   error = null,
-  permitirSimularRechazo = true,
   className = '',
 }: ResumenPagoProps) {
-  const radioGroupName = useId();
-  // En cumplimiento de RNF-02, la pasarela es simulada y solo maneja tokens de resultado
-  const [tokenSimulado, setTokenSimulado] = useState<'tok_mock_aprobado' | 'tok_mock_rechazado'>('tok_mock_aprobado');
-
   const esCancha = detalle.tipo === 'CANCHA';
 
   const handlePagar = async () => {
     if (isProcessing) return;
-    await onConfirmarPago(tokenSimulado);
+    await onConfirmarPago();
   };
 
   return (
@@ -140,45 +132,9 @@ export function ResumenPago({
         <div className="p-3.5 bg-slate-50 rounded-xl text-xs text-slate-600 flex items-start gap-2.5 border border-slate-100">
           <ShieldCheck className="w-4 h-4 text-[#2E9E5B] shrink-0 mt-0.5" />
           <p className="text-[11px] leading-relaxed">
-            <strong className="text-slate-700">Pasarela de pagos protegida:</strong> FitZone no solicita ni almacena números de tarjeta ni datos bancarios sensibles (RNF-02).
+            <strong className="text-slate-700">Pasarela de pagos protegida:</strong> FitZone no solicita ni almacena números de tarjeta ni datos bancarios sensibles.
           </p>
         </div>
-
-        {/* Selector de simulación para pruebas en desarrollo/mock */}
-        {permitirSimularRechazo && (
-          <div className="p-3 bg-amber-50/60 border border-amber-200/60 rounded-xl space-y-2 text-xs">
-            <span className="font-bold text-amber-900 block text-[11px] uppercase tracking-wider">
-              Simulación de Pasarela (Modo Pruebas):
-            </span>
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
-                <input
-                  type="radio"
-                  name={radioGroupName}
-                  value="tok_mock_aprobado"
-                  checked={tokenSimulado === 'tok_mock_aprobado'}
-                  onChange={() => setTokenSimulado('tok_mock_aprobado')}
-                  disabled={isProcessing}
-                  className="text-fitzone-navy focus:ring-fitzone-navy"
-                />
-                <span>Simular Aprobado (Exitoso)</span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
-                <input
-                  type="radio"
-                  name={radioGroupName}
-                  value="tok_mock_rechazado"
-                  checked={tokenSimulado === 'tok_mock_rechazado'}
-                  onChange={() => setTokenSimulado('tok_mock_rechazado')}
-                  disabled={isProcessing}
-                  className="text-fitzone-coral focus:ring-fitzone-coral"
-                />
-                <span className="text-fitzone-coral font-bold">Simular Rechazo (Límite excedido)</span>
-              </label>
-            </div>
-          </div>
-        )}
 
         {error && (
           <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">

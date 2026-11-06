@@ -5,7 +5,7 @@
 export type { SedeDTO } from './sede';
 export type { TipoUsuario, UsuarioDTO, UsuarioFormData } from './usuario';
 export type { EstadoMembresia, PlanDTO, MembresiaDTO, MembresiaFormData } from './membresia';
-export type { Prestacion, ModuloPrestacion, MetadataPrestacion, RolDTO, CrearRolDTO } from './rol';
+export type { Prestacion, ModuloPrestacion, MetadataPrestacion, RolDTO } from './rol';
 export { PRESTACIONES } from './rol';
 export type {
   AccesoDTO,

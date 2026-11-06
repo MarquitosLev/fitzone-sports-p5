@@ -49,16 +49,15 @@ function renderSidebar(tipoUsuario: TipoUsuario | null): string[] {
 describe('SCRUM-92: Sidebar muestra solo los módulos del rol', () => {
   it.each<[TipoUsuario | null, string[]]>([
     [null, ['Canchas']],
-    ['EXTERNO', ['Inicio', 'Canchas', 'Pagos']],
-    ['SOCIO', ['Inicio', 'Mi Pase QR', 'Clases Grupales', 'Canchas', 'Pagos']],
+    ['EXTERNO', ['Canchas', 'Pagos']],
+    ['SOCIO', ['Mi Pase QR', 'Clases Grupales', 'Canchas', 'Pagos']],
     [
       'RECEPCIONISTA',
-      ['Inicio', 'Usuarios', 'Membresías', 'Control Acceso', 'Clases Grupales', 'Canchas', 'Pagos'],
+      ['Usuarios', 'Membresías', 'Control Acceso', 'Clases Grupales', 'Canchas', 'Pagos'],
     ],
     [
       'GERENTE',
       [
-        'Inicio',
         'Usuarios',
         'Membresías',
         'Control Acceso',
@@ -70,11 +69,6 @@ describe('SCRUM-92: Sidebar muestra solo los módulos del rol', () => {
     ],
   ])('rol %s', (rol, esperados) => {
     expect(renderSidebar(rol)).toEqual(esperados);
-  });
-
-  it('el inicio apunta al panel del rol', () => {
-    renderSidebar('SOCIO');
-    expect(screen.getByRole('link', { name: /Inicio/ })).toHaveAttribute('href', '/rol/socio');
   });
 
   it('un visitante ve "Iniciar sesión" en lugar de "Cerrar sesión"', () => {

@@ -39,10 +39,10 @@ export interface FranjaHorariaDTO {
 export interface CotizacionReservaDTO {
   precioBase: number;
   esPico: boolean;
-  recargoPico: number; // +20% en franja pico
-  porcentajeRecargoPico: number; // 20
-  descuentoSocio: number; // -15% sobre tarifa con recargo
-  porcentajeDescuentoSocio: number; // 15
+  recargoPico: number;
+  porcentajeRecargoPico: number;
+  descuentoSocio: number;
+  porcentajeDescuentoSocio: number;
   esSocio: boolean;
   total: number;
 }
@@ -52,7 +52,7 @@ export type EstadoReservaCancha = 'PENDIENTE_PAGO' | 'CONFIRMADA' | 'CANCELADA' 
 /**
  * DTO de Reserva de Cancha.
  * `fechaHoraInicio` y `fechaHoraFin` son strings ISO (LocalDateTime sin zona horaria).
- * `precioFinal` lo calcula el backend (puede incluir el descuento del 15% para socios).
+ * `precioFinal` lo calcula el backend (puede incluir el descuento de socio).
  */
 export interface ReservaCanchaDTO {
   idReservaCancha: number;

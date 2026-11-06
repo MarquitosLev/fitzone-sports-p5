@@ -59,7 +59,7 @@ describe('ResumenPago Component', () => {
     // Debe mostrar los conceptos de DesglosePrecio
     expect(screen.getByText(/desglose del turno/i)).toBeInTheDocument();
     expect(screen.getByText(/beneficio socio/i)).toBeInTheDocument();
-    expect(screen.getByText(/descuento socio activo · −15%/i)).toBeInTheDocument();
+    expect(screen.getByText(/descuento socio · −15%/i)).toBeInTheDocument();
   });
 
   it('renderiza resumen de abono cuando el ítem es de tipo MEMBRESIA', () => {
@@ -91,27 +91,14 @@ describe('ResumenPago Component', () => {
     const botonPagar = screen.getByRole('button', { name: /pagar/i });
     fireEvent.click(botonPagar);
 
-    expect(handlePagar).toHaveBeenCalledWith('tok_mock_aprobado');
+    expect(handlePagar).toHaveBeenCalledTimes(1);
   });
 
-  it('permite alternar el token simulado para probar rechazos en pasarela (RNF-02)', () => {
-    const handlePagar = vi.fn();
-    render(
-      <ResumenPago
-        detalle={detalleCancha}
-        montoTotal={6800}
-        onConfirmarPago={handlePagar}
-        permitirSimularRechazo={true}
-      />
-    );
+  it('no muestra controles para simular la respuesta de la pasarela', () => {
+    render(<ResumenPago detalle={detalleCancha} montoTotal={6800} onConfirmarPago={vi.fn()} />);
 
-    const radioRechazo = screen.getByLabelText(/simular rechazo/i);
-    fireEvent.click(radioRechazo);
-
-    const botonPagar = screen.getByRole('button', { name: /pagar/i });
-    fireEvent.click(botonPagar);
-
-    expect(handlePagar).toHaveBeenCalledWith('tok_mock_rechazado');
+    expect(screen.queryByText(/simulación de pasarela/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/simular rechazo/i)).not.toBeInTheDocument();
   });
 
   it('deshabilita el botón Pagar mientras isProcessing es true para prevenir doble cobro', () => {

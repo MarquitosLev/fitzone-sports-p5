@@ -1,19 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   listarRoles,
   obtenerRolPorCodigo,
   obtenerPrestacionesPorRol,
-  crearRolPersonalizado,
-  eliminarRolPersonalizado,
   PRESTACIONES_EXCLUSIVAS_SOCIO,
 } from '../../services/rolesService';
 import { PRESTACIONES } from '../../types/rol';
 
 describe('SCRUM-107: rolesService (RBAC por prestaciones dinámicas)', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
   it('lista los 4 roles del sistema protegidos por defecto', () => {
     const roles = listarRoles();
     expect(roles.length).toBeGreaterThanOrEqual(4);
@@ -39,46 +33,8 @@ describe('SCRUM-107: rolesService (RBAC por prestaciones dinámicas)', () => {
     expect(prestacionesSocio).not.toContain('ACCESO_ESCANEAR');
   });
 
-  it('permite a Gerencia crear un rol personalizado dinámico', () => {
-    const nuevo = crearRolPersonalizado({
-      codigo: 'INSTRUCTOR',
-      nombre: 'Instructor de Clases',
-      descripcion: 'Encargado de dictar clases grupales',
-      prestaciones: ['CLASES_VER', 'CLASES_ADMIN'],
-    });
-
-    expect(nuevo.codigo).toBe('INSTRUCTOR');
-    expect(nuevo.esSistema).toBe(false);
-
-    const rolesActualizados = listarRoles();
-    expect(rolesActualizados.some((r) => r.codigo === 'INSTRUCTOR')).toBe(true);
-
-    const prestaciones = obtenerPrestacionesPorRol('INSTRUCTOR');
-    expect(prestaciones).toEqual(['CLASES_VER', 'CLASES_ADMIN']);
-  });
-
-  it('rechaza la creación de roles con código duplicado', () => {
-    expect(() =>
-      crearRolPersonalizado({
-        codigo: 'GERENTE',
-        nombre: 'Otro Gerente',
-        descripcion: 'Duplicado',
-        prestaciones: ['CANCHAS_VER'],
-      })
-    ).toThrow(/Ya existe un rol/);
-  });
-
-  it('permite eliminar un rol personalizado', () => {
-    crearRolPersonalizado({
-      codigo: 'AUDITOR',
-      nombre: 'Auditor Externo',
-      descripcion: 'Auditoría',
-      prestaciones: ['PAGOS_VER_HISTORIAL'],
-    });
-
-    expect(obtenerRolPorCodigo('AUDITOR')).toBeDefined();
-
-    eliminarRolPersonalizado('AUDITOR');
-    expect(obtenerRolPorCodigo('AUDITOR')).toBeUndefined();
+  it('solo existen los cuatro roles del backend', () => {
+    expect(listarRoles().map((r) => r.codigo)).toEqual(['GERENTE', 'RECEPCIONISTA', 'SOCIO', 'EXTERNO']);
+    expect(obtenerRolPorCodigo('INSTRUCTOR')).toBeUndefined();
   });
 });

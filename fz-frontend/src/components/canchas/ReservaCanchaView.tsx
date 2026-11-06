@@ -16,13 +16,12 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Calendar,
   Clock,
-  UserCheck,
-  User,
   RefreshCw,
 } from 'lucide-react';
 import { CanchaCard } from './CanchaCard';
 import { SelectorFecha } from './SelectorFecha';
 import { GrillaDisponibilidad } from './GrillaDisponibilidad';
+import { etiquetaTipo } from './tiposCancha';
 import { DesglosePrecio } from './DesglosePrecio';
 import { Button, Alert, Modal } from '../ui';
 import {
@@ -30,12 +29,10 @@ import {
   obtenerDisponibilidad,
   cotizarTurno,
   crearReserva,
-  calcularCotizacion,
 } from '../../services/canchasService';
 import { useSede } from '../../context/SedeContext';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
-import { USE_MOCK } from '../../config';
 import { AppError } from '../../services/httpClient';
 import type {
   CanchaDTO,
@@ -66,10 +63,6 @@ export function ReservaCanchaView({
   // Fecha actual formateada en YYYY-MM-DD
   const hoyIso = useMemo(() => {
     const now = new Date();
-    // Si ya son las 22hs o más tarde (cierre de sedes), sugerir mañana por defecto
-    if (now.getHours() >= 22) {
-      now.setDate(now.getDate() + 1);
-    }
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -94,22 +87,16 @@ export function ReservaCanchaView({
   const [cotizacion, setCotizacion] = useState<CotizacionReservaDTO | null>(null);
   const [loadingCotizacion, setLoadingCotizacion] = useState(false);
 
-  // Perfil del usuario: con la API real sale de la sesión (el backend aplica el descuento);
-  // en modo mock queda el toggle para simular socio vs externo.
+  // Perfil del usuario: sale de la sesión (el backend aplica el descuento)
   const { usuario } = useAuth();
-  const [esSocioSimulado, setEsSocio] = useState<boolean>(true);
-  const esSocio = USE_MOCK ? esSocioSimulado : usuario?.tipoUsuario === 'SOCIO';
-  // Reservan socios y externos con sesión (SCRUM-98); el personal no reserva a su nombre
-  const puedeReservar =
-    USE_MOCK || usuario?.tipoUsuario === 'SOCIO' || usuario?.tipoUsuario === 'EXTERNO';
+  const esSocio = usuario?.tipoUsuario === 'SOCIO';
+  // Reservan socios y externos con sesión; el personal no reserva a su nombre
+  const puedeReservar = usuario?.tipoUsuario === 'SOCIO' || usuario?.tipoUsuario === 'EXTERNO';
 
   // Modal de Confirmación
   const [modalConfirmacionOpen, setModalConfirmacionOpen] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [errorConflicto, setErrorConflicto] = useState<string | null>(null);
-
-  // Simulación de error 409 (para pruebas y Playground)
-  const [simularConflicto409, setSimularConflicto409] = useState(false);
 
   // Cargar Canchas de la Sede
   const cargarCanchas = useCallback(async () => {
@@ -200,13 +187,9 @@ export function ReservaCanchaView({
         }
       } catch {
         if (cancelado) return;
-        // Con la API real el precio sale solo del servidor: sin cotización no se puede confirmar
-        // (el error ya lo avisó httpClient). En mock se calcula localmente.
-        setCotizacion(
-          USE_MOCK
-            ? calcularCotizacion(canchaSeleccionada.precioBaseHora, turnoSeleccionado.horaInicio, esSocio)
-            : null
-        );
+        // El precio sale solo del servidor: sin cotización no se puede confirmar
+        // (el error ya lo avisó httpClient)
+        setCotizacion(null);
       } finally {
         if (!cancelado) setLoadingCotizacion(false);
       }
@@ -217,6 +200,12 @@ export function ReservaCanchaView({
       cancelado = true;
     };
   }, [canchaSeleccionada, turnoSeleccionado, esSocio, fechaSeleccionada, addToast]);
+
+  // Deportes de las canchas cargadas (el filtro no ofrece deportes sin canchas)
+  const tiposDisponibles = useMemo(
+    () => Array.from(new Set(canchas.flatMap((c) => (c.tipo ? [c.tipo] : [])))),
+    [canchas]
+  );
 
   // Canchas filtradas por deporte
   const canchasFiltradas = useMemo(() => {
@@ -260,17 +249,7 @@ export function ReservaCanchaView({
           fecha: fechaSeleccionada,
           horaInicio: turnoSeleccionado.horaInicio,
           horaFin: turnoSeleccionado.horaFin,
-          // Identidad y perfil solo se envían en mock: la API real usa el usuario de la sesión
-          ...(USE_MOCK
-            ? {
-                esSocio,
-                idUsuario: esSocio ? 1 : undefined,
-                nombreInvitado: esSocio ? undefined : 'Cliente Externo',
-                emailInvitado: esSocio ? undefined : 'externo@email.com',
-              }
-            : {}),
-        },
-        USE_MOCK && simularConflicto409
+        }
       );
 
       setModalConfirmacionOpen(false);
@@ -304,8 +283,8 @@ export function ReservaCanchaView({
             err.message.toLowerCase().includes('conflicto') ||
             err.message.toLowerCase().includes('ocupado')));
 
-      // Con la API real httpClient ya mostró el mensaje del backend: no se duplica el toast
-      const yaAvisado = !USE_MOCK && err instanceof AppError;
+      // httpClient ya mostró el mensaje del backend: no se duplica el toast
+      const yaAvisado = err instanceof AppError;
 
       if (isConflict) {
         setErrorConflicto(mensaje);
@@ -347,12 +326,12 @@ export function ReservaCanchaView({
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             {esSocio
-              ? 'Socios activos disfrutan de 15% de descuento en todos los horarios (estándar y pico).'
+              ? 'Con la membresía vigente, el descuento de socio se aplica al cotizar el turno.'
               : 'Tarifa general para público sin membresía activa.'}
           </p>
         </div>
 
-        {/* Toggle para cambiar de Socio a Externo y botón a Mis Reservas */}
+        {/* Acceso a Mis Reservas */}
         <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
           {onVerMisReservas && (
             <Button
@@ -363,30 +342,6 @@ export function ReservaCanchaView({
             >
               Mis Reservas
             </Button>
-          )}
-          {USE_MOCK && (
-          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl text-xs font-bold">
-          <button
-            type="button"
-            onClick={() => setEsSocio(true)}
-            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              esSocio ? 'bg-fitzone-navy text-white shadow-xs' : 'text-slate-600 hover:text-fitzone-navy'
-            }`}
-          >
-            <UserCheck className="w-3.5 h-3.5 text-fitzone-coral" />
-            <span>Socio Activo (-15%)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setEsSocio(false)}
-            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              !esSocio ? 'bg-fitzone-navy text-white shadow-xs' : 'text-slate-600 hover:text-fitzone-navy'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>Cliente Externo</span>
-          </button>
-        </div>
           )}
       </div>
     </div>
@@ -436,17 +391,8 @@ export function ReservaCanchaView({
 
           {/* Filtro por Deporte */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-            {['TODOS', 'PADEL', 'FUTBOL_5', 'TENIS', 'BASQUET'].map((tipo) => {
-              const label =
-                tipo === 'TODOS'
-                  ? 'Todas'
-                  : tipo === 'PADEL'
-                  ? 'Pádel'
-                  : tipo === 'FUTBOL_5'
-                  ? 'Fútbol 5'
-                  : tipo === 'TENIS'
-                  ? 'Tenis'
-                  : 'Básquet';
+            {['TODOS', ...tiposDisponibles].map((tipo) => {
+              const label = tipo === 'TODOS' ? 'Todas' : etiquetaTipo(tipo);
               return (
                 <button
                   key={tipo}
@@ -542,7 +488,6 @@ export function ReservaCanchaView({
             fecha={fechaSeleccionada}
             turnoSeleccionado={turnoSeleccionado}
             onSeleccionarTurno={handleSelectTurno}
-            esSocio={esSocio}
             loading={loadingFranjas}
           />
         </div>
@@ -654,21 +599,6 @@ export function ReservaCanchaView({
             />
           )}
 
-          {/* Controles de Simulación de Conflicto 409 (solo modo mock) */}
-          {USE_MOCK && (
-          <div className="p-3 bg-amber-50/70 border border-amber-200/60 rounded-xl text-xs flex items-center justify-between">
-            <span className="text-amber-900 font-medium">
-              Simular conflicto de horario tomado (409)
-            </span>
-            <input
-              type="checkbox"
-              id="chk-simular-409"
-              checked={simularConflicto409}
-              onChange={(e) => setSimularConflicto409(e.target.checked)}
-              className="rounded text-fitzone-coral focus:ring-fitzone-coral cursor-pointer"
-            />
-          </div>
-          )}
 
           {/* Acciones */}
           <div className="pt-2 flex flex-col-reverse sm:flex-row items-center gap-2.5">

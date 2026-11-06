@@ -430,6 +430,9 @@ export async function obtenerComprobantePorTransaccion(
   }
 }
 
+/** Token de cobro que envía el checkout. La pasarela es simulada y la aprobación la decide el backend. */
+export const TOKEN_PASARELA_APROBADO = 'tok_mock_aprobado';
+
 /**
  * Procesa un nuevo pago a través del checkout con la pasarela simulada.
  * Si el token es 'tok_mock_rechazado', genera la transacción en estado RECHAZADO.
@@ -510,14 +513,12 @@ export async function procesarPago(payload: ProcesarPagoPayload): Promise<Result
   }
 
   // Usuario y monto los define el backend (sesión y precio del plan o de la reserva).
-  // El rechazo simulado de la pasarela se pide con forzarRechazo.
   const api = await httpClient.post<TransaccionApi>(PAGOS_ENDPOINTS.procesar, {
     body: JSON.stringify({
       concepto: conceptoParaApi(payload.concepto),
       idSede: payload.idSede,
       idMembresia: payload.idMembresia ?? undefined,
       idReservaCancha: payload.idReservaCancha ?? undefined,
-      forzarRechazo: payload.tokenTransaccionPasarela === 'tok_mock_rechazado',
     }),
   });
   return resultadoDesde(api);
@@ -533,7 +534,7 @@ export async function procesarPago(payload: ProcesarPagoPayload): Promise<Result
  */
 export async function reintentarPago(
   idTransaccion: number,
-  nuevoTokenPasarela: string = 'tok_mock_aprobado'
+  nuevoTokenPasarela: string = TOKEN_PASARELA_APROBADO
 ): Promise<ResultadoPagoDTO> {
   if (!idTransaccion || idTransaccion <= 0) {
     throw new Error('El identificador de la transacción debe ser un número positivo.');
@@ -612,7 +613,6 @@ export async function reintentarPago(
       idSede: original.sede.idSede,
       idMembresia: original.membresia?.idMembresia,
       idReservaCancha: original.reservaCancha?.idReservaCancha,
-      forzarRechazo: nuevoTokenPasarela === 'tok_mock_rechazado',
     }),
   });
   return resultadoDesde(api);

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '../ui';
-import { generarPdfMockValido, descargarBlobEnNavegador } from '../../services/pagosService';
 
 export interface BotonDescargaPdfProps {
   /** URL directa hacia el archivo PDF */
@@ -30,7 +29,7 @@ export interface BotonDescargaPdfProps {
 
 export function BotonDescargaPdf({
   urlPdf,
-  numeroFactura = '0001-00000123',
+  numeroFactura,
   nombreArchivo,
   loading: externalLoading = false,
   onDescargar,
@@ -42,9 +41,11 @@ export function BotonDescargaPdf({
 }: BotonDescargaPdfProps) {
   const [internalLoading, setInternalLoading] = useState(false);
   const isLoading = externalLoading || internalLoading;
+  // Sin callback ni URL no hay de dónde bajar el comprobante
+  const sinOrigen = !onDescargar && !urlPdf;
 
   const handleDescargar = async () => {
-    if (isLoading || disabled) return;
+    if (isLoading || disabled || sinOrigen) return;
 
     try {
       setInternalLoading(true);
@@ -56,7 +57,9 @@ export function BotonDescargaPdf({
       }
 
       // Nombre del archivo a guardar
-      const fileName = nombreArchivo || `comprobante-${numeroFactura.replace(/\s+/g, '_')}.pdf`;
+      const fileName =
+        nombreArchivo ||
+        (numeroFactura ? `comprobante-${numeroFactura.replace(/\s+/g, '_')}.pdf` : 'comprobante.pdf');
 
       // Si hay una URL de PDF directa y válida, disparamos la descarga
       if (urlPdf) {
@@ -70,13 +73,6 @@ export function BotonDescargaPdf({
         document.body.removeChild(link);
         return;
       }
-
-      // Fallback para modo mock / pruebas locales: generamos un PDF-1.4 válido y renderizable
-      const blob = generarPdfMockValido({
-        numeroFactura,
-        monto: 0,
-      });
-      descargarBlobEnNavegador(blob, fileName);
     } catch (err) {
       console.error('Error al descargar comprobante PDF:', err);
     } finally {
@@ -89,7 +85,7 @@ export function BotonDescargaPdf({
       type="button"
       variant={variant}
       size={size}
-      disabled={disabled || isLoading}
+      disabled={disabled || isLoading || sinOrigen}
       onClick={() => void handleDescargar()}
       className={`inline-flex items-center gap-1.5 cursor-pointer font-bold select-none ${className}`}
     >

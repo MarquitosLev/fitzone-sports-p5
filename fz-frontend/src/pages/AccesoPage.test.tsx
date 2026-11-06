@@ -4,9 +4,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { AccesoPage } from './AccesoPage';
 import { SedeProvider } from '../context/SedeContext';
 import { ToastProvider } from '../context/ToastContext';
+import { AuthContext } from '../context/AuthContext';
+import type { AuthContextType } from '../context/AuthContext';
 import * as membresiasService from '../services/membresiasService';
 import * as accesoService from '../services/accesoService';
-import type { MembresiaDTO, SedeDTO, QrTokenDTO, AccesoDTO } from '../types';
+import type { MembresiaDTO, SedeDTO, QrTokenDTO, AccesoDTO, UsuarioDTO } from '../types';
 
 const mockSede: SedeDTO = {
   idSede: 1,
@@ -107,8 +109,33 @@ const mockAccesos: AccesoDTO[] = [
   },
 ];
 
-function renderAccesoPage() {
-  return render(
+/** Sesión de un socio: el pase QR es siempre el del socio logueado. */
+function sesionSocio(idUsuario: number): AuthContextType {
+  const usuario: UsuarioDTO = {
+    idUsuario,
+    authId: `auth-${idUsuario}`,
+    dni: '30000000',
+    nombre: 'Socio',
+    apellido: 'Prueba',
+    email: 'socio@fitzone.com',
+    telefono: '1100000000',
+    fotoUrl: null,
+    tipoUsuario: 'SOCIO',
+    idSede: null,
+  };
+  return {
+    usuario,
+    token: 'token',
+    isAuthenticated: true,
+    isLoading: false,
+    login: async () => ({ token: 'token', usuario }),
+    register: async () => ({ token: 'token', usuario }),
+    logout: () => {},
+  };
+}
+
+function renderAccesoPage(idSocio?: number) {
+  const pagina = (
     <MemoryRouter>
       <ToastProvider>
         <SedeProvider sedes={[mockSede]} sedeInicial={mockSede}>
@@ -117,12 +144,15 @@ function renderAccesoPage() {
       </ToastProvider>
     </MemoryRouter>
   );
+  return render(
+    idSocio ? <AuthContext.Provider value={sesionSocio(idSocio)}>{pagina}</AuthContext.Provider> : pagina
+  );
 }
 
 describe('AccesoPage (SCRUM-85 Código QR de Ingreso)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(accesoService, 'obtenerQrSocio').mockResolvedValue(mockQrToken);
+    vi.spyOn(accesoService, 'obtenerMiQr').mockResolvedValue(mockQrToken);
     vi.spyOn(accesoService, 'listarAccesos').mockResolvedValue(mockAccesos);
     vi.spyOn(membresiasService, 'obtenerMembresiaPorUsuario').mockImplementation(async (id) => {
       if (id === 2) return mockMembresiaActiva;
@@ -133,7 +163,7 @@ describe('AccesoPage (SCRUM-85 Código QR de Ingreso)', () => {
   });
 
   it('renderiza la cabecera del pase digital y el componente MembresiaEstadoCard', async () => {
-    renderAccesoPage();
+    renderAccesoPage(2);
 
     expect(screen.getByRole('heading', { level: 1, name: /Pase Digital de Acceso/i })).toBeInTheDocument();
 
@@ -144,7 +174,7 @@ describe('AccesoPage (SCRUM-85 Código QR de Ingreso)', () => {
   });
 
   it('para un socio con membresía ACTIVA: genera y renderiza el código QR dinámico y la cuenta regresiva', async () => {
-    renderAccesoPage();
+    renderAccesoPage(2);
 
     await waitFor(() => {
       expect(screen.getByTestId('seccion-qr-activo')).toBeInTheDocument();
@@ -158,11 +188,7 @@ describe('AccesoPage (SCRUM-85 Código QR de Ingreso)', () => {
   });
 
   it('REGLA DE NEGOCIO CRÍTICA: si la membresía está VENCIDA, NO muestra el QR y exhibe el banner con el motivo', async () => {
-    renderAccesoPage();
-
-    // Cambiamos al socio Lucas Martínez (idUsuario: 1 - Vencido)
-    const btnLucas = screen.getByTestId('btn-socio-1');
-    fireEvent.click(btnLucas);
+    renderAccesoPage(1);
 
     await waitFor(() => {
       // Verifica MembresiaEstadoCard con estado vencido
@@ -179,11 +205,7 @@ describe('AccesoPage (SCRUM-85 Código QR de Ingreso)', () => {
   });
 
   it('REGLA DE NEGOCIO CRÍTICA: si la membresía está SUSPENDIDA, bloquea el QR e informa la suspensión', async () => {
-    renderAccesoPage();
-
-    // Cambiamos al socio Camila Torres (idUsuario: 7 - Suspendido)
-    const btnCamila = screen.getByTestId('btn-socio-7');
-    fireEvent.click(btnCamila);
+    renderAccesoPage(7);
 
     await waitFor(() => {
       expect(screen.getByTestId('seccion-qr-bloqueado')).toBeInTheDocument();
@@ -195,11 +217,7 @@ describe('AccesoPage (SCRUM-85 Código QR de Ingreso)', () => {
   });
 
   it('REGLA DE NEGOCIO CRÍTICA: si el usuario NO tiene membresía registrada, bloquea el QR y muestra aviso', async () => {
-    renderAccesoPage();
-
-    // Cambiamos al usuario Martín López (idUsuario: 3 - Sin Membresía)
-    const btnMartin = screen.getByTestId('btn-socio-3');
-    fireEvent.click(btnMartin);
+    renderAccesoPage(3);
 
     await waitFor(() => {
       expect(screen.getByTestId('seccion-qr-bloqueado')).toBeInTheDocument();

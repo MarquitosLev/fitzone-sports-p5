@@ -81,7 +81,7 @@ describe('pagosService con la API real', () => {
     const [ruta, opciones] = post.mock.calls[0];
     expect(ruta).toBe('/v1/pagos');
     const body = JSON.parse(opciones.body);
-    expect(body).toEqual({ concepto: 'RESERVA_CANCHA', idSede: 1, idReservaCancha: 5, forzarRechazo: false });
+    expect(body).toEqual({ concepto: 'RESERVA_CANCHA', idSede: 1, idReservaCancha: 5 });
     expect(body).not.toHaveProperty('idUsuario');
     expect(body).not.toHaveProperty('monto');
     expect(res.aprobado).toBe(true);
@@ -90,7 +90,7 @@ describe('pagosService con la API real', () => {
     expect(res.comprobante?.idComprobante).toBe(7);
   });
 
-  it('traduce el token de rechazo de la pasarela a forzarRechazo y no busca comprobante', async () => {
+  it('no pide el rechazo a la pasarela y, si el backend rechaza, no busca comprobante', async () => {
     post.mockResolvedValue(transaccionApi('RECHAZADO'));
 
     const res = await procesarPago({
@@ -98,11 +98,11 @@ describe('pagosService con la API real', () => {
       idUsuario: 3,
       concepto: 'MEMBRESIA_SOCIO',
       monto: 15000,
-      tokenTransaccionPasarela: 'tok_mock_rechazado',
+      tokenTransaccionPasarela: 'tok_mock_aprobado',
       idMembresia: 2,
     });
 
-    expect(JSON.parse(post.mock.calls[0][1].body)).toMatchObject({ concepto: 'MEMBRESIA', idMembresia: 2, forzarRechazo: true });
+    expect(JSON.parse(post.mock.calls[0][1].body)).toEqual({ concepto: 'MEMBRESIA', idSede: 1, idMembresia: 2 });
     expect(res.aprobado).toBe(false);
     expect(get).not.toHaveBeenCalled();
   });
@@ -111,14 +111,13 @@ describe('pagosService con la API real', () => {
     get.mockResolvedValueOnce(transaccionApi('RECHAZADO'));
     post.mockResolvedValue(transaccionApi('RECHAZADO', { idTransaccion: 11 }));
 
-    await reintentarPago(10, 'tok_mock_rechazado');
+    await reintentarPago(10);
 
     expect(get).toHaveBeenCalledWith('/v1/pagos/10');
     expect(JSON.parse(post.mock.calls[0][1].body)).toEqual({
       concepto: 'RESERVA_CANCHA',
       idSede: 1,
       idReservaCancha: 5,
-      forzarRechazo: true,
     });
   });
 

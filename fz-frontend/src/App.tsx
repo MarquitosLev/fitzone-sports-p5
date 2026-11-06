@@ -19,8 +19,6 @@ import { ToastProvider, useToast } from './context/ToastContext';
 import { SedeProvider } from './context/SedeContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { INICIO_POR_ROL } from './components/layout/navegacion';
-import { AppProvider } from './context/AppContext';
-import { PlaygroundPage } from './pages/PlaygroundPage';
 import { UsuariosPage } from './pages/UsuariosPage';
 import { MembresiasPage } from './pages/MembresiasPage';
 import { AccesoPage } from './pages/AccesoPage';
@@ -30,26 +28,12 @@ import { PagosPage } from './pages/PagosPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegistroPage } from './pages/RegistroPage';
 import { RolesPage } from './pages/RolesPage';
-import {
-  SocioRolPage,
-  ExternoRolPage,
-  RecepcionistaRolPage,
-  GerenteRolPage,
-} from './pages/roles';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { RoleMiddleware } from './components/auth';
 import { httpClient, registerHttpErrorHandler } from './services/httpClient';
 import { Spinner } from './components/ui';
-import { USE_MOCK } from './config';
 import type { SedeDTO } from './types';
 import './App.css';
-
-// Sedes mock para el SedeProvider (usadas únicamente cuando USE_MOCK === true)
-const SEDES_MOCK: SedeDTO[] = [
-  { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
-  { idSede: 2, nombre: 'FitZone Belgrano', aforoMaximo: 60 },
-  { idSede: 3, nombre: 'FitZone Caballito', aforoMaximo: 50 },
-];
 
 /**
  * Componente interno que conecta el httpClient con el ToastContext.
@@ -85,36 +69,34 @@ function IndexRedirect() {
 }
 
 export default function App() {
-  const [sedes, setSedes] = useState<SedeDTO[] | null>(USE_MOCK ? SEDES_MOCK : null);
-  const [loading, setLoading] = useState(!USE_MOCK);
+  const [sedes, setSedes] = useState<SedeDTO[] | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!USE_MOCK) {
-      let isMounted = true;
-      setLoading(true);
-      httpClient
-        .get<SedeDTO[]>('/v1/sedes')
-        .then((data) => {
-          if (isMounted) {
-            setSedes(Array.isArray(data) ? data : []);
-          }
-        })
-        .catch((err) => {
-          console.error('Error cargando sedes', err);
-          if (isMounted) {
-            setSedes([]);
-          }
-        })
-        .finally(() => {
-          if (isMounted) {
-            setLoading(false);
-          }
-        });
+    let isMounted = true;
+    setLoading(true);
+    httpClient
+      .get<SedeDTO[]>('/v1/sedes')
+      .then((data) => {
+        if (isMounted) {
+          setSedes(Array.isArray(data) ? data : []);
+        }
+      })
+      .catch((err) => {
+        console.error('Error cargando sedes', err);
+        if (isMounted) {
+          setSedes([]);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
 
-      return () => {
-        isMounted = false;
-      };
-    }
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (loading) {
@@ -134,7 +116,7 @@ export default function App() {
           {/* AuthProvider: mantiene la sesión del usuario en toda la app (SCRUM-89) */}
           <AuthProvider>
             {/* SedeProvider: la sede activa está disponible en toda la app */}
-            <SedeProvider sedes={USE_MOCK ? SEDES_MOCK : (sedes ?? [])}>
+            <SedeProvider sedes={sedes ?? []}>
               <Routes>
                 {/* Rutas de autenticación a pantalla completa (fuera de AppLayout) */}
                 <Route path="/login" element={<LoginPage />} />
@@ -181,31 +163,10 @@ export default function App() {
                     <Route path="admin/roles" element={<RolesPage />} />
                   </Route>
 
-                  {/* Subárboles dedicados por rol */}
-                  <Route element={<RoleMiddleware allowedRoles={['SOCIO']} />}>
-                    <Route path="rol/socio" element={<SocioRolPage />} />
-                  </Route>
-                  <Route element={<RoleMiddleware allowedRoles={['EXTERNO']} />}>
-                    <Route path="rol/externo" element={<ExternoRolPage />} />
-                  </Route>
-                  <Route element={<RoleMiddleware allowedRoles={['RECEPCIONISTA']} />}>
-                    <Route path="rol/recepcionista" element={<RecepcionistaRolPage />} />
-                  </Route>
-                  <Route element={<RoleMiddleware allowedRoles={['GERENTE']} />}>
-                    <Route path="rol/gerente" element={<GerenteRolPage />} />
-                  </Route>
-                  <Route path="rol" element={<IndexRedirect />} />
+                  {/* Cualquier otra ruta (incluidas las viejas /rol/*) vuelve al inicio del rol */}
+                  <Route path="*" element={<IndexRedirect />} />
                 </Route>
 
-                {/* Playground fuera del AppLayout (sin Sidebar ni Header) */}
-                <Route
-                  path="/playground"
-                  element={
-                    <AppProvider>
-                      <PlaygroundPage />
-                    </AppProvider>
-                  }
-                />
               </Routes>
             </SedeProvider>
           </AuthProvider>
