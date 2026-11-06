@@ -125,6 +125,22 @@ class SeguridadCanchasPagosTest {
     }
 
     @Test
+    @DisplayName("Solo socios y externos reservan turnos; el personal recibe 403")
+    void reservarTurno_soloSocioYExterno() throws Exception {
+        String reserva = "{\"fechaHoraInicio\":\"2026-12-01T10:00:00\",\"fechaHoraFin\":\"2026-12-01T11:00:00\"}";
+        for (String rol : new String[]{"SOCIO", "EXTERNO"}) {
+            mockMvc.perform(post("/v1/canchas/1/reservas").with(sesionDe(rol))
+                            .contentType(MediaType.APPLICATION_JSON).content(reserva))
+                    .andExpect(status().isCreated());
+        }
+        for (String rol : new String[]{"RECEPCIONISTA", "GERENTE"}) {
+            mockMvc.perform(post("/v1/canchas/1/reservas").with(sesionDe(rol))
+                            .contentType(MediaType.APPLICATION_JSON).content(reserva))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
     @DisplayName("Pagos y comprobantes exigen un rol del sistema")
     void pagos_conRol_respondenYSinRolDan403() throws Exception {
         for (String rol : new String[]{"SOCIO", "EXTERNO", "RECEPCIONISTA", "GERENTE"}) {

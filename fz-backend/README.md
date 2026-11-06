@@ -113,8 +113,9 @@ En Swagger: hacé `POST /v1/auth/login`, copiá el `token` y cargalo en **Author
 | M2 Ingreso, egreso, aforo y accesos | — | — | — | Su sede | Su sede |
 | M2 Alta y edición de sedes | — | — | — | — | Sí |
 | M3 Clases | — | ver tabla de abajo | | | |
-| M4 Alta, edición y mantenimiento de canchas | — | — | — | — | Sí |
-| M4 Reservar un turno | — | Sí | Sí | Sí | Sí |
+| M4 Cotización con descuento de socio (token opcional) | Sin descuento | 15% si la membresía está vigente | Sin descuento | Sin descuento | Sin descuento |
+| M4 Alta, edición y mantenimiento de canchas | — | — | — | — | Su sede |
+| M4 Reservar un turno (a nombre del logueado) y `/usuarios/me/reservas-cancha` | — | Sí | Sí | — | — |
 | M5 Pagos y comprobantes | — | Sí | Sí | Sí | Sí |
 
 La pertenencia (pagar o ver solo lo propio, el personal solo su sede en canchas y pagos) se valida en el servicio con `UsuarioActual` en SCRUM-98 y SCRUM-99.

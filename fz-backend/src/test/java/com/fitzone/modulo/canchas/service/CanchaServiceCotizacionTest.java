@@ -2,8 +2,8 @@ package com.fitzone.modulo.canchas.service;
 
 import com.fitzone.core.domain.enums.EstadoMembresia;
 import com.fitzone.core.domain.enums.TipoUsuario;
-import com.fitzone.core.exception.RecursoNoEncontradoException;
 import com.fitzone.core.exception.ReglaNegocioException;
+import com.fitzone.core.security.UsuarioActual;
 import com.fitzone.modulo.canchas.dto.CotizacionDTO;
 import com.fitzone.modulo.canchas.models.Cancha;
 import com.fitzone.modulo.canchas.repository.CanchaRepository;
@@ -31,6 +31,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,6 +52,9 @@ class CanchaServiceCotizacionTest {
     @Mock
     private MembresiaRepository membresiaRepository;
 
+    @Mock
+    private UsuarioActual usuarioActual;
+
     private CanchaService canchaService;
     private Cancha cancha;
     private LocalDateTime inicio;
@@ -70,7 +74,8 @@ class CanchaServiceCotizacionTest {
                 sedeRepository,
                 usuarioRepository,
                 membresiaRepository,
-                calculador
+                calculador,
+                usuarioActual
         );
 
         cancha = Cancha.builder()
@@ -87,17 +92,18 @@ class CanchaServiceCotizacionTest {
     @Test
     @DisplayName("Cotizar: lanza ReglaNegocioException si inicio es posterior o igual a fin")
     void testCotizarFechasInvalidas() {
-        assertThatThrownBy(() -> canchaService.cotizar(1L, null, fin, inicio))
+        assertThatThrownBy(() -> canchaService.cotizar(1L, fin, inicio))
                 .isInstanceOf(ReglaNegocioException.class)
                 .hasMessageContaining("anterior a la de fin");
     }
 
     @Test
-    @DisplayName("Cotizar: usuario externo (idUsuario null) en horario normal cotiza base sin descuento")
-    void testCotizarUsuarioExterno() {
+    @DisplayName("Cotizar: sin sesión en horario normal cotiza base sin descuento")
+    void testCotizarSinSesion() {
         when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
+        when(usuarioActual.obtenerOpcional()).thenReturn(Optional.empty());
 
-        CotizacionDTO resultado = canchaService.cotizar(1L, null, inicio, fin);
+        CotizacionDTO resultado = canchaService.cotizar(1L, inicio, fin);
 
         assertThat(resultado.getPrecioBase()).isEqualByComparingTo("20000.00");
         assertThat(resultado.getDescuento()).isEqualByComparingTo("0.00");
@@ -114,11 +120,11 @@ class CanchaServiceCotizacionTest {
                 .build();
 
         when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
-        when(usuarioRepository.findById(10L)).thenReturn(Optional.of(usuario));
+        when(usuarioActual.obtenerOpcional()).thenReturn(Optional.of(usuario));
         when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
                 10L, List.of(EstadoMembresia.ACTIVO), LocalDate.now())).thenReturn(true);
 
-        CotizacionDTO resultado = canchaService.cotizar(1L, 10L, inicio, fin);
+        CotizacionDTO resultado = canchaService.cotizar(1L, inicio, fin);
 
         // 2 hs a $10.000 = $20.000 base -> 15% desc ($3.000) -> final $17.000
         assertThat(resultado.getPrecioBase()).isEqualByComparingTo("20000.00");
@@ -136,11 +142,11 @@ class CanchaServiceCotizacionTest {
                 .build();
 
         when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
-        when(usuarioRepository.findById(10L)).thenReturn(Optional.of(usuario));
+        when(usuarioActual.obtenerOpcional()).thenReturn(Optional.of(usuario));
         when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
                 10L, List.of(EstadoMembresia.ACTIVO), LocalDate.now())).thenReturn(false);
 
-        CotizacionDTO resultado = canchaService.cotizar(1L, 10L, inicio, fin);
+        CotizacionDTO resultado = canchaService.cotizar(1L, inicio, fin);
 
         assertThat(resultado.getPrecioBase()).isEqualByComparingTo("20000.00");
         assertThat(resultado.getDescuento()).isEqualByComparingTo("0.00");
@@ -148,12 +154,20 @@ class CanchaServiceCotizacionTest {
     }
 
     @Test
-    @DisplayName("Cotizar: usuario inexistente lanza RecursoNoEncontradoException")
-    void testCotizarUsuarioInexistente() {
-        when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
-        when(usuarioRepository.findById(999L)).thenReturn(Optional.empty());
+    @DisplayName("Cotizar: un externo logueado no recibe descuento y no se consulta membresía")
+    void testCotizarExternoLogueado() {
+        Usuario externo = Usuario.builder()
+                .idUsuario(20L)
+                .tipoUsuario(TipoUsuario.EXTERNO)
+                .build();
 
-        assertThatThrownBy(() -> canchaService.cotizar(1L, 999L, inicio, fin))
-                .isInstanceOf(RecursoNoEncontradoException.class);
+        when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
+        when(usuarioActual.obtenerOpcional()).thenReturn(Optional.of(externo));
+
+        CotizacionDTO resultado = canchaService.cotizar(1L, inicio, fin);
+
+        assertThat(resultado.getDescuento()).isEqualByComparingTo("0.00");
+        assertThat(resultado.getPrecioFinal()).isEqualByComparingTo("20000.00");
+        verifyNoInteractions(membresiaRepository);
     }
 }

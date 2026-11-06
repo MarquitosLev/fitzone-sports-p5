@@ -71,6 +71,13 @@ public class UsuarioController {
         return listaEsperaService.listarMias();
     }
 
+    @GetMapping("/me/reservas-cancha")
+    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
+    @Operation(summary = "Obtiene las reservas de cancha del usuario logueado, con la cancha y su sede")
+    public List<ReservaCancha> obtenerMisReservasCancha() {
+        return canchaService.listarMias();
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('RECEPCIONISTA', 'GERENTE')")
