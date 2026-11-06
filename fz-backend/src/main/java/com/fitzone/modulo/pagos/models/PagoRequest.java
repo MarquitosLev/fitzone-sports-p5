@@ -11,6 +11,7 @@ import lombok.Setter;
 
 /**
  * DTO para la solicitud de procesamiento de un pago en la pasarela.
+ * Quien paga sale del token (SCRUM-99): un idUsuario en el JSON se ignora.
  */
 @Getter
 @Setter
@@ -19,11 +20,7 @@ import lombok.Setter;
 @Builder
 public class PagoRequest {
 
-    @NotNull(message = "El idUsuario es obligatorio")
-    @Positive(message = "El idUsuario debe ser positivo")
-    private Long idUsuario;
-
-    @NotNull(message = "El idSede es obligatorio")
+    /** Obligatorio para MEMBRESIA. En RESERVA_CANCHA se usa la sede de la cancha. */
     @Positive(message = "El idSede debe ser positivo")
     private Long idSede;
 

@@ -1,0 +1,15 @@
+meta {
+  name: 11 - Mis Pagos
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/v1/usuarios/me/pagos
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
+}

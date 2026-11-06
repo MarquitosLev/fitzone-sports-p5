@@ -141,6 +141,22 @@ class SeguridadCanchasPagosTest {
     }
 
     @Test
+    @DisplayName("Solo socios y externos pagan; el personal recibe 403 al intentar cobrar por la API web")
+    void pagar_soloSocioYExterno() throws Exception {
+        String pago = "{\"concepto\":\"RESERVA_CANCHA\",\"idReservaCancha\":1}";
+        for (String rol : new String[]{"SOCIO", "EXTERNO"}) {
+            mockMvc.perform(post("/v1/pagos").with(sesionDe(rol))
+                            .contentType(MediaType.APPLICATION_JSON).content(pago))
+                    .andExpect(status().isCreated());
+        }
+        for (String rol : new String[]{"RECEPCIONISTA", "GERENTE"}) {
+            mockMvc.perform(post("/v1/pagos").with(sesionDe(rol))
+                            .contentType(MediaType.APPLICATION_JSON).content(pago))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
     @DisplayName("Pagos y comprobantes exigen un rol del sistema")
     void pagos_conRol_respondenYSinRolDan403() throws Exception {
         for (String rol : new String[]{"SOCIO", "EXTERNO", "RECEPCIONISTA", "GERENTE"}) {

@@ -3,10 +3,12 @@ package com.fitzone.modulo.pagos.service;
 import com.fitzone.core.domain.enums.EstadoMembresia;
 import com.fitzone.core.domain.enums.EstadoPago;
 import com.fitzone.core.domain.enums.TipoOrigenTransaccion;
+import com.fitzone.core.exception.AccesoDenegadoException;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.PeticionInvalidaException;
 import com.fitzone.core.exception.RecursoNoEncontradoException;
 import com.fitzone.core.exception.ReglaNegocioException;
+import com.fitzone.core.security.UsuarioActual;
 import com.fitzone.modulo.canchas.models.ReservaCancha;
 import com.fitzone.modulo.canchas.repository.ReservaCanchaRepository;
 import com.fitzone.modulo.gimnasio.models.Sede;
@@ -43,22 +45,24 @@ public class PagoService {
     private final MembresiaService membresiaService;
     private final PasarelaPago pasarelaPago;
     private final ComprobanteService comprobanteService;
+    private final UsuarioActual usuarioActual;
+    private final AccesoPagos accesoPagos;
 
+    /**
+     * Paga una membresía o una reserva propia del usuario logueado. El monto sale siempre del
+     * servidor (precio del plan o precio congelado de la reserva), nunca del request.
+     */
     @Transactional
     public Transaccion procesarPago(PagoRequest request) {
-        log.info("Iniciando procesamiento de pago: concepto={}, idUsuario={}, idSede={}",
-                request.getConcepto(), request.getIdUsuario(), request.getIdSede());
-
-        Usuario usuario = usuarioRepository.findById(request.getIdUsuario())
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario", request.getIdUsuario()));
-
-        Sede sede = sedeRepository.findById(request.getIdSede())
-                .orElseThrow(() -> new RecursoNoEncontradoException("Sede", request.getIdSede()));
+        Usuario usuario = usuarioActual.obtener();
+        log.info("Iniciando procesamiento de pago: concepto={}, idUsuario={}",
+                request.getConcepto(), usuario.getIdUsuario());
 
         BigDecimal monto;
         String conceptoDescripcion;
         Membresia membresia = null;
         ReservaCancha reservaCancha = null;
+        Sede sede;
 
         if (request.getConcepto() == TipoOrigenTransaccion.MEMBRESIA) {
             if (request.getIdMembresia() == null || request.getIdReservaCancha() != null) {
@@ -67,6 +71,14 @@ public class PagoService {
 
             membresia = membresiaRepository.findById(request.getIdMembresia())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Membresia", request.getIdMembresia()));
+            validarPropio(usuario, membresia.getUsuario(), "No puede pagar la membresía de otro usuario");
+
+            // La membresía es de toda la red: la sede del cobro la indica el cliente
+            if (request.getIdSede() == null) {
+                throw new PeticionInvalidaException("Para pagos de membresía debe indicar idSede");
+            }
+            sede = sedeRepository.findById(request.getIdSede())
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Sede", request.getIdSede()));
 
             if (membresia.getPlan() == null || membresia.getPlan().getPrecioBase() == null) {
                 throw new ReglaNegocioException("La membresía no posee un plan con precio base asociado");
@@ -82,6 +94,8 @@ public class PagoService {
 
             reservaCancha = reservaCanchaRepository.findById(request.getIdReservaCancha())
                     .orElseThrow(() -> new RecursoNoEncontradoException("ReservaCancha", request.getIdReservaCancha()));
+            validarPropio(usuario, reservaCancha.getUsuario(), "No puede pagar la reserva de otro usuario");
+            sede = sedeDeLaReserva(reservaCancha, request.getIdSede());
 
             boolean yaPagada = transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(
                     request.getIdReservaCancha(), EstadoPago.CONFIRMADO);
@@ -149,8 +163,33 @@ public class PagoService {
 
     @Transactional(readOnly = true)
     public Transaccion obtenerPorId(Long id) {
-        return transaccionRepository.findById(id)
+        Transaccion transaccion = transaccionRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Transacción", id));
+        accesoPagos.validarLectura(transaccion);
+        return transaccion;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Transaccion> listarMios() {
+        return transaccionRepository.findConDetalleByUsuario(usuarioActual.obtener().getIdUsuario());
+    }
+
+    private void validarPropio(Usuario logueado, Usuario duenio, String mensaje) {
+        if (duenio == null || !logueado.getIdUsuario().equals(duenio.getIdUsuario())) {
+            throw new AccesoDenegadoException(mensaje);
+        }
+    }
+
+    // El cobro de un turno se registra en la sede de la cancha; el idSede del request solo se usa si falta
+    private Sede sedeDeLaReserva(ReservaCancha reserva, Long idSedeRequest) {
+        if (reserva.getCancha() != null && reserva.getCancha().getSede() != null) {
+            return reserva.getCancha().getSede();
+        }
+        if (idSedeRequest == null) {
+            throw new PeticionInvalidaException("No se pudo determinar la sede de la reserva");
+        }
+        return sedeRepository.findById(idSedeRequest)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Sede", idSedeRequest));
     }
 
     @Transactional(readOnly = true)
