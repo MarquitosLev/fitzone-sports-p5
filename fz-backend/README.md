@@ -90,7 +90,34 @@ El JWT de Supabase identifica al usuario. Los servicios lo obtienen con `Usuario
 
 El rol se valida con `@PreAuthorize` en el controlador. Que un recurso sea propio se valida en el servicio y, si no lo es, se lanza `AccesoDenegadoException`.
 
-Las rutas que todavía no pasaron a `authenticated()` en `SecurityConfig` siguen abiertas hasta su historia de integración.
+### Autenticación y permisos (SCRUM-91)
+`SecurityConfig` lista **solo las rutas públicas**; todo lo demás exige un JWT válido de Supabase y el rol se valida con `@PreAuthorize` en el controlador. Si agregás un endpoint público, sumalo a esa lista: por defecto queda protegido.
+
+| Respuesta | Cuándo | Cuerpo |
+| :-- | :-- | :-- |
+| 401 | Sin token, token vencido o firma inválida | `RespuestaError` con `ACCESO_DENEGADO` |
+| 403 | Token válido pero el rol no alcanza (o el usuario no existe en `fz_usr_usuarios`) | `RespuestaError` con `ACCESO_DENEGADO` |
+
+Rutas públicas: `/ping`, `/health`, Swagger, `/v1/auth/**` (login y logout), `GET /v1/planes`, `GET /v1/sedes` y `/v1/sedes/{id}`, `GET /v1/canchas`, `/v1/canchas/{id}`, `/disponibilidad` y `/cotizacion`, `/v1/prueba/**` (no existe en `prod`) y `/admin/database/**` (protegido por Root Key).
+
+En Swagger: hacé `POST /v1/auth/login`, copiá el `token` y cargalo en **Authorize**.
+
+#### Matriz de permisos por rol
+
+| Módulo / operación | Sin sesión | SOCIO | EXTERNO | RECEPCIONISTA | GERENTE |
+| :-- | :-- | :-- | :-- | :-- | :-- |
+| Ver planes, sedes, canchas, disponibilidad y cotización | Sí | Sí | Sí | Sí | Sí |
+| M1 Perfil propio (`/usuarios/me`) | — | Sí | Sí | Sí | Sí |
+| M1 Alta y búsqueda de usuarios, membresías | — | — | — | Socios y externos | Todo |
+| M2 QR propio | — | Sí | — | — | — |
+| M2 Ingreso, egreso, aforo y accesos | — | — | — | Su sede | Su sede |
+| M2 Alta y edición de sedes | — | — | — | — | Sí |
+| M3 Clases | — | ver tabla de abajo | | | |
+| M4 Alta, edición y mantenimiento de canchas | — | — | — | — | Sí |
+| M4 Reservar un turno | — | Sí | Sí | Sí | Sí |
+| M5 Pagos y comprobantes | — | Sí | Sí | Sí | Sí |
+
+La pertenencia (pagar o ver solo lo propio, el personal solo su sede en canchas y pagos) se valida en el servicio con `UsuarioActual` en SCRUM-98 y SCRUM-99.
 
 #### Matriz de permisos de Clases (M3)
 
@@ -138,7 +165,8 @@ Las rutas que todavía no pasaron a `authenticated()` en `SecurityConfig` siguen
 | :-- | :-- | :-- |
 | 400 | `VALIDACION` | Falló Bean Validation (body o parámetros). `detalles` trae los campos. |
 | 400 / 405 / 415 | `SOLICITUD_INVALIDA` | JSON mal formado, tipo de dato incorrecto, falta un parámetro obligatorio, método HTTP no soportado. |
-| 403 | `ACCESO_DENEGADO` | Sin permisos (cuando se agreguen los roles). |
+| 401 | `ACCESO_DENEGADO` | Sin token o con token inválido o vencido. |
+| 403 | `ACCESO_DENEGADO` | El rol no tiene permiso o el recurso no es propio. |
 | 404 | `RECURSO_NO_ENCONTRADO` | `RecursoNoEncontradoException` o ruta inexistente. |
 | 409 | `CONFLICTO` | `ConflictoException`, o una restricción de la BD (UNIQUE, EXCLUDE de RN-02). |
 | 422 | `REGLA_NEGOCIO` | `ReglaNegocioException`. |

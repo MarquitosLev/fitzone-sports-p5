@@ -2,6 +2,7 @@ package com.fitzone.modulo.usuarios.service;
 
 import com.fitzone.core.domain.enums.TipoUsuario;
 import com.fitzone.core.exception.AccesoDenegadoException;
+import com.fitzone.core.exception.AccesoNoAutorizadoException;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.RecursoNoEncontradoException;
 import com.fitzone.core.exception.ReglaNegocioException;
@@ -76,8 +77,7 @@ public class UsuarioService {
 
     @Transactional
     public Usuario crear(Usuario usuario, Long idOperador) {
-        Long operadorEfectivo = (idOperador != null) ? idOperador : 1L;
-        validarOperadorParaCreacion(operadorEfectivo, usuario.getTipoUsuario());
+        validarOperadorParaCreacion(exigirOperador(idOperador), usuario.getTipoUsuario());
 
         String dniLimpio = usuario.getDni() != null ? usuario.getDni().trim() : "";
         usuario.setDni(dniLimpio);
@@ -136,7 +136,7 @@ public class UsuarioService {
 
     @Transactional
     public Usuario actualizar(Long id, Usuario datos, Long idOperador) {
-        Long operadorEfectivo = (idOperador != null) ? idOperador : 1L;
+        Long operadorEfectivo = exigirOperador(idOperador);
         Usuario existente = obtenerPorId(id);
         Usuario operador = obtenerPorId(operadorEfectivo);
 
@@ -175,6 +175,14 @@ public class UsuarioService {
         }
 
         return usuarioRepository.save(existente);
+    }
+
+    // Sin operador no hay a quién atribuirle el alta o la edición: nunca se asume un usuario por defecto
+    private Long exigirOperador(Long idOperador) {
+        if (idOperador == null) {
+            throw new AccesoNoAutorizadoException("Se requiere un operador autenticado para esta operación");
+        }
+        return idOperador;
     }
 
     private void validarOperadorParaCreacion(Long idOperador, TipoUsuario tipoNuevoUsuario) {
