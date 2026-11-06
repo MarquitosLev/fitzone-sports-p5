@@ -378,7 +378,8 @@ export function _resetMockPagos(): void {
 // ─── FUNCIONES DEL SERVICIO ───────────────────────────────────────────────────
 
 /**
- * Lista las transacciones de pago de una sede, con filtro opcional por socio.
+ * Lista las transacciones de pago de una sede, con filtro opcional por socio (modo mock).
+ * Con la API real no hay historial por sede todavía (DEV-M5-03): usar `listarMisPagos`.
  */
 export async function listarPagos(idSede: number, idUsuario?: number): Promise<TransaccionDTO[]> {
   if (USE_MOCK) {
@@ -390,9 +391,7 @@ export async function listarPagos(idSede: number, idUsuario?: number): Promise<T
     });
   }
 
-  // Con la API real cada usuario ve sus propios pagos (SCRUM-99). El historial por sede para el
-  // personal es otra historia del backlog (DEV-M5-03): todavía no hay endpoint.
-  return listarMisPagos();
+  throw new AppError('El historial de pagos por sede todavía no está disponible', 501);
 }
 
 /** Historial del usuario logueado (GET /v1/usuarios/me/pagos). */

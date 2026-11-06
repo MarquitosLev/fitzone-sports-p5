@@ -31,7 +31,7 @@ import { listarMisPagos } from '../../services/pagosService';
 import { useToast } from '../../context/ToastContext';
 import { USE_MOCK } from '../../config';
 import type { ReservaCanchaDTO } from '../../types';
-import { formatearMonto } from '../../utils/formatters';
+import { formatearMonto, toLocalISOString } from '../../utils/formatters';
 
 export interface MisReservasViewProps {
   /** Callback para ir a la pestaña o flujo de nueva reserva */
@@ -68,7 +68,8 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
         const pagadas = new Set(
           pagos.filter((p) => p.estadoPago === 'CONFIRMADO').map((p) => p.reservaCanchaId)
         );
-        const ahora = new Date().toISOString().slice(0, 19);
+        // LocalDateTime del backend en hora local: se compara contra la hora local, no UTC
+        const ahora = toLocalISOString(new Date());
         setReservas(
           data.map((r) => ({
             ...r,

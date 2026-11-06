@@ -39,6 +39,7 @@ import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
+import { AppError } from '../services/httpClient';
 import { USE_MOCK } from '../config';
 import type {
   TransaccionDTO,
@@ -48,7 +49,7 @@ import type {
   ResultadoPagoDTO,
   UsuarioDTO,
 } from '../types';
-import { formatearFechaHora, formatearMonto } from '../utils/formatters';
+import { formatearFechaHora, formatearMonto, toLocalISOString } from '../utils/formatters';
 
 interface ItemCobroDemo {
   id: string;
@@ -70,7 +71,8 @@ async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobroDemo
   const pagadas = new Set(
     pagos.filter((p) => p.estadoPago === 'CONFIRMADO').map((p) => p.reservaCanchaId)
   );
-  const ahora = new Date().toISOString().slice(0, 19);
+  // El backend guarda LocalDateTime en hora local: se compara contra la hora local, no UTC
+  const ahora = toLocalISOString(new Date());
   const concepto = usuario.tipoUsuario === 'EXTERNO' ? 'RESERVA_EXTERNO' : 'RESERVA_SOCIO';
 
   const items: ItemCobroDemo[] = reservas
@@ -114,6 +116,9 @@ async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobroDemo
   }
   return items;
 }
+
+/** Socio de demo del modo mock (sin sesión real). */
+const ID_SOCIO_DEMO = 1;
 
 const ITEMS_COBRO_DEMO: ItemCobroDemo[] = [
   {
@@ -244,13 +249,20 @@ export function PagosPage() {
   const [vistaModo, setVistaModo] = useState<'tarjetas' | 'tabla'>('tarjetas');
   const [comprobantesMap, setComprobantesMap] = useState<Record<number, ComprobanteDTO>>({});
 
-  // Carga de transacciones por sede
+  // Historial: en mock, el de la sede; con la API real, los pagos propios del socio o externo.
+  // El historial por sede para el personal todavía no tiene endpoint (DEV-M5-03).
+  const cargarHistorial = async (idSede: number): Promise<TransaccionDTO[]> => {
+    if (USE_MOCK) return listarPagos(idSede);
+    return puedePagar ? listarMisPagos() : [];
+  };
+
+  // Carga de transacciones
   const cargarTransacciones = async () => {
     if (!sedeActiva) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await listarPagos(sedeActiva.idSede);
+      const data = await cargarHistorial(sedeActiva.idSede);
       setTransacciones(data);
 
       // Precargamos comprobantes para las confirmadas
@@ -278,7 +290,7 @@ export function PagosPage() {
       setLoading(true);
       setError(null);
       try {
-        const data = await listarPagos(sedeActiva.idSede);
+        const data = await cargarHistorial(sedeActiva.idSede);
         if (cancelled) return;
         setTransacciones(data);
 
@@ -308,7 +320,13 @@ export function PagosPage() {
     return () => {
       cancelled = true;
     };
-  }, [sedeActiva]);
+  }, [sedeActiva, puedePagar]);
+
+  // Con la API real httpClient ya avisó el error del backend: no se duplica el toast
+  const avisarError = (titulo: string, err: unknown, porDefecto: string) => {
+    if (!USE_MOCK && err instanceof AppError) return;
+    addToast({ type: 'error', title: titulo, message: err instanceof Error ? err.message : porDefecto });
+  };
 
   // Manejo de confirmación de pago en checkout
   const handleConfirmarPago = async (tokenPasarela: string) => {
@@ -317,8 +335,8 @@ export function PagosPage() {
     try {
       const payload: ProcesarPagoPayload = {
         idSede: selectedDemoItem.idSede ?? sedeActiva.idSede,
-        // En mock se simula al socio de demo; con la API real el backend usa la sesión
-        idUsuario: usuario?.idUsuario ?? 1,
+        // Con la API real el backend usa la sesión; en mock, el socio de demo
+        idUsuario: usuario?.idUsuario ?? ID_SOCIO_DEMO,
         concepto: selectedDemoItem.concepto,
         monto: selectedDemoItem.monto,
         tokenTransaccionPasarela: tokenPasarela,
@@ -336,7 +354,7 @@ export function PagosPage() {
         addToast({
           type: 'success',
           title: 'Pago Acreditado',
-          message: 'La transacción fue aprobada y se emitió la factura.',
+          message: 'La transacción fue aprobada y se emitió el comprobante.',
         });
       } else {
         addToast({
@@ -352,11 +370,7 @@ export function PagosPage() {
         setItemsCobro((prev) => prev.filter((i) => i.id !== selectedDemoItem.id));
       }
     } catch (err: unknown) {
-      addToast({
-        type: 'error',
-        title: 'Error de Procesamiento',
-        message: err instanceof Error ? err.message : 'No se pudo comunicar con la pasarela.',
-      });
+      avisarError('Error de Procesamiento', err, 'No se pudo comunicar con la pasarela.');
     } finally {
       setIsProcessing(false);
     }
@@ -373,19 +387,19 @@ export function PagosPage() {
       setResultadoPago(res);
       setCheckoutStep('resultado');
 
-      addToast({
-        type: 'success',
-        title: 'Reintento Exitoso',
-        message: `Se confirmó el cobro original de ${formatearMonto(res.transaccion.monto)} sin alteraciones.`,
-      });
+      addToast(
+        res.aprobado
+          ? {
+              type: 'success',
+              title: 'Reintento Exitoso',
+              message: `Se confirmó el cobro original de ${formatearMonto(res.transaccion.monto)} sin alteraciones.`,
+            }
+          : { type: 'error', title: 'Reintento Rechazado', message: res.mensaje ?? 'La pasarela volvió a rechazar el pago.' }
+      );
 
       void cargarTransacciones();
     } catch (err: unknown) {
-      addToast({
-        type: 'error',
-        title: 'Fallo al Reintentar',
-        message: err instanceof Error ? err.message : 'No se pudo reintentar el pago.',
-      });
+      avisarError('Fallo al Reintentar', err, 'No se pudo reintentar el pago.');
     } finally {
       setIsProcessing(false);
     }
@@ -735,6 +749,14 @@ export function PagosPage() {
               </button>
             </div>
           </div>
+
+          {!USE_MOCK && !puedePagar && (
+            <Alert
+              type="info"
+              title="Historial por sede no disponible"
+              message="Por ahora cada socio o cliente ve sus propios pagos. El historial de cobros por sede para el personal todavía no está habilitado."
+            />
+          )}
 
           {error && <Alert type="error" title="Error" message={error} />}
 
