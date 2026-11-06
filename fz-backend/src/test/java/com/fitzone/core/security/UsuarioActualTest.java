@@ -52,6 +52,29 @@ class UsuarioActualTest {
     }
 
     @Test
+    @DisplayName("obtenerOpcional sin sesión devuelve vacío en lugar de lanzar 401")
+    void obtenerOpcional_sinSesion_vacio() {
+        assertThat(usuarioActual.obtenerOpcional()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("obtenerOpcional con sub inválido devuelve vacío")
+    void obtenerOpcional_subInvalido_vacio() {
+        iniciarSesion("no-es-un-uuid");
+
+        assertThat(usuarioActual.obtenerOpcional()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("obtenerOpcional con sesión devuelve el usuario del token")
+    void obtenerOpcional_conSesion_devuelveUsuario() {
+        iniciarSesionComo(TipoUsuario.SOCIO, null);
+
+        assertThat(usuarioActual.obtenerOpcional()).get()
+                .extracting(Usuario::getIdUsuario).isEqualTo(1L);
+    }
+
+    @Test
     @DisplayName("obtener devuelve el usuario vinculado al claim sub del token")
     void obtener_resuelvePorSub() {
         iniciarSesionComo(TipoUsuario.SOCIO, null);

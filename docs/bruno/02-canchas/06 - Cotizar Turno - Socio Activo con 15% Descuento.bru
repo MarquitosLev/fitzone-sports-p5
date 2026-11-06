@@ -5,13 +5,16 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/v1/canchas/1/cotizacion?idUsuario=1&inicio=2026-10-25T10:00:00&fin=2026-10-25T12:00:00
+  url: {{baseUrl}}/v1/canchas/1/cotizacion?inicio=2026-10-25T10:00:00&fin=2026-10-25T12:00:00
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenSocio}}
 }
 
 params:query {
-  idUsuario: 1
   inicio: 2026-10-25T10:00:00
   fin: 2026-10-25T12:00:00
 }

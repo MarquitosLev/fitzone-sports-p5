@@ -76,13 +76,13 @@ public class CanchaController {
     }
 
     @GetMapping("/{id}/cotizacion")
-    @Operation(summary = "Cotización y desglose dinámico del precio de un turno")
+    @Operation(summary = "Cotización y desglose dinámico del precio de un turno",
+            description = "Pública. Si se envía el token de un socio con membresía vigente, aplica el 15% de descuento.")
     public CotizacionDTO cotizar(
             @PathVariable @Positive Long id,
-            @RequestParam(required = false) Long idUsuario,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fin) {
-        return canchaService.cotizar(id, idUsuario, inicio, fin);
+        return canchaService.cotizar(id, inicio, fin);
     }
 
     @GetMapping("/{id}/disponibilidad")
@@ -95,8 +95,8 @@ public class CanchaController {
 
     @PostMapping("/{id}/reservas")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO', 'RECEPCIONISTA', 'GERENTE')")
-    @Operation(summary = "Reserva de un turno en una cancha")
+    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
+    @Operation(summary = "Reserva de un turno en una cancha a nombre del usuario logueado")
     public ReservaCancha reservar(
             @PathVariable @Positive Long id,
             @Valid @RequestBody ReservaCancha reserva) {

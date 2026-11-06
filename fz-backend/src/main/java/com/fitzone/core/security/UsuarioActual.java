@@ -11,6 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -32,6 +33,22 @@ public class UsuarioActual {
         }
         return usuarioRepository.findByAuthId(authIdDe(jwt))
                 .orElseThrow(() -> new AccesoNoAutorizadoException(USUARIO_NO_REGISTRADO));
+    }
+
+    /**
+     * Para endpoints públicos que cambian su respuesta si hay sesión (ej: cotización de canchas con
+     * descuento de socio). Sin sesión, o con un token que no corresponde a un usuario registrado, devuelve vacío.
+     */
+    public Optional<Usuario> obtenerOpcional() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt) || jwt.getSubject() == null) {
+            return Optional.empty();
+        }
+        try {
+            return usuarioRepository.findByAuthId(UUID.fromString(jwt.getSubject()));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
     public void validarSede(Long idSede) {
