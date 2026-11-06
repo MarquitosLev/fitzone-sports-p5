@@ -103,7 +103,7 @@ describe('canchasService con la API real', () => {
   it('lista las reservas propias desde /usuarios/me', async () => {
     get.mockResolvedValue([]);
 
-    await listarMisReservas(5);
+    await listarMisReservas();
 
     expect(get).toHaveBeenCalledWith('/v1/usuarios/me/reservas-cancha');
   });

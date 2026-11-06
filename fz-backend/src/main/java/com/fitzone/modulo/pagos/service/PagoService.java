@@ -95,7 +95,8 @@ public class PagoService {
             reservaCancha = reservaCanchaRepository.findById(request.getIdReservaCancha())
                     .orElseThrow(() -> new RecursoNoEncontradoException("ReservaCancha", request.getIdReservaCancha()));
             validarPropio(usuario, reservaCancha.getUsuario(), "No puede pagar la reserva de otro usuario");
-            sede = sedeDeLaReserva(reservaCancha, request.getIdSede());
+            // El cobro de un turno se registra en la sede de la cancha; el idSede del request no se usa
+            sede = reservaCancha.getCancha().getSede();
 
             boolean yaPagada = transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(
                     request.getIdReservaCancha(), EstadoPago.CONFIRMADO);
@@ -178,18 +179,6 @@ public class PagoService {
         if (duenio == null || !logueado.getIdUsuario().equals(duenio.getIdUsuario())) {
             throw new AccesoDenegadoException(mensaje);
         }
-    }
-
-    // El cobro de un turno se registra en la sede de la cancha; el idSede del request solo se usa si falta
-    private Sede sedeDeLaReserva(ReservaCancha reserva, Long idSedeRequest) {
-        if (reserva.getCancha() != null && reserva.getCancha().getSede() != null) {
-            return reserva.getCancha().getSede();
-        }
-        if (idSedeRequest == null) {
-            throw new PeticionInvalidaException("No se pudo determinar la sede de la reserva");
-        }
-        return sedeRepository.findById(idSedeRequest)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Sede", idSedeRequest));
     }
 
     @Transactional(readOnly = true)
