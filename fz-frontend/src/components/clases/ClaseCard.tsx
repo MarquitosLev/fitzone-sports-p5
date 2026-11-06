@@ -19,7 +19,7 @@ import { CupoIndicator } from './CupoIndicator';
 import { PosicionEsperaBadge } from './PosicionEsperaBadge';
 import type { ClaseGrupalDTO } from '../../types';
 import { formatearFechaHora, formatearHora, parseLocalDateTime } from '../../utils/formatters';
-import { MENSAJES_CLASES, VENTANA_RESERVA_HORAS } from '../../services/clasesService';
+import { VENTANA_RESERVA_HORAS } from '../../services/clasesService';
 
 const VENTANA_RESERVA_MS = VENTANA_RESERVA_HORAS * 60 * 60 * 1000;
 
@@ -170,7 +170,7 @@ export function ClaseCard({
           {/* Aviso contextual para "fuera de ventana" */}
           {accion === 'fuera-de-ventana' && !yaEmpezo && (
             <p className="text-[10px] text-slate-400 text-center mt-1.5">
-              {MENSAJES_CLASES.ventanaReserva}
+              Se reserva hasta {VENTANA_RESERVA_HORAS} hs antes
             </p>
           )}
         </div>

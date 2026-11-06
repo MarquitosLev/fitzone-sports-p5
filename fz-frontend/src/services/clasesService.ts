@@ -46,10 +46,11 @@ export const CLASES_ENDPOINTS = {
   miListaEspera:     () => '/v1/usuarios/me/lista-espera',
 } as const;
 
-// ─── Reglas de negocio (mismos valores y mensajes que el backend) ────────────
+// ─── Reglas de negocio (mismos valores que valida el backend) ────────────────
 export const VENTANA_RESERVA_HORAS = 48;
 export const CORTE_CANCELACION_HORAS = 2;
-export const MENSAJES_CLASES = {
+// Solo para el modo mock: imita los mensajes de ReservaClaseService y ListaEsperaService del backend.
+const MENSAJES_CLASES = {
   ventanaReserva: 'La reserva solo puede realizarse con hasta 48 horas de anticipación',
   corteCancelacion: 'La cancelación solo está permitida hasta 2 horas antes del inicio de la clase',
   claseComenzada: 'No se puede reservar una clase que ya ha comenzado',

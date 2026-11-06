@@ -100,15 +100,13 @@ describe('ClaseCard Component', () => {
     expect(screen.getByRole('button', { name: /anotarme en espera/i })).toBeInTheDocument();
   });
 
-  it('muestra "Fuera de ventana" con el mensaje del backend cuando faltan más de 48 hs', () => {
+  it('muestra "Fuera de ventana" con el aviso de 48 hs cuando faltan más de 48 hs', () => {
     renderCard({ fechaHoraInicio: generarFechaHoras(72) });
 
     const btn = screen.getByRole('button', { name: /fuera de ventana para spinning power/i });
     expect(btn).toBeDisabled();
     expect(screen.getByText('+48 HS')).toBeInTheDocument();
-    expect(
-      screen.getByText('La reserva solo puede realizarse con hasta 48 horas de anticipación')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Se reserva hasta 48 hs antes')).toBeInTheDocument();
   });
 
   it('muestra el badge "FINALIZADA" si la clase ya pasó', () => {

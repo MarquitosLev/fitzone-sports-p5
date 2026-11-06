@@ -1,6 +1,6 @@
 /**
  * clasesService.test.ts — Pruebas del servicio de Clases Grupales en modo mock.
- * Valida las reglas del backend replicadas en el mock: 48 hs, 2 hs, cupo,
+ * Valida las reglas del backend replicadas en el mock (mensajes comparados por fragmento): 48 hs, 2 hs, cupo,
  * doble reserva y lista de espera con reacomodo de posiciones.
  */
 
@@ -18,7 +18,6 @@ import {
   eliminarClase,
   listarInscriptos,
   listarEsperaDeClase,
-  MENSAJES_CLASES,
   _resetMockClases,
 } from '../../services/clasesService';
 import { toLocalISOString } from '../../utils/formatters';
@@ -66,23 +65,23 @@ describe('clasesService (Modo Mock)', () => {
   });
 
   it('rechaza la doble reserva con el mensaje del backend', async () => {
-    await expect(reservarClase(1)).rejects.toThrow(MENSAJES_CLASES.yaReservada);
+    await expect(reservarClase(1)).rejects.toThrow(/ya posee una reserva confirmada/);
   });
 
   it('rechaza reservar con más de 48 hs de anticipación', async () => {
-    await expect(reservarClase(3)).rejects.toThrow(MENSAJES_CLASES.ventanaReserva);
+    await expect(reservarClase(3)).rejects.toThrow(/hasta 48 horas de anticipación/);
   });
 
   it('rechaza reservar una clase sin cupo', async () => {
-    await expect(reservarClase(4)).rejects.toThrow(MENSAJES_CLASES.sinCupo);
+    await expect(reservarClase(4)).rejects.toThrow(/No hay cupo disponible/);
   });
 
   it('rechaza cancelar a menos de 2 hs del inicio', async () => {
-    await expect(cancelarReservaClase(102)).rejects.toThrow(MENSAJES_CLASES.corteCancelacion);
+    await expect(cancelarReservaClase(102)).rejects.toThrow(/hasta 2 horas antes del inicio/);
   });
 
   it('rechaza cancelar una reserva ya cancelada', async () => {
-    await expect(cancelarReservaClase(103)).rejects.toThrow(MENSAJES_CLASES.reservaYaCancelada);
+    await expect(cancelarReservaClase(103)).rejects.toThrow(/ya se encuentra cancelada/);
   });
 
   it('anotarse en espera asigna la última posición y no permite anotarse dos veces', async () => {
@@ -91,11 +90,11 @@ describe('clasesService (Modo Mock)', () => {
     expect((await listarMiListaEspera()).some((e) => e.idEspera === nueva.idEspera)).toBe(true);
     expect((await listarClases(1)).find((c) => c.idClase === 4)?.posicionEspera).toBe(1);
 
-    await expect(anotarseEnEspera(4)).rejects.toThrow(MENSAJES_CLASES.yaEnEspera);
+    await expect(anotarseEnEspera(4)).rejects.toThrow(/ya se encuentra en la lista de espera/);
   });
 
   it('no permite anotarse en espera si la clase todavía tiene cupo', async () => {
-    await expect(anotarseEnEspera(5)).rejects.toThrow(MENSAJES_CLASES.conCupo);
+    await expect(anotarseEnEspera(5)).rejects.toThrow(/aún posee cupos disponibles/);
   });
 
   it('salir de la espera reacomoda las posiciones de los que siguen', async () => {
