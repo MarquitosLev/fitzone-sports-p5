@@ -147,7 +147,7 @@ describe('canchasService (Lógica de Negocio y Modo Mock)', () => {
       expect(cancelada.idReservaCancha).toBe(1029);
       expect(cancelada.estado).toBe('CANCELADA');
 
-      const reservas = await listarMisReservas(1);
+      const reservas = await listarMisReservas();
       const encontrada = reservas.find((r) => r.idReservaCancha === 1029);
       expect(encontrada?.estado).toBe('CANCELADA');
     });
