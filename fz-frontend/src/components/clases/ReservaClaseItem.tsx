@@ -4,7 +4,7 @@
  * Reglas de negocio implementadas (prevención BUG-02):
  * - Solo las reservas con estado 'CONFIRMADA' pueden cancelarse.
  * - Si faltan ≤ 2 hs para el inicio de la clase, el botón "Cancelar" se deshabilita
- *   con un aviso claro ("Cancelación disponible hasta 2 hs antes").
+ *   con un aviso corto ("Se cancela hasta 2 hs antes").
  * - Si la reserva está en estado 'CANCELADA', 'ASISTIO' o 'NO_ASISTIO', no se
  *   ofrece ninguna acción de cancelación.
  * - La acción destructiva pasa siempre por ConfirmDialog antes de invocar onCancelar.
@@ -18,9 +18,10 @@ import { StatusBadge, ConfirmDialog } from '../ui';
 import { PosicionEsperaBadge } from './PosicionEsperaBadge';
 import type { ReservaClaseDTO, ListaEsperaDTO } from '../../types';
 import { formatearFechaHora, formatearHora, parseLocalDateTime } from '../../utils/formatters';
+import { CORTE_CANCELACION_HORAS } from '../../services/clasesService';
 
-// ── Constante de corte de cancelación (2 hs en milisegundos) ────────────────
-const CORTE_CANCELACION_MS = 2 * 60 * 60 * 1000;
+// ── Corte de cancelación (mismo valor que valida el backend) ────────────────
+const CORTE_CANCELACION_MS = CORTE_CANCELACION_HORAS * 60 * 60 * 1000;
 
 interface ReservaClaseItemProps {
   reserva: ReservaClaseDTO;
@@ -118,8 +119,8 @@ export function ReservaClaseItem({ reserva, listaEspera, onCancelar, isLoading =
 
               {/* Aviso cuando está dentro del corte de 2 hs */}
               {dentroDelCorte && (
-                <p className="text-[10px] text-slate-400 text-right max-w-[160px] leading-tight">
-                  Cancelación disponible hasta 2 hs antes
+                <p className="text-[10px] text-slate-400 text-right max-w-[200px] leading-tight">
+                  Se cancela hasta {CORTE_CANCELACION_HORAS} hs antes
                 </p>
               )}
             </div>

@@ -15,7 +15,14 @@ export type {
   ResultadoValidacionDTO,
   QrTokenDTO,
 } from './acceso';
-export type { EstadoReservaClase, ClaseGrupalDTO, ReservaClaseDTO, ListaEsperaDTO } from './clase';
+export type {
+  EstadoReservaClase,
+  ClaseGrupalDTO,
+  ClaseGrupalRequest,
+  ReservaClaseDTO,
+  ListaEsperaDTO,
+  InscriptoClaseDTO,
+} from './clase';
 export type {
   CanchaDTO,
   ReservaCanchaDTO,

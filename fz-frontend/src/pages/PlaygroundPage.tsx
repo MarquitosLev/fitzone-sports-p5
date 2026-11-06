@@ -2096,8 +2096,6 @@ export function PlaygroundPage() {
                     cupoMaximo: 20,
                     cupoDisponible: 5,
                   }}
-                  estaReservada={false}
-                  estaEnEspera={false}
                   onReservar={() => addToast('Demo', 'reservarClase(901, socioId) llamado.', 'success')}
                   onAnotarEnEspera={() => {}}
                 />
@@ -2118,8 +2116,6 @@ export function PlaygroundPage() {
                     cupoMaximo: 15,
                     cupoDisponible: 0,
                   }}
-                  estaReservada={false}
-                  estaEnEspera={false}
                   onReservar={() => {}}
                   onAnotarEnEspera={() => addToast('Demo', 'anotarseEnEspera(902, socioId) llamado.', 'info')}
                 />
@@ -2128,7 +2124,7 @@ export function PlaygroundPage() {
               {/* Estado C: YA RESERVADA (con PosicionEsperaBadge si también en espera) */}
               <div className="space-y-1">
                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
-                  C — "Ya reservada" + en espera
+                  C — En lista de espera (posición 2)
                 </span>
                 <ClaseCard
                   clase={{
@@ -2138,13 +2134,12 @@ export function PlaygroundPage() {
                     fechaHoraInicio: toLocalISOString(new Date(Date.now() + 10 * 3600_000)),
                     duracionMinutos: 50,
                     cupoMaximo: 12,
-                    cupoDisponible: 3,
+                    cupoDisponible: 0,
+                    posicionEspera: 2,
                   }}
-                  estaReservada={true}
-                  estaEnEspera={true}
-                  ordenEnEspera={2}
                   onReservar={() => {}}
                   onAnotarEnEspera={() => {}}
+                  onSalirDeEspera={() => {}}
                 />
               </div>
 
@@ -2163,8 +2158,6 @@ export function PlaygroundPage() {
                     cupoMaximo: 10,
                     cupoDisponible: 8,
                   }}
-                  estaReservada={false}
-                  estaEnEspera={false}
                   onReservar={() => {}}
                   onAnotarEnEspera={() => {}}
                 />

@@ -1,12 +1,12 @@
 /**
  * ClaseCard.tsx — Tarjeta de clase grupal para la vista del SOCIO.
- * Muestra info de la clase y un botón de acción dinámica según el estado
- * del socio respecto a esa clase y la ventana temporal de 48 horas.
+ * Muestra info de la clase y un botón de acción según el estado que devuelve
+ * la agenda del backend para el socio logueado (`yaReservada`, `posicionEspera`).
  *
- * Reglas de negocio implementadas:
- * - Solo se puede reservar/anotarse si la clase inicia dentro de las próximas 48 hs (y en el futuro).
- * - BUG-02: No se puede reservar ni anotar en lista de espera sobre una clase cancelada o ya iniciada.
- * - Si el socio ya tiene una reserva o está en espera, el botón queda deshabilitado.
+ * Reglas de negocio (las valida el backend; acá solo se anticipan en la UI):
+ * - Solo se puede reservar o anotarse si la clase empieza dentro de las próximas 48 hs.
+ * - Con la clase reservada, el botón queda deshabilitado (se cancela desde "Mis Reservas").
+ * - En lista de espera se muestra la posición y la opción de salir de la cola.
  *
  * Este componente NO hace fetch: toda la lógica de acción entra por props.
  */
@@ -19,62 +19,53 @@ import { CupoIndicator } from './CupoIndicator';
 import { PosicionEsperaBadge } from './PosicionEsperaBadge';
 import type { ClaseGrupalDTO } from '../../types';
 import { formatearFechaHora, formatearHora, parseLocalDateTime } from '../../utils/formatters';
+import { VENTANA_RESERVA_HORAS } from '../../services/clasesService';
 
-// ── Constante de ventana de reserva (48 hs en milisegundos) ─────────────────
-const VENTANA_RESERVA_MS = 48 * 60 * 60 * 1000;
+const VENTANA_RESERVA_MS = VENTANA_RESERVA_HORAS * 60 * 60 * 1000;
 
 interface ClaseCardProps {
+  /** Clase de la agenda; para un socio trae `yaReservada` y `posicionEspera` */
   clase: ClaseGrupalDTO;
-  /** True si el socio ya tiene una reserva CONFIRMADA para esta clase */
-  estaReservada: boolean;
-  /** True si el socio está en la lista de espera para esta clase */
-  estaEnEspera: boolean;
-  /** Posición en la lista de espera (solo requerida si estaEnEspera = true) */
-  ordenEnEspera?: number;
   /** Callback para reservar la clase. La mutación (fetch) la hace el padre. */
   onReservar: () => void;
   /** Callback para anotarse en lista de espera. La mutación la hace el padre. */
   onAnotarEnEspera: () => void;
+  /** Callback para salir de la lista de espera. Sin él, no se ofrece la acción. */
+  onSalirDeEspera?: () => void;
   /** Estado de carga del padre (mientras procesa la acción) */
   isLoading?: boolean;
 }
 
-/**
- * Calcula si la clase está dentro de la ventana de reserva de 48 hs.
- * Devuelve true solo si la clase:
- * 1. No ha comenzado aún (fechaHoraInicio > ahora)
- * 2. Comienza dentro de las próximas 48 horas
- *
- * Usa parseLocalDateTime para asegurar interpretación en hora local y evitar desfasajes.
- */
+/** True si la clase todavía no empezó y empieza dentro de las próximas 48 hs. */
 function estaEnVentana(fechaHoraInicio: string): boolean {
-  const ahora = Date.now();
-  const inicio = parseLocalDateTime(fechaHoraInicio).getTime();
-  const diferencia = inicio - ahora;
-  // La clase debe ser futura Y estar a menos de 48 hs
+  const diferencia = parseLocalDateTime(fechaHoraInicio).getTime() - Date.now();
   return diferencia > 0 && diferencia <= VENTANA_RESERVA_MS;
 }
 
 export function ClaseCard({
   clase,
-  estaReservada,
-  estaEnEspera,
-  ordenEnEspera,
   onReservar,
   onAnotarEnEspera,
+  onSalirDeEspera,
   isLoading = false,
 }: ClaseCardProps) {
   const enVentana = estaEnVentana(clase.fechaHoraInicio);
-  const sinCupo = clase.cupoDisponible === 0;
+  const sinCupo = clase.cupoDisponible <= 0;
+  const estaReservada = clase.yaReservada === true;
+  const ordenEnEspera = clase.posicionEspera ?? undefined;
+  const estaEnEspera = ordenEnEspera !== undefined;
+  const yaEmpezo = parseLocalDateTime(clase.fechaHoraInicio).getTime() <= Date.now();
 
   // ── Determinar el estado del botón ────────────────────────────────────────
-  type AccionBtn = 'reservar' | 'espera' | 'ya-reservada' | 'fuera-de-ventana';
+  type AccionBtn = 'reservar' | 'espera' | 'salir-espera' | 'en-espera' | 'ya-reservada' | 'fuera-de-ventana';
 
   let accion: AccionBtn;
-  if (!enVentana) {
-    accion = 'fuera-de-ventana';
-  } else if (estaReservada || estaEnEspera) {
+  if (estaReservada) {
     accion = 'ya-reservada';
+  } else if (estaEnEspera) {
+    accion = onSalirDeEspera && !yaEmpezo ? 'salir-espera' : 'en-espera';
+  } else if (!enVentana) {
+    accion = 'fuera-de-ventana';
   } else if (sinCupo) {
     accion = 'espera';
   } else {
@@ -84,6 +75,8 @@ export function ClaseCard({
   const btnConfig: Record<AccionBtn, { label: string; variant: Parameters<typeof Button>[0]['variant']; disabled: boolean }> = {
     reservar: { label: 'Reservar', variant: 'success', disabled: false },
     espera: { label: 'Anotarme en espera', variant: 'secondary', disabled: false },
+    'salir-espera': { label: 'Salir de la espera', variant: 'secondary', disabled: false },
+    'en-espera': { label: 'En lista de espera', variant: 'secondary', disabled: true },
     'ya-reservada': { label: 'Ya reservada', variant: 'secondary', disabled: true },
     'fuera-de-ventana': { label: 'Fuera de ventana', variant: 'secondary', disabled: true },
   };
@@ -93,6 +86,7 @@ export function ClaseCard({
   const handleClick = () => {
     if (accion === 'reservar') onReservar();
     if (accion === 'espera') onAnotarEnEspera();
+    if (accion === 'salir-espera') onSalirDeEspera?.();
   };
 
   return (
@@ -114,7 +108,7 @@ export function ClaseCard({
             {estaEnEspera && !estaReservada && <Badge variant="gold-soft" size="xs">EN ESPERA</Badge>}
             {!enVentana && !estaReservada && !estaEnEspera && (
               <Badge variant="default" size="xs">
-                {parseLocalDateTime(clase.fechaHoraInicio).getTime() <= Date.now() ? 'FINALIZADA' : '+48 HS'}
+                {yaEmpezo ? 'FINALIZADA' : '+48 HS'}
               </Badge>
             )}
           </div>
@@ -167,16 +161,16 @@ export function ClaseCard({
             size="sm"
             className="w-full"
             disabled={btn.disabled || isLoading}
-            isLoading={isLoading && (accion === 'reservar' || accion === 'espera')}
+            isLoading={isLoading && (accion === 'reservar' || accion === 'espera' || accion === 'salir-espera')}
             onClick={handleClick}
           >
             {btn.label}
           </Button>
 
           {/* Aviso contextual para "fuera de ventana" */}
-          {accion === 'fuera-de-ventana' && parseLocalDateTime(clase.fechaHoraInicio).getTime() > Date.now() && (
+          {accion === 'fuera-de-ventana' && !yaEmpezo && (
             <p className="text-[10px] text-slate-400 text-center mt-1.5">
-              Reserva habilitada hasta 48 hs antes del inicio
+              Se reserva hasta {VENTANA_RESERVA_HORAS} hs antes
             </p>
           )}
         </div>
