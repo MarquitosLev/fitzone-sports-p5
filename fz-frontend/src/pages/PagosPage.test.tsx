@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { PagosPage } from './PagosPage';
 import { SedeProvider } from '../context/SedeContext';
 import { ToastProvider } from '../context/ToastContext';
@@ -102,12 +103,15 @@ const mockComprobante: ComprobanteDTO = {
 };
 
 function renderWithProviders(ui: React.ReactElement) {
+  // MemoryRouter: la página lee ?reserva= para preseleccionar el ítem a pagar
   return render(
-    <ToastProvider>
-      <SedeProvider sedes={[mockSede]} sedeInicial={mockSede}>
-        {ui}
-      </SedeProvider>
-    </ToastProvider>
+    <MemoryRouter>
+      <ToastProvider>
+        <SedeProvider sedes={[mockSede]} sedeInicial={mockSede}>
+          {ui}
+        </SedeProvider>
+      </ToastProvider>
+    </MemoryRouter>
   );
 }
 
@@ -140,7 +144,7 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Total Abonado')).toBeInTheDocument();
-      expect(screen.getByText('Comprobantes AFIP')).toBeInTheDocument();
+      expect(screen.getByText('Comprobantes')).toBeInTheDocument();
       expect(screen.getByText('Rechazados / A Revisar')).toBeInTheDocument();
     });
 
