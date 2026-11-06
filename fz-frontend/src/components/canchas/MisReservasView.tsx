@@ -27,7 +27,9 @@ import {
   cancelarReserva,
   CANCELACION_DISPONIBLE,
 } from '../../services/canchasService';
+import { listarMisPagos } from '../../services/pagosService';
 import { useToast } from '../../context/ToastContext';
+import { USE_MOCK } from '../../config';
 import type { ReservaCanchaDTO } from '../../types';
 import { formatearMonto } from '../../utils/formatters';
 
@@ -58,7 +60,26 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
     setError(null);
     try {
       const data = await listarMisReservas();
-      setReservas(data);
+      if (USE_MOCK) {
+        setReservas(data);
+      } else {
+        // El backend no guarda un estado en la reserva: está paga si tiene un pago confirmado (ADR-004)
+        const pagos = await listarMisPagos();
+        const pagadas = new Set(
+          pagos.filter((p) => p.estadoPago === 'CONFIRMADO').map((p) => p.reservaCanchaId)
+        );
+        const ahora = new Date().toISOString().slice(0, 19);
+        setReservas(
+          data.map((r) => ({
+            ...r,
+            estado: pagadas.has(r.idReservaCancha)
+              ? r.fechaHoraFin < ahora
+                ? 'FINALIZADA'
+                : 'CONFIRMADA'
+              : 'PENDIENTE_PAGO',
+          }))
+        );
+      }
     } catch (err: unknown) {
       const mensaje = err instanceof Error ? err.message : 'Error al cargar las reservas';
       setError(mensaje);
@@ -393,7 +414,7 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
                             variant="primary"
                             size="sm"
                             leftIcon={CreditCard}
-                            onClick={() => navigate('/pagos')}
+                            onClick={() => navigate(`/pagos?reserva=${b.idReservaCancha}`)}
                           >
                             Ir a Pagar
                           </Button>
