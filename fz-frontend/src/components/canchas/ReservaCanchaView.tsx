@@ -1,5 +1,5 @@
 /**
- * ReservaCanchaView.tsx — Pantalla de Reserva de Cancha (RF-10, RF-11).
+ * ReservaCanchaView.tsx — Pantalla de Reserva de Cancha.
  *
  * Flujo:
  * 1. Elegir cancha (filtro por deporte o selección directa de tarjeta).
@@ -30,6 +30,7 @@ import {
   obtenerDisponibilidad,
   cotizarTurno,
   crearReserva,
+  calcularCotizacion,
 } from '../../services/canchasService';
 import { useSede } from '../../context/SedeContext';
 import { useToast } from '../../context/ToastContext';
@@ -199,33 +200,13 @@ export function ReservaCanchaView({
         }
       } catch {
         if (cancelado) return;
-        if (!USE_MOCK) {
-          // Con la API real el precio sale solo del servidor: sin cotización no se puede confirmar
-          setCotizacion(null);
-          addToast({
-            type: 'error',
-            title: 'No se pudo cotizar el turno',
-            message: 'Intentá de nuevo en unos segundos.',
-          });
-          return;
-        }
-        // Fallback local del modo mock
-        {
-          const esPico = turnoSeleccionado.esPico;
-          const recargo = esPico ? Math.round(canchaSeleccionada.precioBaseHora * 0.2) : 0;
-          const sub = canchaSeleccionada.precioBaseHora + recargo;
-          const desc = esSocio ? Math.round(sub * 0.15) : 0;
-          setCotizacion({
-            precioBase: canchaSeleccionada.precioBaseHora,
-            esPico,
-            recargoPico: recargo,
-            porcentajeRecargoPico: 20,
-            descuentoSocio: desc,
-            porcentajeDescuentoSocio: esSocio ? 15 : 0,
-            esSocio,
-            total: sub - desc,
-          });
-        }
+        // Con la API real el precio sale solo del servidor: sin cotización no se puede confirmar
+        // (el error ya lo avisó httpClient). En mock se calcula localmente.
+        setCotizacion(
+          USE_MOCK
+            ? calcularCotizacion(canchaSeleccionada.precioBaseHora, turnoSeleccionado.horaInicio, esSocio)
+            : null
+        );
       } finally {
         if (!cancelado) setLoadingCotizacion(false);
       }
@@ -323,20 +304,25 @@ export function ReservaCanchaView({
             err.message.toLowerCase().includes('conflicto') ||
             err.message.toLowerCase().includes('ocupado')));
 
+      // Con la API real httpClient ya mostró el mensaje del backend: no se duplica el toast
+      const yaAvisado = !USE_MOCK && err instanceof AppError;
+
       if (isConflict) {
         setErrorConflicto(mensaje);
         setModalConfirmacionOpen(false);
 
-        addToast({
-          type: 'error',
-          title: 'Horario no disponible (409)',
-          message: mensaje,
-        });
+        if (!yaAvisado) {
+          addToast({
+            type: 'error',
+            title: 'Horario no disponible (409)',
+            message: mensaje,
+          });
+        }
 
-        // Requisito: "Si el horario ya fue tomado (409), se muestra el mensaje y se refresca la grilla."
+        // Si el horario ya fue tomado (409), se muestra el mensaje y se refresca la grilla
         await cargarDisponibilidad();
         setTurnoSeleccionado(null);
-      } else {
+      } else if (!yaAvisado) {
         addToast({
           type: 'error',
           title: 'Error al reservar',
@@ -354,7 +340,7 @@ export function ReservaCanchaView({
       <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-black uppercase text-fitzone-coral tracking-wider block">
-            RESERVA DE CANCHAS DEPORTIVAS (RF-10, RF-11)
+            RESERVA DE CANCHAS DEPORTIVAS
           </span>
           <h2 className="text-xl sm:text-2xl font-black text-fitzone-navy font-outfit mt-0.5">
             {esSocio ? 'Reservá con tu beneficio de socio' : 'Reservá tu turno como cliente externo'}

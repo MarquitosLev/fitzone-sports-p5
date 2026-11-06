@@ -671,13 +671,8 @@ export async function crearReserva(
   });
 }
 
-/**
- * Obtiene las reservas del usuario logueado (SCRUM-98: GET /v1/usuarios/me/reservas-cancha).
- * El parámetro solo se usa en modo mock.
- */
-export async function listarMisReservas(
-  _idUsuario = 1
-): Promise<ReservaCanchaDTO[]> {
+/** Obtiene las reservas del usuario logueado (GET /v1/usuarios/me/reservas-cancha). */
+export async function listarMisReservas(): Promise<ReservaCanchaDTO[]> {
   if (USE_MOCK) {
     await new Promise((resolve) => setTimeout(resolve, 200));
     return [...MOCK_RESERVAS];
