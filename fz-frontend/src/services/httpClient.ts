@@ -92,8 +92,8 @@ function buildUserMessage(response: BackendErrorResponse): string {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api';
 
 /**
- * Mensaje que ve el usuario cuando el backend responde 403 (tiene sesión,
- * pero su rol no puede hacer esa operación). La pantalla no se rompe: se
+ * Mensaje genérico para un 403 (tiene sesión, pero no puede hacer esa operación)
+ * cuando el backend no manda su propio `mensaje`. La pantalla no se rompe: se
  * muestra un toast y el servicio recibe un AppError con status 403.
  */
 export const MENSAJE_SIN_PERMISO = 'No tenés permiso para realizar esta acción.';
@@ -183,11 +183,12 @@ async function httpRequest<T>(
     backendError = undefined;
   }
 
-  // 403: el usuario está logueado pero su rol no alcanza. No cerramos sesión:
-  // avisamos "sin permiso" y dejamos que la pantalla siga funcionando.
+  // 403: el usuario está logueado pero no puede hacer esa operación. No cerramos sesión
+  // y la pantalla sigue funcionando. Si el backend explica el motivo (por ejemplo,
+  // "No puede pagar la reserva de otro usuario") lo mostramos; si no, el genérico.
   let userMessage: string;
   if (response.status === 403) {
-    userMessage = MENSAJE_SIN_PERMISO;
+    userMessage = backendError?.mensaje ? buildUserMessage(backendError) : MENSAJE_SIN_PERMISO;
   } else {
     userMessage = backendError
       ? buildUserMessage(backendError)

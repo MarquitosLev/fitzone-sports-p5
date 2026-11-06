@@ -23,13 +23,13 @@ export interface NavItem {
   prestacion?: Prestacion;
 }
 
+/** Módulos que ve un visitante sin sesión: solo lo que el backend expone sin token. */
+export const RUTAS_PUBLICAS: readonly string[] = ['/canchas'];
+
 /**
  * Inicio de cada rol (mismas rutas que IndexRedirect en App.tsx).
  * Es a donde vuelve alguien que entra por URL a una sección de otro rol.
  */
-/** Módulos que ve un visitante sin sesión: solo lo que el backend expone sin token. */
-export const RUTAS_PUBLICAS: readonly string[] = ['/canchas'];
-
 export const INICIO_POR_ROL: Record<TipoUsuario, string> = {
   SOCIO: '/rol/socio',
   EXTERNO: '/rol/externo',

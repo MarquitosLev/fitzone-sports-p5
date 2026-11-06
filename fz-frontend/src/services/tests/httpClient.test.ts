@@ -41,22 +41,35 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer token-123');
   });
 
-  it('ante un 403 avisa "sin permiso", lanza AppError 403 y no cierra la sesión', async () => {
+  it('ante un 403 con mensaje del backend lo muestra, lanza AppError 403 y no cierra la sesión', async () => {
+    const mensaje = 'No puede pagar la reserva de otro usuario';
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(respuestaJson(403, { codigo: 'ACCESO_DENEGADO', mensaje: 'Forbidden', timestamp: '' }))
+      vi.fn().mockResolvedValue(respuestaJson(403, { codigo: 'ACCESO_DENEGADO', mensaje, timestamp: '' }))
     );
     setAuthToken('token-socio');
     localStorage.setItem('fitzone_auth_session', '{"token":"token-socio"}');
 
-    const error = await httpClient.post('/v1/canchas', { body: '{}' }).catch((e: unknown) => e);
+    const error = await httpClient.post('/v1/pagos', { body: '{}' }).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(AppError);
+    expect((error as AppError).status).toBe(403);
+    expect((error as AppError).message).toBe(mensaje);
+    expect(handler).toHaveBeenCalledWith(mensaje, 403);
+    expect(getAuthToken()).toBe('token-socio');
+    expect(localStorage.getItem('fitzone_auth_session')).not.toBeNull();
+  });
+
+  it('ante un 403 sin cuerpo usa el mensaje genérico de sin permiso', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 403 })));
+    setAuthToken('token-socio');
+
+    const error = await httpClient.post('/v1/canchas', { body: '{}' }).catch((e: unknown) => e);
+
     expect((error as AppError).status).toBe(403);
     expect((error as AppError).message).toBe(MENSAJE_SIN_PERMISO);
     expect(handler).toHaveBeenCalledWith(MENSAJE_SIN_PERMISO, 403);
     expect(getAuthToken()).toBe('token-socio');
-    expect(localStorage.getItem('fitzone_auth_session')).not.toBeNull();
   });
 
   it('ante un 401 con sesión borra el token y la sesión guardada', async () => {

@@ -84,7 +84,8 @@ export function RoleMiddlewareDemo() {
             <li>
               Mientras se valida la sesión con <code>GET /v1/usuarios/me</code> muestra un spinner.
               Si el backend responde 401 la sesión se cierra y se vuelve al login; un 403 de
-              cualquier servicio muestra el toast “No tenés permiso…” sin romper la pantalla.
+              cualquier servicio muestra un toast “Sin permiso” con el motivo que mande el backend
+              (o “No tenés permiso…” si no manda ninguno), sin romper la pantalla.
             </li>
           </ul>
         </div>
