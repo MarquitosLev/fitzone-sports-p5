@@ -20,6 +20,37 @@ export interface ClaseGrupalDTO {
   duracionMinutos: number;
   cupoMaximo: number;
   cupoDisponible: number;
+  /**
+   * Estado del socio logueado sobre la clase. Solo viaja en la agenda
+   * (`GET /v1/clases?idSede=`) cuando quien consulta es SOCIO; el backend lo omite en el resto.
+   */
+  yaReservada?: boolean;
+  /** Posición del socio logueado en la lista de espera; ausente si no está anotado. */
+  posicionEspera?: number | null;
+}
+
+/**
+ * Body de alta y edición (`POST /v1/clases`, `PUT /v1/clases/{id}`).
+ * El backend calcula `cupoDisponible` y resuelve la sede a partir de `idSede`.
+ */
+export interface ClaseGrupalRequest {
+  idSede: number;
+  nombreActividad: string;
+  fechaHoraInicio: string;
+  duracionMinutos: number;
+  cupoMaximo: number;
+}
+
+/**
+ * Inscripto de una clase (`GET /v1/clases/{id}/reservas`, solo RECEPCIONISTA y GERENTE).
+ * Corresponde al record `InscriptoResponse` del backend.
+ */
+export interface InscriptoClaseDTO {
+  idReservaClase: number;
+  idUsuario: number;
+  nombre: string;
+  apellido: string;
+  estado: EstadoReservaClase;
 }
 
 /**
