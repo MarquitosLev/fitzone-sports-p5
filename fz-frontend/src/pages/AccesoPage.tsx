@@ -1,5 +1,5 @@
 /**
- * AccesoPage.tsx — Control de Acceso, Aforo en Tiempo Real y Pase Digital (SCRUM-82, SCRUM-85, RF-04, RF-05).
+ * AccesoPage.tsx — Control de Acceso, Aforo en Tiempo Real y Pase Digital (SCRUM-82, SCRUM-85, SCRUM-101, RF-04, RF-05).
  *
  * Integra en una sola pantalla:
  *   1. Vista Socio ('mi-qr'): Pase digital móvil con <QrDinamico /> (rotación de token de 60s),
@@ -36,6 +36,7 @@ import {
 } from '../components/acceso';
 import {
   obtenerQrSocio,
+  obtenerMiQr,
   listarAccesos,
   obtenerAforo,
   listarAccesosActivos,
@@ -43,6 +44,7 @@ import {
   registrarEgreso,
 } from '../services/accesoService';
 import { obtenerMembresiaPorUsuario } from '../services/membresiasService';
+import { httpClient } from '../services/httpClient';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -143,25 +145,64 @@ type VistaAcceso = 'mi-qr' | 'control-aforo' | 'historial';
 export function AccesoPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { sedeActiva } = useSede();
+  const { sedeActiva, sedes, setSedeActiva } = useSede();
   const { addToast } = useToast();
   const { usuario: usuarioAuth } = useAuth();
   const esSocio = usuarioAuth?.tipoUsuario === 'SOCIO';
-  const puedeVerAforo = !usuarioAuth || useTienePrestacion('ACCESO_AFORO_VIEW');
-  const puedeVerMiQr = !usuarioAuth || useTienePrestacion('ACCESO_MI_QR');
+  const tienePrestacionAforo = useTienePrestacion('ACCESO_AFORO_VIEW');
+  const tienePrestacionEscanear = useTienePrestacion('ACCESO_ESCANEAR');
+  const tienePrestacionMiQr = useTienePrestacion('ACCESO_MI_QR');
+
+  const puedeVerAforo = !usuarioAuth || tienePrestacionAforo;
+  const puedeEscanear = !usuarioAuth || tienePrestacionEscanear;
+  const puedeVerMiQr = !usuarioAuth || tienePrestacionMiQr;
+
+  // Sincronizar la sede activa con la sede asignada del recepcionista/gerente autenticado (SCRUM-96, SCRUM-101)
+  useEffect(() => {
+    if (
+      usuarioAuth?.idSede &&
+      (usuarioAuth.tipoUsuario === 'RECEPCIONISTA' || usuarioAuth.tipoUsuario === 'GERENTE') &&
+      sedeActiva?.idSede !== usuarioAuth.idSede
+    ) {
+      const sedeDelOperador = sedes.find((s) => s.idSede === usuarioAuth.idSede);
+      if (sedeDelOperador) {
+        setSedeActiva(sedeDelOperador);
+      }
+    }
+  }, [usuarioAuth, sedeActiva, sedes, setSedeActiva]);
 
   // Pestaña activa: 'mi-qr' (Socio), 'control-aforo' (Recepción SCRUM-82), o 'historial'
-  const [vistaActiva, setVistaActiva] = useState<VistaAcceso>(
-    !location.pathname.includes('/mi-qr') &&
+  // Se basa en prestaciones atómicas (SCRUM-107) y en la ruta actual (/mi-qr vs /acceso).
+  const [vistaActiva, setVistaActiva] = useState<VistaAcceso>(() => {
+    if (location.pathname.includes('/mi-qr')) {
+      return 'mi-qr';
+    }
+    if (usuarioAuth && (tienePrestacionAforo || !tienePrestacionMiQr)) {
+      return 'control-aforo';
+    }
+    return 'mi-qr';
+  });
+
+  // Sincronizar pestaña activa cuando el usuario navega desde el Sidebar entre /mi-qr y /acceso
+  useEffect(() => {
+    if (location.pathname.includes('/mi-qr') && puedeVerMiQr) {
+      setVistaActiva('mi-qr');
+    } else if (
+      location.pathname.includes('/acceso') &&
       usuarioAuth &&
-      (usuarioAuth.tipoUsuario === 'RECEPCIONISTA' || usuarioAuth.tipoUsuario === 'GERENTE')
-      ? 'control-aforo'
-      : 'mi-qr'
-  );
+      (tienePrestacionAforo || !tienePrestacionMiQr)
+    ) {
+      setVistaActiva('control-aforo');
+    }
+  }, [location.pathname, usuarioAuth, puedeVerMiQr, tienePrestacionAforo, tienePrestacionMiQr]);
 
   // ── Estado Vista 1: Pase QR Socio (SCRUM-85) ────────────────────────────────
+  const [sociosDisponibles, setSociosDisponibles] = useState<UsuarioDTO[]>(SOCIOS_EJEMPLO);
   const [socioSeleccionado, setSocioSeleccionado] = useState<UsuarioDTO>(
     esSocio && usuarioAuth ? usuarioAuth : SOCIOS_EJEMPLO[0]
+  );
+  const [sociosRealesCargados, setSociosRealesCargados] = useState<boolean>(
+    USE_MOCK || Boolean(esSocio && usuarioAuth)
   );
   const [membresia, setMembresia] = useState<MembresiaDTO | null>(null);
   const [cargandoMembresia, setCargandoMembresia] = useState<boolean>(true);
@@ -184,13 +225,60 @@ export function AccesoPage() {
   const [accesosSede, setAccesosSede] = useState<AccesoDTO[]>([]);
   const [cargandoAccesos, setCargandoAccesos] = useState<boolean>(false);
 
-  // ── Lógica Socio: Solicitar Token QR Dinámico ────────────────────────────────
+  // Cargar socios reales desde el backend cuando USE_MOCK === false y no es un SOCIO individual
+  useEffect(() => {
+    if (esSocio && usuarioAuth) {
+      setSocioSeleccionado(usuarioAuth);
+      setSociosRealesCargados(true);
+      return;
+    }
+    if (USE_MOCK) {
+      setSociosRealesCargados(true);
+      return;
+    }
+    if (vistaActiva !== 'mi-qr' || !puedeVerMiQr) {
+      return;
+    }
+
+    let cancelado = false;
+    httpClient
+      .get<UsuarioDTO[]>('/v1/usuarios?tipo=SOCIO')
+      .then((lista) => {
+        if (cancelado) return;
+        if (Array.isArray(lista) && lista.length > 0) {
+          setSociosDisponibles(lista);
+          setSocioSeleccionado((prev) =>
+            lista.some((u) => u.idUsuario === prev.idUsuario) ? prev : lista[0]
+          );
+        }
+      })
+      .catch(() => {
+        // Fallback silencioso si no hay sesión o permisos para listar
+      })
+      .finally(() => {
+        if (!cancelado) {
+          setSociosRealesCargados(true);
+        }
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [esSocio, usuarioAuth, vistaActiva, puedeVerMiQr]);
+
+  // ── Lógica Socio: Solicitar Token QR Dinámico (SCRUM-96, SCRUM-101) ──────────
   const solicitarNuevoToken = useCallback(
     async (idUsuario: number) => {
       setCargandoQr(true);
       setErrorQr(null);
       try {
-        const tokenResp = await obtenerQrSocio(idUsuario);
+        // Si el socio autenticado pide su propio QR, consume /v1/usuarios/me/qr (SCRUM-101)
+        const esPropioSocioAutenticado =
+          Boolean(usuarioAuth && usuarioAuth.tipoUsuario === 'SOCIO' && usuarioAuth.idUsuario === idUsuario);
+        const tokenResp = esPropioSocioAutenticado
+          ? await obtenerMiQr(idUsuario)
+          : await obtenerQrSocio(idUsuario);
+
         setSocioSeleccionado((current) => {
           if (current.idUsuario === idUsuario) {
             setQrTokenData(tokenResp);
@@ -209,11 +297,15 @@ export function AccesoPage() {
         setCargandoQr(false);
       }
     },
-    [addToast]
+    [addToast, usuarioAuth]
   );
 
-  // Efecto cuando cambia el socio seleccionado
+  // Efecto cuando cambia el socio seleccionado (solo cuando la vista 'mi-qr' está activa)
   useEffect(() => {
+    if (vistaActiva !== 'mi-qr' || !puedeVerMiQr || !sociosRealesCargados) {
+      return;
+    }
+
     let cancelado = false;
 
     const cargar = async () => {
@@ -249,22 +341,22 @@ export function AccesoPage() {
     return () => {
       cancelado = true;
     };
-  }, [socioSeleccionado, solicitarNuevoToken, addToast]);
+  }, [vistaActiva, puedeVerMiQr, sociosRealesCargados, socioSeleccionado, solicitarNuevoToken, addToast]);
 
   // ── Lógica Recepción: Cargar Aforo en tiempo real ─────────────────────────────
   const cargarAforo = useCallback(async () => {
-    if (!sedeActiva) return;
+    if (!sedeActiva || !puedeVerAforo) return;
     try {
       const datosAforo = await obtenerAforo(sedeActiva.idSede);
       setAforo(datosAforo);
     } catch (err: unknown) {
       console.error('Error al actualizar aforo:', err);
     }
-  }, [sedeActiva]);
+  }, [sedeActiva, puedeVerAforo]);
 
   // ── Lógica Recepción: Cargar Accesos Activos de la sede ────────────────────────
   const cargarAccesosActivos = useCallback(async () => {
-    if (!sedeActiva) return;
+    if (!sedeActiva || !puedeVerAforo) return;
     setLoadingAccesos(true);
     try {
       const activos = await listarAccesosActivos(sedeActiva.idSede);
@@ -274,24 +366,24 @@ export function AccesoPage() {
     } finally {
       setLoadingAccesos(false);
     }
-  }, [sedeActiva]);
+  }, [sedeActiva, puedeVerAforo]);
 
-  // Al montar o cambiar de sede, se actualizan los datos de recepción
+  // Al montar o cambiar de sede, se actualizan los datos de recepción (solo si tiene permiso ACCESO_AFORO_VIEW)
   useEffect(() => {
     setResultadoValidacion(null);
     setErrorOperativo(null);
 
-    if (sedeActiva) {
+    if (sedeActiva && puedeVerAforo) {
       setLoadingAforo(true);
       void Promise.all([cargarAforo(), cargarAccesosActivos()]).finally(() => {
         setLoadingAforo(false);
       });
     }
-  }, [sedeActiva, cargarAforo, cargarAccesosActivos]);
+  }, [sedeActiva, puedeVerAforo, cargarAforo, cargarAccesosActivos]);
 
   // ── Lógica Recepción: Historial de accesos ────────────────────────────────────
   useEffect(() => {
-    if (vistaActiva !== 'historial' || !sedeActiva) return;
+    if (vistaActiva !== 'historial' || !sedeActiva || !puedeVerAforo) return;
 
     let cancelado = false;
     const cargar = async () => {
@@ -310,7 +402,7 @@ export function AccesoPage() {
     return () => {
       cancelado = true;
     };
-  }, [vistaActiva, sedeActiva]);
+  }, [vistaActiva, sedeActiva, puedeVerAforo]);
 
   // ── Lógica Recepción: Validación de Ingreso ──────────────────────────────────
   const handleValidarIngreso = async (token: string) => {
@@ -325,9 +417,12 @@ export function AccesoPage() {
 
     setValidando(true);
     try {
+      // SCRUM-96 / SCRUM-101: cuando el operador autenticado tiene sede asignada y usa API real,
+      // no se envía idSede en el body porque el backend la obtiene de su sesión autenticada.
+      const omitirIdSedeEnBody = !USE_MOCK && Boolean(usuarioAuth?.idSede);
       const res = await validarIngreso({
         token,
-        idSede: sedeActiva.idSede,
+        ...(omitirIdSedeEnBody ? {} : { idSede: sedeActiva.idSede }),
       });
 
       setResultadoValidacion(res);
@@ -426,7 +521,7 @@ export function AccesoPage() {
         return {
           titulo: 'Ingreso No Permitido',
           mensaje: 'Tu membresía no se encuentra en estado activo.',
-          tipo: 'warning' as const,
+        tipo: 'warning' as const,
         };
     }
   };
@@ -506,43 +601,43 @@ export function AccesoPage() {
         <div className="space-y-6">
           {/* Selector de Socio de Prueba / Simulación de Estado (oculto para un SOCIO real) */}
           {(!esSocio || USE_MOCK) && (
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 max-w-xl mx-auto">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <UserCheck className="w-3.5 h-3.5 text-fitzone-coral" />
-                Simular Socio / Caso de Negocio:
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium">
-                Cambia el socio para evaluar las reglas
-              </span>
-            </div>
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 max-w-xl mx-auto">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <UserCheck className="w-3.5 h-3.5 text-fitzone-coral" />
+                  Simular Socio / Caso de Negocio:
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  Cambia el socio para evaluar las reglas
+                </span>
+              </div>
 
-            <div className="flex flex-wrap gap-2">
-              {SOCIOS_EJEMPLO.map((s) => {
-                const esSeleccionado = socioSeleccionado.idUsuario === s.idUsuario;
-                return (
-                  <button
-                    key={s.idUsuario}
-                    type="button"
-                    onClick={() => setSocioSeleccionado(s)}
-                    data-testid={`btn-socio-${s.idUsuario}`}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      esSeleccionado
-                        ? 'bg-fitzone-navy text-white shadow-xs'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {s.nombre} {s.apellido}
-                    {s.idUsuario === 2 && ' (Activo)'}
-                    {s.idUsuario === 6 && ' (Por vencer)'}
-                    {s.idUsuario === 1 && ' (Vencido)'}
-                    {s.idUsuario === 7 && ' (Suspendido)'}
-                    {s.idUsuario === 3 && ' (Sin Membresía)'}
-                  </button>
-                );
-              })}
+              <div className="flex flex-wrap gap-2">
+                {sociosDisponibles.map((s) => {
+                  const esSeleccionado = socioSeleccionado.idUsuario === s.idUsuario;
+                  return (
+                    <button
+                      key={s.idUsuario}
+                      type="button"
+                      onClick={() => setSocioSeleccionado(s)}
+                      data-testid={`btn-socio-${s.idUsuario}`}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        esSeleccionado
+                          ? 'bg-fitzone-navy text-white shadow-xs'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {s.nombre} {s.apellido}
+                      {USE_MOCK && s.idUsuario === 2 && ' (Activo)'}
+                      {USE_MOCK && s.idUsuario === 6 && ' (Por vencer)'}
+                      {USE_MOCK && s.idUsuario === 1 && ' (Vencido)'}
+                      {USE_MOCK && s.idUsuario === 7 && ' (Suspendido)'}
+                      {USE_MOCK && s.idUsuario === 3 && ' (Sin Membresía)'}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
           )}
 
           {/* Contenedor principal responsive y centrado optimizado para mobile */}
@@ -650,7 +745,7 @@ export function AccesoPage() {
       )}
 
       {/* ─── VISTA 2: CONTROL DE ACCESO Y AFORO EN VIVO (RECEPCIÓN - SCRUM-82) ── */}
-      {vistaActiva === 'control-aforo' && (
+      {vistaActiva === 'control-aforo' && puedeVerAforo && (
         <div className="space-y-6">
           {/* Header Operativo */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -728,11 +823,13 @@ export function AccesoPage() {
                 nombreSede={sedeActiva?.nombre}
               />
 
-              <ValidadorIngreso
-                onValidar={handleValidarIngreso}
-                loading={validando}
-                disabled={!sedeActiva}
-              />
+              {puedeEscanear && (
+                <ValidadorIngreso
+                  onValidar={handleValidarIngreso}
+                  loading={validando}
+                  disabled={!sedeActiva}
+                />
+              )}
             </div>
 
             {/* Columna Derecha: Resultado de Validación + Personas Adentro (7 columnas en LG) */}
@@ -754,7 +851,7 @@ export function AccesoPage() {
       )}
 
       {/* ─── VISTA 3: HISTORIAL DE ENTRADAS / MOLINETE RECEPCIÓN ──────────────── */}
-      {vistaActiva === 'historial' && (
+      {vistaActiva === 'historial' && puedeVerAforo && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

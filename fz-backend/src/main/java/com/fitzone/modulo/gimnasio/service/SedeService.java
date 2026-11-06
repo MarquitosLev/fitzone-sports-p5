@@ -20,6 +20,7 @@ public class SedeService {
 
     private final SedeRepository sedeRepository;
     private final AccesoRepository accesoRepository;
+    private final AccesoService accesoService;
 
     @Transactional(readOnly = true)
     public List<Sede> listar() {
@@ -46,20 +47,21 @@ public class SedeService {
 
     @Transactional
     public Sede actualizar(Long id, Sede datos) {
-        Sede existente = sedeRepository.findByIdWithLock(id)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Sede", id));
+        Long idSedeEfectiva = accesoService.resolverYValidarSedeOperador(id);
+        Sede existente = sedeRepository.findByIdWithLock(idSedeEfectiva)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Sede", idSedeEfectiva));
 
         if (datos.getAforoMaximo() == null || datos.getAforoMaximo() <= 0) {
             throw new ReglaNegocioException("El aforo máximo debe ser mayor a 0");
         }
 
-        int aforoActual = (int) accesoRepository.countBySede_IdSedeAndFechaHoraEgresoIsNull(id);
+        int aforoActual = (int) accesoRepository.countBySede_IdSedeAndFechaHoraEgresoIsNull(idSedeEfectiva);
         if (datos.getAforoMaximo() < aforoActual) {
             throw new ReglaNegocioException("El aforo máximo (" + datos.getAforoMaximo()
                     + ") no se puede bajar por debajo del aforo actual (" + aforoActual + ")");
         }
 
-        if (sedeRepository.existsByNombreIgnoreCaseAndIdSedeNot(datos.getNombre(), id)) {
+        if (sedeRepository.existsByNombreIgnoreCaseAndIdSedeNot(datos.getNombre(), idSedeEfectiva)) {
             throw new ConflictoException("Ya existe otra sede con el nombre '" + datos.getNombre() + "'");
         }
 
@@ -70,8 +72,9 @@ public class SedeService {
 
     @Transactional(readOnly = true)
     public AforoSede obtenerAforo(Long id) {
-        Sede sede = obtenerPorId(id);
-        int aforoActual = (int) accesoRepository.countBySede_IdSedeAndFechaHoraEgresoIsNull(id);
+        Long idSedeEfectiva = accesoService.resolverYValidarSedeOperador(id);
+        Sede sede = obtenerPorId(idSedeEfectiva);
+        int aforoActual = (int) accesoRepository.countBySede_IdSedeAndFechaHoraEgresoIsNull(idSedeEfectiva);
         int aforoMaximo = sede.getAforoMaximo();
         double porcentaje = aforoMaximo > 0
                 ? Math.round(((double) aforoActual / aforoMaximo * 100.0) * 100.0) / 100.0
@@ -81,9 +84,10 @@ public class SedeService {
 
     @Transactional(readOnly = true)
     public List<Acceso> listarAccesosActivos(Long id) {
+        Long idSedeEfectiva = accesoService.resolverYValidarSedeOperador(id);
         // Validar que la sede existe (lanza 404 si no existe)
-        obtenerPorId(id);
+        obtenerPorId(idSedeEfectiva);
         // Aislamiento por sede: nunca devolver datos de otra sede
-        return accesoRepository.findBySede_IdSedeAndFechaHoraEgresoIsNull(id);
+        return accesoRepository.findBySede_IdSedeAndFechaHoraEgresoIsNull(idSedeEfectiva);
     }
 }

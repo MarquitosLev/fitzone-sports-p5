@@ -1,5 +1,6 @@
 package com.fitzone.modulo.gimnasio.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fitzone.core.domain.common.BaseEntity;
 import com.fitzone.modulo.canchas.models.ReservaCancha;
@@ -48,11 +49,13 @@ public class Acceso extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_reserva_clase")
+    @JsonIgnore
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ReservaClase reservaClase;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_reserva_cancha")
+    @JsonIgnore
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ReservaCancha reservaCancha;
 
