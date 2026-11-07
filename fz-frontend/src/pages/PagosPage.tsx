@@ -33,7 +33,7 @@ import {
   descargarComprobantePdf,
   descargarBlobEnNavegador,
 } from '../services/pagosService';
-import { listarMisReservas } from '../services/canchasService';
+import { cotizarTurno, listarMisReservas } from '../services/canchasService';
 import { obtenerMembresiaPorUsuario } from '../services/membresiasService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
@@ -43,8 +43,10 @@ import { AppError } from '../services/httpClient';
 import type {
   TransaccionDTO,
   ComprobanteDTO,
+  CotizacionReservaDTO,
   DetalleItemPago,
   ProcesarPagoPayload,
+  ReservaCanchaDTO,
   ResultadoPagoDTO,
   UsuarioDTO,
 } from '../types';
@@ -62,6 +64,28 @@ interface ItemCobro {
 }
 
 /**
+ * Desglose del turno según el backend. Solo se usa si coincide con el precio congelado de la reserva:
+ * si la tarifa o la membresía cambiaron desde que se reservó, no explicaría el monto que se cobra.
+ */
+async function cotizacionDeReserva(
+  reserva: ReservaCanchaDTO,
+  esSocio: boolean
+): Promise<CotizacionReservaDTO | undefined> {
+  try {
+    const cotizacion = await cotizarTurno(
+      reserva.cancha.idCancha,
+      reserva.fechaHoraInicio.slice(11, 16),
+      esSocio,
+      reserva.fechaHoraInicio.slice(0, 10),
+      reserva.fechaHoraFin.slice(11, 16)
+    );
+    return Math.abs(cotizacion.total - Number(reserva.precioFinal)) < 0.01 ? cotizacion : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Con la API real, lo que el usuario logueado puede pagar: sus reservas futuras sin un pago
  * confirmado y, si es socio, su membresía (pagarla la renueva). El monto es el del servidor.
  */
@@ -74,24 +98,30 @@ async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobro[]> 
   const ahora = toLocalISOString(new Date());
   const concepto = usuario.tipoUsuario === 'EXTERNO' ? 'RESERVA_EXTERNO' : 'RESERVA_SOCIO';
 
-  const items: ItemCobro[] = reservas
-    .filter((r) => !pagadas.has(r.idReservaCancha) && r.fechaHoraInicio > ahora)
-    .map((r) => ({
-      id: `reserva-${r.idReservaCancha}`,
-      monto: Number(r.precioFinal),
-      concepto,
-      idReservaCancha: r.idReservaCancha,
-      idSede: r.cancha.sede?.idSede,
-      detalle: {
-        tipo: 'CANCHA',
-        titulo: `Turno · ${r.cancha.nombre}`,
-        subtitulo: r.cancha.sede?.nombre,
-        canchaNombre: r.cancha.nombre,
-        deporte: r.cancha.tipo,
-        fecha: r.fechaHoraInicio.slice(0, 10),
-        horario: `${r.fechaHoraInicio.slice(11, 16)} a ${r.fechaHoraFin.slice(11, 16)} hs`,
-      },
-    }));
+  const pendientes = reservas.filter(
+    (r) => !pagadas.has(r.idReservaCancha) && r.fechaHoraInicio > ahora
+  );
+  const cotizaciones = await Promise.all(
+    pendientes.map((r) => cotizacionDeReserva(r, usuario.tipoUsuario === 'SOCIO'))
+  );
+
+  const items: ItemCobro[] = pendientes.map((r, i) => ({
+    id: `reserva-${r.idReservaCancha}`,
+    monto: Number(r.precioFinal),
+    concepto,
+    idReservaCancha: r.idReservaCancha,
+    idSede: r.cancha.sede?.idSede,
+    detalle: {
+      tipo: 'CANCHA',
+      titulo: `Turno · ${r.cancha.nombre}`,
+      subtitulo: r.cancha.sede?.nombre,
+      canchaNombre: r.cancha.nombre,
+      deporte: r.cancha.tipo,
+      fecha: r.fechaHoraInicio.slice(0, 10),
+      horario: `${r.fechaHoraInicio.slice(11, 16)} a ${r.fechaHoraFin.slice(11, 16)} hs`,
+      cotizacion: cotizaciones[i],
+    },
+  }));
 
   if (usuario.tipoUsuario === 'SOCIO') {
     const membresia = await obtenerMembresiaPorUsuario(usuario.idUsuario);

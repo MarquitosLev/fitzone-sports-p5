@@ -155,6 +155,17 @@ const membresiaSocio = {
   estado: 'ACTIVO',
 } as MembresiaDTO;
 
+const cotizacionTurno = {
+  precioBase: 8000,
+  esPico: false,
+  recargoPico: 0,
+  porcentajeRecargoPico: 0,
+  descuentoSocio: 1200,
+  porcentajeDescuentoSocio: 15,
+  esSocio: true,
+  total: 6800,
+};
+
 function renderWithProviders(ui: React.ReactElement) {
   // MemoryRouter: la página lee ?reserva= para preseleccionar el ítem a pagar
   return render(
@@ -176,6 +187,7 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
     vi.spyOn(pagosService, 'listarMisPagos').mockResolvedValue([...mockTransacciones]);
     vi.spyOn(canchasService, 'listarMisReservas').mockResolvedValue([reservaPendiente]);
     vi.spyOn(membresiasService, 'obtenerMembresiaPorUsuario').mockResolvedValue(membresiaSocio);
+    vi.spyOn(canchasService, 'cotizarTurno').mockResolvedValue(cotizacionTurno);
     vi.spyOn(pagosService, 'obtenerComprobantePorTransaccion').mockImplementation(async (id) =>
       id === 1 ? mockComprobante : null
     );
@@ -191,6 +203,23 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
     // En Checkout se muestran lo que el socio tiene pendiente de pago
     expect((await screen.findAllByText(/Turno · Pádel · Cancha 1/i)).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Renovación Membresía · Plan Trimestral/i)).toBeInTheDocument();
+  });
+
+  it('el pago de una cancha muestra el desglose de la cotización del backend (SCRUM-120)', async () => {
+    renderWithProviders(<PagosPage />);
+
+    expect(await screen.findByText(/desglose del turno/i)).toBeInTheDocument();
+    expect(screen.queryByText(/cuota membresía/i)).not.toBeInTheDocument();
+    expect(canchasService.cotizarTurno).toHaveBeenCalledWith(1, '19:00', true, '2099-01-10', '20:00');
+  });
+
+  it('si la cotización no coincide con el precio congelado, muestra el resumen del turno', async () => {
+    vi.spyOn(canchasService, 'cotizarTurno').mockResolvedValue({ ...cotizacionTurno, total: 8000 });
+    renderWithProviders(<PagosPage />);
+
+    expect(await screen.findByText(/resumen del turno/i)).toBeInTheDocument();
+    expect(screen.queryByText(/desglose del turno/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/cuota membresía/i)).not.toBeInTheDocument();
   });
 
   it('permite cambiar a la pestaña de Historial y muestra las transacciones y métricas', async () => {
