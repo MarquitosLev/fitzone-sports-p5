@@ -122,6 +122,7 @@ export function PagosPage() {
   const { usuario } = useAuth();
   const [searchParams] = useSearchParams();
   const idReservaPedida = Number(searchParams.get('reserva')) || null;
+  const pideMembresia = searchParams.get('item') === 'membresia';
 
   // Con la API real solo pagan socios y externos lo propio; el cobro en mostrador es otra historia
   const puedePagar = usuario?.tipoUsuario === 'SOCIO' || usuario?.tipoUsuario === 'EXTERNO';
@@ -147,7 +148,9 @@ export function PagosPage() {
       .then((items) => {
         if (cancelado) return;
         setItemsCobro(items);
-        const pedido = items.find((i) => i.idReservaCancha === idReservaPedida);
+        const pedido = pideMembresia
+          ? items.find((i) => i.idMembresia !== undefined)
+          : items.find((i) => i.idReservaCancha === idReservaPedida);
         setItemSeleccionado(pedido ?? items[0] ?? null);
       })
       .catch(() => {
@@ -159,7 +162,7 @@ export function PagosPage() {
     return () => {
       cancelado = true;
     };
-  }, [usuario, puedePagar, idReservaPedida]);
+  }, [usuario, puedePagar, idReservaPedida, pideMembresia]);
   const [checkoutStep, setCheckoutStep] = useState<'formulario' | 'resultado'>('formulario');
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultadoPago, setResultadoPago] = useState<ResultadoPagoDTO | null>(null);
