@@ -130,9 +130,11 @@ describe('MembresiaEstadoCard Component', () => {
   it('SCRUM-124: con membresía VENCIDA, calcularDiasRestantes retorna un valor estrictamente negativo (< 0)', () => {
     const fechaAyer = fechaRelativa(-1); // vencida ayer
     expect(calcularDiasRestantes(fechaAyer)).toBeLessThan(0);
+    expect(calcularDiasRestantes(fechaAyer)).toBe(-1);
 
     const fechaPasada = fechaRelativa(-14); // vencida hace 14 días
     expect(calcularDiasRestantes(fechaPasada)).toBeLessThan(0);
+    expect(calcularDiasRestantes(fechaPasada)).toBe(-14);
   });
 
   it('SCRUM-124: si la membresía venció ayer y el DTO todavía reporta ACTIVO, se marca como vencida', () => {

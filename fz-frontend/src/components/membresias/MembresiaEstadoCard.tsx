@@ -30,13 +30,18 @@ export function calcularDiasRestantes(fechaVencimientoIso: string): number {
     if (!year || !month || !day) return 0;
 
     const hoy = new Date();
-    // Normalizar ambas fechas a medianoche UTC para cálculo exacto de días calendario sin saltos de zona horaria / DST
-    const vtoUtc = Date.UTC(year, month - 1, day);
-    const hoyUtc = Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-    const diffMs = vtoUtc - hoyUtc;
+    // Normalizar AMBAS fechas a 00:00:00.000 (inicio de día local) para que la diferencia
+    // sea siempre un número entero exacto de días calendario, sin ambigüedad de horas ni DST.
+    // Con ambas marcas de tiempo en medianoche la división es exacta (sin fracción residual)
+    // y nunca hace falta Math.round ni Math.ceil.
+    // SCRUM-124: si la fecha de vencimiento fue ayer, el resultado es estrictamente -1 (< 0).
+    const fechaVto = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const hoyInicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0, 0);
+    const diffMs = fechaVto.getTime() - hoyInicio.getTime();
 
+    // División exacta: ambas marcas son múltiplos de 86 400 000 ms → resultado siempre entero
     // SCRUM-124: NO aplicar Math.abs — el valor estrictamente negativo (< 0) indica membresía vencida
-    return Math.round(diffMs / (1000 * 60 * 60 * 24));
+    return diffMs / (1000 * 60 * 60 * 24);
   } catch {
     return 0;
   }
