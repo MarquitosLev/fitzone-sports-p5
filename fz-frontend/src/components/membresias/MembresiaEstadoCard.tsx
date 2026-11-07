@@ -15,6 +15,8 @@ export interface MembresiaEstadoCardProps {
 
 /**
  * Calcula la diferencia en días entre la fecha de vencimiento y la fecha actual.
+ * Retorna un valor negativo si la membresía está vencida, positivo si está vigente.
+ * Nunca aplica Math.abs: el signo indica si la membresía sigue activa o ya expiró.
  */
 export function calcularDiasRestantes(fechaVencimientoIso: string): number {
   if (!fechaVencimientoIso) return 0;
@@ -25,6 +27,7 @@ export function calcularDiasRestantes(fechaVencimientoIso: string): number {
     // Normalizar hoy a inicio del día para cálculo exacto de días calendario
     const hoyInicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
     const diffMs = fechaVto.getTime() - hoyInicio.getTime();
+    // SCRUM-124: NO aplicar Math.abs — el valor negativo indica membresía vencida
     return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
   } catch {
     return 0;
@@ -121,7 +124,7 @@ export function MembresiaEstadoCard({
             <Clock className="w-5 h-5 text-fitzone-coral shrink-0" />
             <div>
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                {estaVencido ? 'Días vencida' : 'Días restantes'}
+                {estaVencido ? 'Membresía vencida' : 'Días restantes'}
               </div>
               <div
                 className={`text-lg font-black font-outfit tracking-tight ${
@@ -132,8 +135,9 @@ export function MembresiaEstadoCard({
                     : 'text-white'
                 }`}
               >
+                {/* SCRUM-124: membresía vencida muestra 0, nunca un positivo engañoso */}
                 {estaVencido
-                  ? `${Math.abs(diasRestantes)} ${Math.abs(diasRestantes) === 1 ? 'día' : 'días'}`
+                  ? '0 días'
                   : diasRestantes === 0
                   ? 'Vence hoy'
                   : `${diasRestantes} ${diasRestantes === 1 ? 'día' : 'días'}`}
