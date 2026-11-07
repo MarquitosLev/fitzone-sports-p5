@@ -369,7 +369,7 @@ export function ClasesPage() {
           TAB 1: CLASES DISPONIBLES (SOCIO)
           El estado de cada tarjeta viene de la agenda (yaReservada, posicionEspera).
       ──────────────────────────────────────────────────────────────────── */}
-      {!loading && activeTab === 'disponibles' && (
+      {!loading && esSocio && activeTab === 'disponibles' && (
         <>
           {motivoBloqueo && (
             <Alert
@@ -417,15 +417,9 @@ export function ClasesPage() {
           TAB 2: MIS RESERVAS (SOCIO)
           Todas las reservas (incluye CANCELADA, ASISTIO, NO_ASISTIO) como historial.
       ──────────────────────────────────────────────────────────────────── */}
-      {!loading && activeTab === 'mis-reservas' && (
+      {!loading && esSocio && activeTab === 'mis-reservas' && (
         <>
-          {!esSocio ? (
-            <EmptyState
-              icon={ClipboardList}
-              title="Iniciá sesión como socio"
-              description="Necesitás una cuenta de socio activa para ver y gestionar tus reservas de clases."
-            />
-          ) : reservasSocio.length === 0 ? (
+          {reservasSocio.length === 0 ? (
             <EmptyState
               icon={ClipboardList}
               title="Sin reservas aún"
@@ -453,7 +447,7 @@ export function ClasesPage() {
           TAB 3: AGENDA ADMIN
           GERENTE edita y elimina; GERENTE y RECEPCIONISTA ven inscriptos y espera.
       ──────────────────────────────────────────────────────────────────── */}
-      {!loading && activeTab === 'agenda-admin' && (
+      {!loading && puedeVerAgendaAdmin && (activeTab === 'agenda-admin' || !esSocio) && (
         <AgendaSemanal
           clases={clases}
           onEdit={puedeGestionarClases ? handleOpenEdit : undefined}
