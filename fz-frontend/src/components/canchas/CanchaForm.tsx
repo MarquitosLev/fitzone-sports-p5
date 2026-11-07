@@ -22,6 +22,7 @@ export interface CanchaFormProps {
 
 const OPCIONES_TIPO: SelectOption[] = [
   { value: 'PADEL', label: 'Pádel' },
+  { value: 'PADDLE', label: 'Pádel' },
   { value: 'FUTBOL_5', label: 'Fútbol 5' },
   { value: 'FUTBOL_7', label: 'Fútbol 7' },
   { value: 'TENIS', label: 'Tenis' },
