@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
@@ -51,23 +52,25 @@ function renderEnRuta(ruta: string, usuario: UsuarioDTO | null, isLoading = fals
   };
 
   return render(
-    <MemoryRouter initialEntries={[ruta]}>
-      <ToastProvider>
-        <AuthContext.Provider value={auth}>
-          <ListaToasts />
-          <Routes>
-            <Route path="/" element={<MostrarUbicacion />} />
-            <Route path="/login" element={<MostrarUbicacion />} />
-            <Route element={<RoleMiddleware prestacionRequerida="USUARIOS_ADMIN" />}>
-              <Route path="/usuarios" element={<div>Pantalla Usuarios</div>} />
-            </Route>
-            <Route element={<RoleMiddleware allowedRoles={['GERENTE']} />}>
-              <Route path="/admin/roles" element={<div>Panel Gerente</div>} />
-            </Route>
-          </Routes>
-        </AuthContext.Provider>
-      </ToastProvider>
-    </MemoryRouter>
+    <StrictMode>
+      <MemoryRouter initialEntries={[ruta]}>
+        <ToastProvider>
+          <AuthContext.Provider value={auth}>
+            <ListaToasts />
+            <Routes>
+              <Route path="/" element={<MostrarUbicacion />} />
+              <Route path="/login" element={<MostrarUbicacion />} />
+              <Route element={<RoleMiddleware prestacionRequerida="USUARIOS_ADMIN" />}>
+                <Route path="/usuarios" element={<div>Pantalla Usuarios</div>} />
+              </Route>
+              <Route element={<RoleMiddleware allowedRoles={['GERENTE']} />}>
+                <Route path="/admin/roles" element={<div>Panel Gerente</div>} />
+              </Route>
+            </Routes>
+          </AuthContext.Provider>
+        </ToastProvider>
+      </MemoryRouter>
+    </StrictMode>
   );
 }
 
@@ -86,7 +89,7 @@ describe('SCRUM-92: RoleMiddleware (RutaProtegida)', () => {
     renderEnRuta('/usuarios', crearUsuario('SOCIO'));
     expect(screen.queryByText('Pantalla Usuarios')).toBeNull();
     expect(screen.getByTestId('ubicacion')).toHaveTextContent(/^\/$/);
-    expect(await screen.findByText(MENSAJE_RUTA_SIN_PERMISO)).toBeInTheDocument();
+    expect(await screen.findAllByText(MENSAJE_RUTA_SIN_PERMISO)).toHaveLength(1);
   });
 
   it('un recepcionista que entra por URL al panel del gerente vuelve a su inicio', () => {
