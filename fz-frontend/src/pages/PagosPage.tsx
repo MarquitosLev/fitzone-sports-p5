@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   CreditCard,
   FileText,
@@ -355,11 +355,51 @@ export function PagosPage() {
   const metricas = useMemo(() => {
     const confirmadas = transacciones.filter((t) => t.estadoPago === 'CONFIRMADO');
     const totalAbonado = confirmadas.reduce((acc, curr) => acc + curr.monto, 0);
-    const rechazadas = transacciones.filter((t) => t.estadoPago === 'RECHAZADO').length;
+    const reservasConf = new Set(
+      confirmadas.map((t) => t.reservaCanchaId).filter((id): id is number => id != null)
+    );
+    const membresiasConf = new Set(
+      confirmadas.map((t) => t.membresiaId).filter((id): id is number => id != null)
+    );
+    const rechazadas = transacciones.filter((t) => {
+      if (t.estadoPago !== 'RECHAZADO') return false;
+      if (t.reservaCanchaId != null && reservasConf.has(t.reservaCanchaId)) return false;
+      if (t.membresiaId != null && membresiasConf.has(t.membresiaId)) return false;
+      return true;
+    }).length;
     const comprobantesEmitidos = Object.keys(comprobantesMap).length || confirmadas.length;
 
     return { totalAbonado, rechazadas, comprobantesEmitidos };
   }, [transacciones, comprobantesMap]);
+
+  const reservasConfirmadas = useMemo(
+    () =>
+      new Set(
+        transacciones
+          .filter((t) => t.estadoPago === 'CONFIRMADO' && t.reservaCanchaId != null)
+          .map((t) => t.reservaCanchaId!)
+      ),
+    [transacciones]
+  );
+  const membresiasConfirmadas = useMemo(
+    () =>
+      new Set(
+        transacciones
+          .filter((t) => t.estadoPago === 'CONFIRMADO' && t.membresiaId != null)
+          .map((t) => t.membresiaId!)
+      ),
+    [transacciones]
+  );
+
+  const puedeReintentarTransaccion = useCallback(
+    (t: TransaccionDTO) => {
+      if (t.estadoPago !== 'RECHAZADO') return false;
+      if (t.reservaCanchaId != null && reservasConfirmadas.has(t.reservaCanchaId)) return false;
+      if (t.membresiaId != null && membresiasConfirmadas.has(t.membresiaId)) return false;
+      return true;
+    },
+    [reservasConfirmadas, membresiasConfirmadas]
+  );
 
   // Transacciones filtradas para el historial
   const transaccionesFiltradas = useMemo(() => {
@@ -413,7 +453,7 @@ export function PagosPage() {
               onDescargar={() => handleDescargarPdf(row)}
             />
           )}
-          {row.estadoPago === 'RECHAZADO' && (
+          {puedeReintentarTransaccion(row) && (
             <Button
               size="xs"
               variant="coral"
@@ -702,7 +742,11 @@ export function PagosPage() {
                       key={transaccion.idTransaccion}
                       transaccion={transaccion}
                       comprobante={comprobantesMap[transaccion.idTransaccion]}
-                      onReintentar={() => void handleReintentarPago(transaccion.idTransaccion)}
+                      onReintentar={
+                        puedeReintentarTransaccion(transaccion)
+                          ? () => void handleReintentarPago(transaccion.idTransaccion)
+                          : undefined
+                      }
                       onDescargarPdf={() => handleDescargarPdf(transaccion)}
                     />
                   ))}
