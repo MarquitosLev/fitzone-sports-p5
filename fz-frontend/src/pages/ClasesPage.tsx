@@ -85,8 +85,15 @@ export function ClasesPage() {
   const puedeGestionarClases = puedeVerAgendaAdmin && usuario?.tipoUsuario === 'GERENTE';
   const esSocio = usuario?.tipoUsuario === 'SOCIO';
   const [activeTab, setActiveTab] = useState<TabClases>(
-    puedeVerAgendaAdmin ? 'agenda-admin' : 'disponibles'
+    !esSocio && puedeVerAgendaAdmin ? 'agenda-admin' : 'disponibles'
   );
+
+  // El personal de sede solo opera la agenda administrativa
+  useEffect(() => {
+    if (!esSocio && puedeVerAgendaAdmin && activeTab !== 'agenda-admin') {
+      setActiveTab('agenda-admin');
+    }
+  }, [esSocio, puedeVerAgendaAdmin, activeTab]);
 
   // ── Data: clases, reservas del socio y lista de espera ───────────────────
   const [clases, setClases] = useState<ClaseGrupalDTO[]>([]);
