@@ -118,6 +118,11 @@ class SeguridadCanchasPagosTest {
                             .contentType(MediaType.APPLICATION_JSON).content(CANCHA_JSON))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.codigo", is("ACCESO_DENEGADO")));
+            // SCRUM-131: Sin permiso debe recibir 403 aun con body vacío o inválido (no 400)
+            mockMvc.perform(post("/v1/canchas").with(sesionDe(rol))
+                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.codigo", is("ACCESO_DENEGADO")));
             mockMvc.perform(patch("/v1/canchas/1/mantenimiento").with(sesionDe(rol))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"enMantenimiento\":true}"))
                     .andExpect(status().isForbidden());
