@@ -28,7 +28,7 @@ export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-fitzone-gray-50 flex flex-col font-manrope text-slate-900">
+    <div className="h-screen overflow-hidden bg-fitzone-gray-50 flex flex-col font-manrope text-slate-900">
       {/* Header pegado al top */}
       <Header
         onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)}
@@ -36,14 +36,14 @@ export function AppLayout() {
       />
 
       {/* Cuerpo: Sidebar fijo a la izquierda (o drawer en móvil) + contenido de la ruta actual */}
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar
           mobileOpen={mobileMenuOpen}
           onCloseMobile={() => setMobileMenuOpen(false)}
         />
 
         {/* Área de contenido principal — aquí se "intercalan" las páginas */}
-        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>
