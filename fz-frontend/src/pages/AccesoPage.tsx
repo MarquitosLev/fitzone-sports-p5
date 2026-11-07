@@ -353,7 +353,7 @@ export function AccesoPage() {
   };
 
   const handleRenovar = () => {
-    navigate('/pagos');
+    navigate('/pagos?item=membresia');
   };
 
   const tieneAccesoHabilitado = membresia !== null && membresia.estado === 'ACTIVO';
