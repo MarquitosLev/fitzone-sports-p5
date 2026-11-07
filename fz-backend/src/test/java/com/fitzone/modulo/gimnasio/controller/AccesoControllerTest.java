@@ -50,7 +50,12 @@ class AccesoControllerTest {
         IngresoRequest request = new IngresoRequest("valid-token-qr", 1L);
         Acceso accesoCreado = Acceso.builder()
                 .idAcceso(10L)
-                .usuario(Usuario.builder().idUsuario(5L).nombre("Carlos").build())
+                .usuario(Usuario.builder()
+                        .idUsuario(5L)
+                        .nombre("Carlos")
+                        .dni("30123456")
+                        .authId(java.util.UUID.randomUUID())
+                        .build())
                 .sede(Sede.builder().idSede(1L).nombre("Sede Central").build())
                 .fechaHoraIngreso(LocalDateTime.now())
                 .build();
@@ -62,7 +67,10 @@ class AccesoControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.idAcceso", is(10)))
-                .andExpect(jsonPath("$.usuario.idUsuario", is(5)));
+                .andExpect(jsonPath("$.usuario.idUsuario", is(5)))
+                .andExpect(jsonPath("$.usuario.nombre", is("Carlos")))
+                .andExpect(jsonPath("$.usuario.dni", is("30123456")))
+                .andExpect(jsonPath("$.usuario.authId").doesNotExist());
     }
 
     @Test
