@@ -127,10 +127,28 @@ describe('MembresiaEstadoCard Component', () => {
   });
 
   // ── SCRUM-124: Bug "Días restantes positivos en membresía vencida" ──────────
-  it('SCRUM-124: con membresía VENCIDA, calcularDiasRestantes retorna un valor ≤ 0', () => {
+  it('SCRUM-124: con membresía VENCIDA, calcularDiasRestantes retorna un valor estrictamente negativo (< 0)', () => {
+    const fechaAyer = fechaRelativa(-1); // vencida ayer
+    expect(calcularDiasRestantes(fechaAyer)).toBeLessThan(0);
+
     const fechaPasada = fechaRelativa(-14); // vencida hace 14 días
-    const dias = calcularDiasRestantes(fechaPasada);
-    expect(dias).toBeLessThanOrEqual(0);
+    expect(calcularDiasRestantes(fechaPasada)).toBeLessThan(0);
+  });
+
+  it('SCRUM-124: si la membresía venció ayer y el DTO todavía reporta ACTIVO, se marca como vencida', () => {
+    const membresiaExpiradaAyer: MembresiaDTO = {
+      ...baseMembresia,
+      fechaVencimiento: fechaRelativa(-1),
+      estado: 'ACTIVO',
+    };
+
+    render(<MembresiaEstadoCard membresia={membresiaExpiradaAyer} />);
+
+    // Debe mostrar la alerta de vencida y no "Vence hoy"
+    expect(screen.getByTestId('alerta-vencida')).toBeInTheDocument();
+    expect(screen.queryByText('Vence hoy')).not.toBeInTheDocument();
+    expect(screen.getByText('Membresía vencida')).toBeInTheDocument();
+    expect(screen.getByText('0 días')).toBeInTheDocument();
   });
 
   it('SCRUM-124: con membresía VENCIDA, el componente NO muestra un número positivo en "Días restantes"', () => {

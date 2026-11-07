@@ -14,21 +14,29 @@ export interface MembresiaEstadoCardProps {
 }
 
 /**
- * Calcula la diferencia en días entre la fecha de vencimiento y la fecha actual.
- * Retorna un valor negativo si la membresía está vencida, positivo si está vigente.
+ * Calcula la diferencia en días calendario entre la fecha de vencimiento y la fecha actual.
+ * Compara ambas fechas normalizadas a medianoche (inicio de día).
+ * Retorna:
+ *  - Un valor estrictamente negativo (< 0) si la membresía ya expiró (vencida).
+ *  - 0 si la fecha de vencimiento es el día de hoy ("Vence hoy").
+ *  - Un valor estrictamente positivo (> 0) si la membresía sigue vigente.
+ *
  * Nunca aplica Math.abs: el signo indica si la membresía sigue activa o ya expiró.
  */
 export function calcularDiasRestantes(fechaVencimientoIso: string): number {
   if (!fechaVencimientoIso) return 0;
   try {
     const [year, month, day] = fechaVencimientoIso.split('-').map(Number);
-    const fechaVto = new Date(year, month - 1, day, 23, 59, 59);
+    if (!year || !month || !day) return 0;
+
     const hoy = new Date();
-    // Normalizar hoy a inicio del día para cálculo exacto de días calendario
-    const hoyInicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
-    const diffMs = fechaVto.getTime() - hoyInicio.getTime();
-    // SCRUM-124: NO aplicar Math.abs — el valor negativo indica membresía vencida
-    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    // Normalizar ambas fechas a medianoche UTC para cálculo exacto de días calendario sin saltos de zona horaria / DST
+    const vtoUtc = Date.UTC(year, month - 1, day);
+    const hoyUtc = Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const diffMs = vtoUtc - hoyUtc;
+
+    // SCRUM-124: NO aplicar Math.abs — el valor estrictamente negativo (< 0) indica membresía vencida
+    return Math.round(diffMs / (1000 * 60 * 60 * 24));
   } catch {
     return 0;
   }
