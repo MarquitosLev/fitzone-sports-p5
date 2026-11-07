@@ -377,4 +377,32 @@ class PagoServiceTest {
 
         assertThat(pagoService.listarMios()).containsExactly(t);
     }
+
+    @Test
+    @DisplayName("procesarPagoInvitado cobra el precio congelado en la sede de la cancha, sin sesión, y emite el comprobante")
+    void procesarPagoInvitado_aprobado() {
+        when(pasarelaPago.cobrar(eq(new BigDecimal("12000.00")), anyString(), eq(false)))
+                .thenReturn(new RespuestaPasarela(true, "tok_ok", "Pago aprobado"));
+        when(transaccionRepository.save(any(Transaccion.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaccion resultado = pagoService.procesarPagoInvitado(reservaCancha, false);
+
+        assertThat(resultado.getEstadoPago()).isEqualTo(EstadoPago.CONFIRMADO);
+        assertThat(resultado.getMonto()).isEqualByComparingTo("12000.00");
+        assertThat(resultado.getSede()).isEqualTo(sede);
+        assertThat(resultado.getUsuario()).isEqualTo(usuario);
+        verify(comprobanteService).generarComprobante(resultado);
+        verify(usuarioActual, never()).obtener();
+    }
+
+    @Test
+    @DisplayName("procesarPagoInvitado de una reserva ya pagada lanza ConflictoException")
+    void procesarPagoInvitado_yaPagada() {
+        when(transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(30L, EstadoPago.CONFIRMADO))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> pagoService.procesarPagoInvitado(reservaCancha, false))
+                .isInstanceOf(ConflictoException.class);
+        verify(pasarelaPago, never()).cobrar(any(), anyString(), anyBoolean());
+    }
 }

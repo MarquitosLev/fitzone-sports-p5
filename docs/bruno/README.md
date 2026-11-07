@@ -29,7 +29,8 @@ docs/bruno/
 ├── 02-canchas/                     # Módulo 2: Reservas y Canchas (a incorporar)
 ├── 03-clases/                      # Módulo 3: Clases Grupales y Cupos (a incorporar)
 ├── 04-gimnasio/                    # Módulo 4: Accesos y Aforo (a incorporar)
-└── 05-pagos/                       # Módulo 5: Pagos y Membresías (a incorporar)
+├── 05-pagos/                       # Módulo 5: Pagos y Membresías (a incorporar)
+└── 06-invitado/                    # Reserva, pago y comprobante de cancha sin cuenta (SCRUM-134)
 ```
 
 ---

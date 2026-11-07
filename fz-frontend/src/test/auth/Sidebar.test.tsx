@@ -49,7 +49,7 @@ function renderSidebar(tipoUsuario: TipoUsuario | null): string[] {
 describe('SCRUM-92: Sidebar muestra solo los módulos del rol', () => {
   it.each<[TipoUsuario | null, string[]]>([
     [null, ['Canchas']],
-    ['EXTERNO', ['Canchas', 'Pagos']],
+    ['EXTERNO', ['Canchas']],
     ['SOCIO', ['Mi Pase QR', 'Clases Grupales', 'Canchas', 'Pagos']],
     [
       'RECEPCIONISTA',

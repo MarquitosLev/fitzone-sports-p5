@@ -3,8 +3,10 @@ package com.fitzone.core.config;
 import com.fitzone.core.exception.GlobalExceptionHandler;
 import com.fitzone.modulo.canchas.controller.CanchaController;
 import com.fitzone.modulo.canchas.service.CanchaService;
+import com.fitzone.modulo.pagos.controller.CheckoutInvitadoController;
 import com.fitzone.modulo.pagos.controller.ComprobanteController;
 import com.fitzone.modulo.pagos.controller.PagoController;
+import com.fitzone.modulo.pagos.service.CheckoutInvitadoService;
 import com.fitzone.modulo.pagos.service.ComprobanteService;
 import com.fitzone.modulo.pagos.service.PagoService;
 import com.fitzone.modulo.usuarios.repository.UsuarioRepository;
@@ -33,7 +35,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Corre con los filtros de seguridad activos para verificar la matriz de permisos
  * de Canchas (M4) y Pagos (M5) definida en SCRUM-91.
  */
-@WebMvcTest({CanchaController.class, PagoController.class, ComprobanteController.class})
+@WebMvcTest({CanchaController.class, PagoController.class, ComprobanteController.class,
+        CheckoutInvitadoController.class})
 @Import({WebConfig.class, GlobalExceptionHandler.class, SecurityConfig.class})
 class SeguridadCanchasPagosTest {
 
@@ -52,6 +55,9 @@ class SeguridadCanchasPagosTest {
 
     @MockitoBean
     private ComprobanteService comprobanteService;
+
+    @MockitoBean
+    private CheckoutInvitadoService checkoutInvitadoService;
 
     @MockitoBean
     private UsuarioRepository usuarioRepository;
@@ -125,15 +131,13 @@ class SeguridadCanchasPagosTest {
     }
 
     @Test
-    @DisplayName("Solo socios y externos reservan turnos; el personal recibe 403")
-    void reservarTurno_soloSocioYExterno() throws Exception {
+    @DisplayName("Con sesión reservan solo los socios; externo y personal reciben 403")
+    void reservarTurno_soloSocio() throws Exception {
         String reserva = "{\"fechaHoraInicio\":\"2026-12-01T10:00:00\",\"fechaHoraFin\":\"2026-12-01T11:00:00\"}";
-        for (String rol : new String[]{"SOCIO", "EXTERNO"}) {
-            mockMvc.perform(post("/v1/canchas/1/reservas").with(sesionDe(rol))
-                            .contentType(MediaType.APPLICATION_JSON).content(reserva))
-                    .andExpect(status().isCreated());
-        }
-        for (String rol : new String[]{"RECEPCIONISTA", "GERENTE"}) {
+        mockMvc.perform(post("/v1/canchas/1/reservas").with(sesionDe("SOCIO"))
+                        .contentType(MediaType.APPLICATION_JSON).content(reserva))
+                .andExpect(status().isCreated());
+        for (String rol : new String[]{"EXTERNO", "RECEPCIONISTA", "GERENTE"}) {
             mockMvc.perform(post("/v1/canchas/1/reservas").with(sesionDe(rol))
                             .contentType(MediaType.APPLICATION_JSON).content(reserva))
                     .andExpect(status().isForbidden());
@@ -141,15 +145,13 @@ class SeguridadCanchasPagosTest {
     }
 
     @Test
-    @DisplayName("Solo socios y externos pagan; el personal recibe 403 al intentar cobrar por la API web")
-    void pagar_soloSocioYExterno() throws Exception {
+    @DisplayName("Con sesión paga solo el socio; externo y personal reciben 403")
+    void pagar_soloSocio() throws Exception {
         String pago = "{\"concepto\":\"RESERVA_CANCHA\",\"idReservaCancha\":1}";
-        for (String rol : new String[]{"SOCIO", "EXTERNO"}) {
-            mockMvc.perform(post("/v1/pagos").with(sesionDe(rol))
-                            .contentType(MediaType.APPLICATION_JSON).content(pago))
-                    .andExpect(status().isCreated());
-        }
-        for (String rol : new String[]{"RECEPCIONISTA", "GERENTE"}) {
+        mockMvc.perform(post("/v1/pagos").with(sesionDe("SOCIO"))
+                        .contentType(MediaType.APPLICATION_JSON).content(pago))
+                .andExpect(status().isCreated());
+        for (String rol : new String[]{"EXTERNO", "RECEPCIONISTA", "GERENTE"}) {
             mockMvc.perform(post("/v1/pagos").with(sesionDe(rol))
                             .contentType(MediaType.APPLICATION_JSON).content(pago))
                     .andExpect(status().isForbidden());
@@ -159,15 +161,44 @@ class SeguridadCanchasPagosTest {
     @Test
     @DisplayName("Pagos y comprobantes exigen un rol del sistema")
     void pagos_conRol_respondenYSinRolDan403() throws Exception {
-        for (String rol : new String[]{"SOCIO", "EXTERNO", "RECEPCIONISTA", "GERENTE"}) {
+        for (String rol : new String[]{"SOCIO", "RECEPCIONISTA", "GERENTE"}) {
             mockMvc.perform(get("/v1/pagos/1").with(sesionDe(rol)))
                     .andExpect(status().isOk());
         }
+        mockMvc.perform(get("/v1/pagos/1").with(sesionDe("EXTERNO")))
+                .andExpect(status().isForbidden());
 
         // Token válido de Supabase pero sin usuario en fz_usr_usuarios: el converter no asigna rol
         mockMvc.perform(get("/v1/pagos/1").with(jwt()))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/v1/comprobantes/1/pdf").with(jwt()))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("El checkout de invitado responde sin token")
+    void checkoutInvitado_sinToken() throws Exception {
+        String codigo = "3f0c5a52-1d1f-4c7e-9b1a-2f4a8f6a9c10";
+        String reserva = """
+                {"idCancha":1,"fechaHoraInicio":"2026-12-01T10:00:00","fechaHoraFin":"2026-12-01T11:00:00",
+                 "nombre":"Ana","apellido":"Pérez","dni":"30111222","email":"ana@mail.com","telefono":"1155550000"}
+                """;
+        mockMvc.perform(post("/v1/invitados/reservas").contentType(MediaType.APPLICATION_JSON).content(reserva))
+                .andExpect(status().isCreated());
+        mockMvc.perform(get("/v1/invitados/reservas/" + codigo))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/v1/invitados/reservas/" + codigo + "/pago"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("Reserva de invitado con DNI o email inválidos: 400 de validación")
+    void checkoutInvitado_validaDatos() throws Exception {
+        String reserva = """
+                {"idCancha":1,"fechaHoraInicio":"2026-12-01T10:00:00","fechaHoraFin":"2026-12-01T11:00:00",
+                 "nombre":"Ana","apellido":"Pérez","dni":"30.111.222","email":"no-es-email","telefono":"1155550000"}
+                """;
+        mockMvc.perform(post("/v1/invitados/reservas").contentType(MediaType.APPLICATION_JSON).content(reserva))
+                .andExpect(status().isBadRequest());
     }
 }

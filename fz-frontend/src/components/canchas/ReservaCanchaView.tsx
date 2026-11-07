@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
   Clock,
@@ -23,12 +24,14 @@ import { SelectorFecha } from './SelectorFecha';
 import { GrillaDisponibilidad } from './GrillaDisponibilidad';
 import { etiquetaTipo } from './tiposCancha';
 import { DesglosePrecio } from './DesglosePrecio';
+import { FormularioInvitado } from './FormularioInvitado';
 import { Button, Alert, Modal } from '../ui';
 import {
   listarCanchas,
   obtenerDisponibilidad,
   cotizarTurno,
   crearReserva,
+  reservarComoInvitado,
 } from '../../services/canchasService';
 import { useSede } from '../../context/SedeContext';
 import { useToast } from '../../context/ToastContext';
@@ -38,6 +41,7 @@ import type {
   CanchaDTO,
   FranjaHorariaDTO,
   CotizacionReservaDTO,
+  DatosInvitado,
   ReservaCanchaDTO,
 } from '../../types';
 
@@ -59,6 +63,7 @@ export function ReservaCanchaView({
 }: ReservaCanchaViewProps) {
   const { sedeActiva } = useSede();
   const { addToast } = useToast();
+  const navigate = useNavigate();
 
   // Fecha actual formateada en YYYY-MM-DD
   const hoyIso = useMemo(() => {
@@ -90,8 +95,10 @@ export function ReservaCanchaView({
   // Perfil del usuario: sale de la sesión (el backend aplica el descuento)
   const { usuario } = useAuth();
   const esSocio = usuario?.tipoUsuario === 'SOCIO';
-  // Reservan socios y externos con sesión; el personal no reserva a su nombre
-  const puedeReservar = usuario?.tipoUsuario === 'SOCIO' || usuario?.tipoUsuario === 'EXTERNO';
+  // Sin sesión se reserva como invitado; con sesión, solo el socio. El personal no reserva.
+  const esInvitado = !usuario;
+  const puedeReservar = esSocio || esInvitado;
+  const [errorInvitado, setErrorInvitado] = useState<{ mensaje: string; pedirInicioSesion: boolean } | null>(null);
 
   // Modal de Confirmación
   const [modalConfirmacionOpen, setModalConfirmacionOpen] = useState(false);
@@ -232,7 +239,44 @@ export function ReservaCanchaView({
   const handleAbrirConfirmacion = () => {
     if (!canchaSeleccionada || !turnoSeleccionado || !cotizacion) return;
     setErrorConflicto(null);
+    setErrorInvitado(null);
     setModalConfirmacionOpen(true);
+  };
+
+  const handleReservarComoInvitado = async (datos: DatosInvitado) => {
+    if (!canchaSeleccionada || !turnoSeleccionado) return;
+    setConfirmando(true);
+    setErrorInvitado(null);
+    try {
+      const reserva = await reservarComoInvitado(
+        {
+          idCancha: canchaSeleccionada.idCancha,
+          fecha: fechaSeleccionada,
+          horaInicio: turnoSeleccionado.horaInicio,
+          horaFin: turnoSeleccionado.horaFin,
+        },
+        datos
+      );
+      setModalConfirmacionOpen(false);
+      navigate(`/reserva-invitado/${reserva.codigoReserva}`);
+    } catch (err: unknown) {
+      const codigo = err instanceof AppError ? err.backendResponse?.codigo : undefined;
+      if (codigo === 'REQUIERE_INICIO_SESION') {
+        setErrorInvitado({ mensaje: (err as Error).message, pedirInicioSesion: true });
+      } else if (err instanceof AppError && err.status === 409) {
+        setModalConfirmacionOpen(false);
+        setErrorConflicto(err.message);
+        await cargarDisponibilidad();
+        setTurnoSeleccionado(null);
+      } else {
+        setErrorInvitado({
+          mensaje: err instanceof Error ? err.message : 'No se pudo reservar el turno',
+          pedirInicioSesion: false,
+        });
+      }
+    } finally {
+      setConfirmando(false);
+    }
   };
 
   // Confirmar reserva
@@ -322,12 +366,12 @@ export function ReservaCanchaView({
             RESERVA DE CANCHAS DEPORTIVAS
           </span>
           <h2 className="text-xl sm:text-2xl font-black text-fitzone-navy font-outfit mt-0.5">
-            {esSocio ? 'Reservá con tu beneficio de socio' : 'Reservá tu turno como cliente externo'}
+            {esSocio ? 'Reservá con tu beneficio de socio' : 'Reservá tu turno sin crear una cuenta'}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             {esSocio
               ? 'Con la membresía vigente, el descuento de socio se aplica al cotizar el turno.'
-              : 'Tarifa general para público sin membresía activa.'}
+              : 'Tarifa general. Cargás tus datos, pagás online y recibís un código. Los socios tienen 15% de descuento.'}
           </p>
         </div>
 
@@ -349,12 +393,8 @@ export function ReservaCanchaView({
       {!puedeReservar && (
         <Alert
           type="info"
-          title={usuario ? 'Las reservas son para socios y clientes' : 'Iniciá sesión para reservar'}
-          message={
-            usuario
-              ? 'Con tu rol podés consultar la disponibilidad, pero el turno se reserva desde la cuenta del socio o cliente.'
-              : 'Podés ver turnos y precios sin sesión. Para confirmar un turno, iniciá sesión con tu cuenta.'
-          }
+          title="El personal no reserva turnos"
+          message="Con tu rol podés consultar la disponibilidad. El turno lo reserva el socio desde su cuenta o el cliente como invitado."
         />
       )}
 
@@ -600,7 +640,15 @@ export function ReservaCanchaView({
           )}
 
 
-          {/* Acciones */}
+          {esInvitado ? (
+            <FormularioInvitado
+              onSubmit={handleReservarComoInvitado}
+              onCancelar={() => setModalConfirmacionOpen(false)}
+              isLoading={confirmando}
+              error={errorInvitado?.mensaje}
+              pedirInicioSesion={errorInvitado?.pedirInicioSesion}
+            />
+          ) : (
           <div className="pt-2 flex flex-col-reverse sm:flex-row items-center gap-2.5">
             <Button
               type="button"
@@ -621,6 +669,7 @@ export function ReservaCanchaView({
               Confirmar reserva
             </Button>
           </div>
+          )}
         </div>
       </Modal>
     </div>

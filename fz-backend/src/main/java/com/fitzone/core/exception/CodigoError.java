@@ -37,5 +37,7 @@ public enum CodigoError {
     /** 409: la sede ha alcanzado su aforo máximo permitido. */
     AFORO_COMPLETO,
     /** 409: la clase no dispone de cupo disponible. */
-    CLASE_COMPLETA
+    CLASE_COMPLETA,
+    /** 409: los datos son de una cuenta registrada (socio o personal): tiene que iniciar sesión. */
+    REQUIERE_INICIO_SESION
 }

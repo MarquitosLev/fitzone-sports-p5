@@ -1,5 +1,6 @@
 package com.fitzone.modulo.usuarios.controller;
 
+import com.fitzone.core.domain.enums.TipoUsuario;
 import com.fitzone.core.exception.AccesoNoAutorizadoException;
 import com.fitzone.core.security.SupabaseAuthClient;
 import com.fitzone.modulo.usuarios.models.AuthResponse;
@@ -35,6 +36,10 @@ public class AuthController {
         Usuario usuario = usuarioRepository.findByAuthId(sesion.authId())
                 .or(() -> usuarioRepository.findByEmail(emailNormalizado))
                 .orElseThrow(() -> new AccesoNoAutorizadoException("Credenciales inválidas. Verifique su correo y contraseña."));
+
+        if (usuario.getTipoUsuario() == TipoUsuario.EXTERNO) {
+            throw new AccesoNoAutorizadoException("Los clientes sin cuenta no inician sesión. Reservá como invitado o hacete socio.");
+        }
 
         if (!sesion.authId().equals(usuario.getAuthId())) {
             usuario.setAuthId(sesion.authId());

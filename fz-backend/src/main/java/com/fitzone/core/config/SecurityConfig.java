@@ -78,6 +78,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/v1/sedes", "/v1/sedes/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/canchas", "/v1/canchas/*",
                                 "/v1/canchas/*/disponibilidad", "/v1/canchas/*/cotizacion").permitAll()
+                        .requestMatchers("/v1/invitados/**").permitAll()
                         // Muestran el formato de error; solo se registran fuera del perfil prod
                         .requestMatchers("/v1/prueba/**").permitAll()
                         // Endpoint administrativo protegido internamente con Bearer Root Key

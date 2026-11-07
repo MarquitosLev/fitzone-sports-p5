@@ -97,17 +97,7 @@ public class PagoService {
             validarPropio(usuario, reservaCancha.getUsuario(), "No puede pagar la reserva de otro usuario");
             // El cobro de un turno se registra en la sede de la cancha; el idSede del request no se usa
             sede = reservaCancha.getCancha().getSede();
-
-            boolean yaPagada = transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(
-                    request.getIdReservaCancha(), EstadoPago.CONFIRMADO);
-            if (yaPagada) {
-                throw new ConflictoException("La reserva de cancha ya fue pagada con éxito previamente");
-            }
-
-            if (reservaCancha.getPrecioFinal() == null) {
-                throw new ReglaNegocioException("La reserva de cancha no tiene un precio final asignado");
-            }
-
+            validarReservaPagable(reservaCancha);
             monto = reservaCancha.getPrecioFinal();
             conceptoDescripcion = "Reserva Cancha #" + reservaCancha.getIdReservaCancha();
 
@@ -115,10 +105,40 @@ public class PagoService {
             throw new PeticionInvalidaException("El concepto de pago no es soportado. Debe ser MEMBRESIA o RESERVA_CANCHA");
         }
 
-        // Delegar cobro a la pasarela externa o simulada (Adapter Pattern)
-        boolean forzarRechazo = Boolean.TRUE.equals(request.getForzarRechazo());
-        RespuestaPasarela respuesta = pasarelaPago.cobrar(monto, conceptoDescripcion, forzarRechazo);
+        return cobrar(usuario, sede, membresia, reservaCancha, request.getConcepto(), monto,
+                conceptoDescripcion, Boolean.TRUE.equals(request.getForzarRechazo()));
+    }
 
+    /** Paga la reserva de un invitado sin sesión; el código de la reserva ya fue validado por quien llama. */
+    @Transactional
+    public Transaccion procesarPagoInvitado(ReservaCancha reserva, boolean forzarRechazo) {
+        validarReservaPagable(reserva);
+        return cobrar(reserva.getUsuario(), reserva.getCancha().getSede(), null, reserva,
+                TipoOrigenTransaccion.RESERVA_CANCHA, reserva.getPrecioFinal(),
+                "Reserva Cancha #" + reserva.getIdReservaCancha(), forzarRechazo);
+    }
+
+    private void validarReservaPagable(ReservaCancha reserva) {
+        if (transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(
+                reserva.getIdReservaCancha(), EstadoPago.CONFIRMADO)) {
+            throw new ConflictoException("La reserva de cancha ya fue pagada con éxito previamente");
+        }
+        if (reserva.getPrecioFinal() == null) {
+            throw new ReglaNegocioException("La reserva de cancha no tiene un precio final asignado");
+        }
+    }
+
+    // Delegar cobro a la pasarela externa o simulada (Adapter Pattern)
+    private Transaccion cobrar(Usuario usuario, Sede sede, Membresia membresia, ReservaCancha reservaCancha,
+                               TipoOrigenTransaccion concepto, BigDecimal monto, String descripcion,
+                               boolean forzarRechazo) {
+        RespuestaPasarela respuesta = pasarelaPago.cobrar(monto, descripcion, forzarRechazo);
+        return registrarCobro(usuario, sede, membresia, reservaCancha, concepto, monto, respuesta);
+    }
+
+    @Transactional
+    public Transaccion registrarCobro(Usuario usuario, Sede sede, Membresia membresia, ReservaCancha reservaCancha,
+                                      TipoOrigenTransaccion concepto, BigDecimal monto, RespuestaPasarela respuesta) {
         EstadoPago estadoFinal;
         LocalDateTime fechaConfirmacion = null;
 
@@ -127,7 +147,7 @@ public class PagoService {
             fechaConfirmacion = LocalDateTime.now();
 
             // Si es membresía y el pago fue confirmado, se renueva si no estaba activa o si ya tenía un pago previo
-            if (request.getConcepto() == TipoOrigenTransaccion.MEMBRESIA) {
+            if (membresia != null) {
                 boolean yaTeniaPago = transaccionRepository.existsByMembresia_IdMembresiaAndEstadoPago(
                         membresia.getIdMembresia(), EstadoPago.CONFIRMADO);
                 if (membresia.getEstado() != EstadoMembresia.ACTIVO || yaTeniaPago) {
@@ -145,7 +165,7 @@ public class PagoService {
                 .sede(sede)
                 .membresia(membresia)
                 .reservaCancha(reservaCancha)
-                .concepto(request.getConcepto())
+                .concepto(concepto)
                 .monto(monto)
                 .estadoPago(estadoFinal)
                 .tokenTransaccionPasarela(respuesta.tokenTransaccion())

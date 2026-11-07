@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/comprobantes")
-@PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO', 'RECEPCIONISTA', 'GERENTE')")
+@PreAuthorize("hasAnyRole('SOCIO', 'RECEPCIONISTA', 'GERENTE')")
 @RequiredArgsConstructor
 @Tag(name = "Comprobantes", description = "Endpoints de descarga y visualización de comprobantes oficiales de pago en PDF")
 public class ComprobanteController {
