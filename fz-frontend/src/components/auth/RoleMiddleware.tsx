@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToastOpcional } from '../../context/ToastContext';
@@ -24,8 +24,11 @@ export interface RoleMiddlewareProps {
 function RedireccionSinPermiso() {
   const toast = useToastOpcional();
   const addToast = toast?.addToast;
+  const notificadoRef = useRef(false);
 
   useEffect(() => {
+    if (notificadoRef.current) return;
+    notificadoRef.current = true;
     addToast?.({ type: 'warning', title: 'Sin permiso', message: MENSAJE_RUTA_SIN_PERMISO });
   }, [addToast]);
 
