@@ -36,7 +36,7 @@ export interface AuthProviderProps {
  * Mantiene la sesión global del usuario y el token sincronizado.
  *
  * Al arrancar:
- *   1. Restaura la sesión guardada en localStorage (para no parpadear).
+ *   1. Restaura la sesión guardada en sessionStorage (para no parpadear).
  *   2. Con la API real, confirma el usuario con `GET /v1/usuarios/me`.
  *      Mientras tanto `isLoading` queda en true, así las rutas protegidas
  *      esperan en vez de mostrar contenido con un token que podría estar vencido.

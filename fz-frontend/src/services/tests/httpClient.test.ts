@@ -21,7 +21,7 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
   beforeEach(() => {
     handler.mockReset();
     registerHttpErrorHandler(handler);
-    localStorage.clear();
+    sessionStorage.clear();
     setAuthToken(null);
   });
 
@@ -48,7 +48,7 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
       vi.fn().mockResolvedValue(respuestaJson(403, { codigo: 'ACCESO_DENEGADO', mensaje, timestamp: '' }))
     );
     setAuthToken('token-socio');
-    localStorage.setItem('fitzone_auth_session', '{"token":"token-socio"}');
+    sessionStorage.setItem('fitzone_auth_session', '{"token":"token-socio"}');
 
     const error = await httpClient.post('/v1/pagos', { body: '{}' }).catch((e: unknown) => e);
 
@@ -57,7 +57,7 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
     expect((error as AppError).message).toBe(mensaje);
     expect(handler).toHaveBeenCalledWith(mensaje, 403);
     expect(getAuthToken()).toBe('token-socio');
-    expect(localStorage.getItem('fitzone_auth_session')).not.toBeNull();
+    expect(sessionStorage.getItem('fitzone_auth_session')).not.toBeNull();
   });
 
   it('ante un 403 sin cuerpo usa el mensaje genérico de sin permiso', async () => {
@@ -78,12 +78,12 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
       vi.fn().mockResolvedValue(respuestaJson(401, { codigo: 401, mensaje: 'Token vencido', timestamp: '' }))
     );
     setAuthToken('token-vencido');
-    localStorage.setItem('fitzone_auth_session', '{"token":"token-vencido"}');
+    sessionStorage.setItem('fitzone_auth_session', '{"token":"token-vencido"}');
 
     await expect(httpClient.get('/v1/usuarios/me')).rejects.toBeInstanceOf(AppError);
 
     expect(getAuthToken()).toBeNull();
-    expect(localStorage.getItem('fitzone_auth_session')).toBeNull();
+    expect(sessionStorage.getItem('fitzone_auth_session')).toBeNull();
     expect(handler).toHaveBeenCalledWith('Token vencido', 401);
   });
 

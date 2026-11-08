@@ -12,7 +12,7 @@ import { AppError } from '../httpClient';
 
 describe('SCRUM-89: authService (Modo Mock)', () => {
   beforeEach(() => {
-    localStorage.clear();
+    sessionStorage.clear();
     _resetMockUsersForTest();
   });
 
@@ -26,7 +26,16 @@ describe('SCRUM-89: authService (Modo Mock)', () => {
     expect(res.usuario.tipoUsuario).toBe('SOCIO');
     expect(res.usuario.nombre).toBe('Martín');
     expect(getAuthToken()).toBe(res.token);
-    expect(localStorage.getItem(AUTH_STORAGE_KEY)).not.toBeNull();
+    expect(sessionStorage.getItem(AUTH_STORAGE_KEY)).not.toBeNull();
+  });
+
+  it('SCRUM-136: guarda la sesión solo en sessionStorage para que otra pestaña no la pise', async () => {
+    localStorage.clear();
+    await iniciarSesion({ email: 'socio@fitzone.com', password: 'password123' });
+
+    // localStorage lo comparten todas las pestañas; sessionStorage es propio de cada una
+    expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+    expect(sessionStorage.getItem(AUTH_STORAGE_KEY)).not.toBeNull();
   });
 
   it('inicia sesión exitosamente para un rol GERENTE', async () => {
@@ -140,6 +149,6 @@ describe('SCRUM-89: authService (Modo Mock)', () => {
 
     expect(obtenerSesionActual()).toBeNull();
     expect(getAuthToken()).toBeNull();
-    expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+    expect(sessionStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
   });
 });
