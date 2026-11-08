@@ -195,6 +195,8 @@ export async function obtenerMembresiaPorId(idMembresia: number): Promise<Membre
 
 /**
  * Obtiene la membresía activa o más reciente asociada a un usuario específico.
+ * Si el usuario no tiene membresía (404 o mensaje del backend indicando que no posee membresía),
+ * retorna `null` como estado normal de UI (SIN_MEMBRESIA), sin disparar notificaciones de error.
  */
 export async function obtenerMembresiaPorUsuario(idUsuario: number): Promise<MembresiaDTO | null> {
   if (USE_MOCK) {
@@ -205,10 +207,26 @@ export async function obtenerMembresiaPorUsuario(idUsuario: number): Promise<Mem
     return { ...membresiasUsuario[membresiasUsuario.length - 1] };
   }
   try {
-    return await httpClient.get<MembresiaDTO>(`/v1/usuarios/${idUsuario}/membresia`);
+    return await httpClient.get<MembresiaDTO>(`/v1/usuarios/${idUsuario}/membresia`, { silent: true });
   } catch (err: unknown) {
-    if (err instanceof AppError && err.status === 404) {
-      return null;
+    if (err instanceof AppError) {
+      const msg = (err.message || '').toLowerCase();
+      const backendMsg = (err.backendResponse?.mensaje || '').toLowerCase();
+      const esSinMembresia =
+        err.status === 404 ||
+        msg.includes('no posee una membresía') ||
+        msg.includes('sin membresía') ||
+        backendMsg.includes('no posee una membresía') ||
+        backendMsg.includes('sin membresía');
+
+      if (esSinMembresia) {
+        return null;
+      }
+    } else if (err instanceof Error) {
+      const msg = err.message.toLowerCase();
+      if (msg.includes('no posee una membresía') || msg.includes('sin membresía')) {
+        return null;
+      }
     }
     throw err;
   }

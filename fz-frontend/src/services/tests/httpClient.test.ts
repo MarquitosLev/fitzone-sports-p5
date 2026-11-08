@@ -96,4 +96,24 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
     await expect(httpClient.post('/v1/reservas', { body: '{}' })).rejects.toBeInstanceOf(AppError);
     expect(handler).toHaveBeenCalledWith('Turno ocupado', 409);
   });
+
+  it('SCRUM-125: si la petición tiene silent: true no invoca al handler global de errores', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        respuestaJson(404, {
+          codigo: 404,
+          mensaje: 'El usuario no posee una membresía activa o suspendida',
+          timestamp: '',
+        })
+      )
+    );
+
+    await expect(
+      httpClient.get('/v1/usuarios/11222333/membresia', { silent: true })
+    ).rejects.toBeInstanceOf(AppError);
+
+    // El error se lanza como AppError, pero el handler NO fue invocado para evitar toasts rojos no deseados
+    expect(handler).not.toHaveBeenCalled();
+  });
 });
