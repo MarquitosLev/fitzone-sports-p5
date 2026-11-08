@@ -22,5 +22,12 @@ export default defineConfig({
     env: {
       VITE_USE_MOCK: 'true',
     },
+    // `npm run coverage`: resumen en consola y HTML en coverage/, que el pipeline sube como artefacto
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**'],
+    },
   },
 });
