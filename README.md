@@ -9,6 +9,7 @@ Plataforma integral de gestión deportiva y administrativa para cadenas de gimna
 ```text
 Integrador/
 ├── docker-compose.yml             # PostgreSQL 16 local para desarrollo
+├── .github/workflows/ci.yml       # Pipeline de CI: tests, build y cobertura en cada PR
 ├── docker/initdb/                 # Scripts SQL de inicialización local
 ├── fz-frontend/                   # Aplicación Web en React 19 + TypeScript + Vite
 └── fz-backend/                    # API REST en Java 21 (Spring Boot 3.4 + JPA + Postgres)
@@ -57,6 +58,25 @@ npm run dev
 
 ---
 
+## 🧪 Pruebas, Cobertura e Integración Continua
+
+```bash
+cd fz-backend && ./mvnw verify                  # tests + reporte JaCoCo en target/site/jacoco/
+cd fz-frontend && npm run coverage              # tests + reporte V8 en coverage/
+cd fz-frontend && npm run build                 # chequeo de tipos + build de producción
+```
+
+Cada Pull Request hacia `develop` corre esos mismos pasos en GitHub Actions y publica los dos reportes de cobertura como artefactos descargables.
+
+| Proyecto | Pruebas | Cobertura (2026-11-07) |
+| :-- | :-- | :-- |
+| Backend | 248 en verde | 64 % instrucciones · 47 % ramas |
+| Frontend | 353 en verde | 69 % líneas · 64 % ramas |
+
+Etapas, decisiones de diseño y cómo leer los reportes: [docs/PIPELINE_CI.md](docs/PIPELINE_CI.md).
+
+---
+
 ## 🛡️ Flujo de Ramas y Trabajo en Equipo (Jira GitFlow)
 
 * **Rama de desarrollo e integración:** `develop`
@@ -68,6 +88,6 @@ npm run dev
   git pull origin develop
   git checkout -b SCRUM-<NUMERO>
   ```
-* Al finalizar el desarrollo y verificar los tests, se abre un **Pull Request (PR)** hacia `develop`.
+* Al finalizar el desarrollo y verificar los tests, se abre un **Pull Request (PR)** hacia `develop`. El pipeline de CI valida el PR automáticamente; se mergea con el check en verde.
 * **Mensajes de Commit:**
   `feat(scope): [SCRUM-26] descripcion concisa del cambio`

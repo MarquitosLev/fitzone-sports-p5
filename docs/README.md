@@ -28,4 +28,10 @@ Esta carpeta contiene la documentación viva, las especificaciones de arquitectu
 7. **[Kit de QA y desarrollo](./KIT_QA_DESARROLLO.md)**  
    Guía interna del equipo: qué contiene el kit, cómo usar las [historias de usuario para QA](./HISTORIAS_DE_USUARIO.md) y el [backlog técnico](./BACKLOG_DESARROLLO.md).
 
+8. **[PIPELINE_CI.md](./PIPELINE_CI.md)**  
+   Pipeline de integración continua con GitHub Actions: etapas, decisiones y alternativas, cómo reproducirlo en local, cómo leer los reportes de cobertura de JaCoCo y V8, y estado actual de la suite.
+
+9. **[Lineamientos de entrega del TIF](./Lineamientos_Entrega_TIF_FitZone_Sports.md)**  
+   Documento de la cátedra: fecha límite (19/11/2026, 18:00), tag `v1.0-entrega`, estructura del repositorio, bitácoras, los nueve ADR obligatorios, diagramas, manuales, rúbrica y checklist de autoevaluación.
+
 
