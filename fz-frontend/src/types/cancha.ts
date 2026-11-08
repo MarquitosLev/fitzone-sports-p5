@@ -1,7 +1,7 @@
 import type { SedeDTO } from './sede';
 import type { UsuarioDTO } from './usuario';
 
-export type TipoCancha = 'PADEL' | 'FUTBOL_5' | 'FUTBOL_7' | 'TENIS' | 'BASQUET' | 'OTRO';
+export type TipoCancha = 'PADEL' | 'PADDLE' | 'FUTBOL_5' | 'FUTBOL_7' | 'TENIS' | 'BASQUET' | 'OTRO';
 
 /**
  * DTO de Cancha.

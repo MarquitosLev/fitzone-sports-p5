@@ -1,6 +1,7 @@
 /** Nombres visibles de los tipos de cancha (enum TipoCancha del backend). */
 export const TIPO_LABELS: Record<string, string> = {
   PADEL: 'Pádel',
+  PADDLE: 'Pádel',
   FUTBOL_5: 'Fútbol 5',
   FUTBOL_7: 'Fútbol 7',
   TENIS: 'Tenis',
