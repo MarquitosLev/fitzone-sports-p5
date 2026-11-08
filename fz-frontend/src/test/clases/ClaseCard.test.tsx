@@ -121,4 +121,22 @@ describe('ClaseCard Component', () => {
 
     expect(screen.getByRole('button', { name: /reservar para spinning power/i })).toBeDisabled();
   });
+
+  it('muestra "Reservar" habilitado a un socio en espera si hay cupo disponible', () => {
+    const { onReservar, onSalirDeEspera } = renderCard({
+      cupoDisponible: 1,
+      posicionEspera: 1,
+    });
+
+    expect(screen.getByText('EN ESPERA')).toBeInTheDocument();
+    expect(screen.getByText(/estás 1° en la lista/i)).toBeInTheDocument();
+
+    const btn = screen.getByRole('button', { name: /reservar para spinning power/i });
+    expect(btn).toBeInTheDocument();
+    expect(btn).not.toBeDisabled();
+
+    fireEvent.click(btn);
+    expect(onReservar).toHaveBeenCalledTimes(1);
+    expect(onSalirDeEspera).not.toHaveBeenCalled();
+  });
 });
