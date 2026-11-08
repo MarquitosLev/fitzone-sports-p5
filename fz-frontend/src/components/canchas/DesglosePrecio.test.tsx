@@ -36,24 +36,25 @@ describe('DesglosePrecio Component', () => {
 
   it('muestra el descuento de socio de la cotización y el precio tachado', () => {
     const cotizacion: CotizacionReservaDTO = {
-      precioBase: 10000,
+      precioBase: 20000,
       esPico: true,
-      recargoPico: 2000,
+      recargoPico: 4000,
       porcentajeRecargoPico: 20,
-      descuentoSocio: 1800,
+      descuentoSocio: 3000,
       porcentajeDescuentoSocio: 15,
       esSocio: true,
-      total: 10200,
+      total: 21000,
     };
 
     render(<DesglosePrecio cotizacion={cotizacion} />);
 
     expect(screen.getByText(/descuento socio · −15%/i)).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('−') && content.includes('1.800'))).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('10.200'))).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('−') && content.includes('3.000'))).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('21.000'))).toBeInTheDocument();
+    expect(screen.getByText(/el descuento de socio se aplica sobre la tarifa base.*20\.000/i)).toBeInTheDocument();
     // Subtotal tachado
-    const elements12000 = screen.getAllByText((content) => content.includes('12.000'));
-    expect(elements12000.some((el) => el.classList.contains('line-through'))).toBe(true);
+    const elements24000 = screen.getAllByText((content) => content.includes('24.000'));
+    expect(elements24000.some((el) => el.classList.contains('line-through'))).toBe(true);
     expect(screen.getByText(/beneficio socio/i)).toBeInTheDocument();
   });
 
