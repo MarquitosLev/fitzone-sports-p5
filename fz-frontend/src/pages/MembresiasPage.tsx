@@ -355,7 +355,7 @@ export function MembresiasPage() {
               Membresías del Socio
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              Consulta de vigencia, renovaciones, catálogo de planes y administración de estado (RF-02).
+              Consulta de vigencia, renovaciones, catálogo de planes y administración de estado.
             </p>
           </div>
         </div>
@@ -651,7 +651,11 @@ export function MembresiasPage() {
                       </span>
                     </div>
                     <span className="text-[10px] text-slate-500 font-medium mt-2">
-                      {p.duracionMeses ? `${p.duracionMeses} meses` : 'Mensual'}
+                      {p.duracionMeses
+                        ? p.duracionMeses === 1
+                          ? '1 mes'
+                          : `${p.duracionMeses} meses`
+                        : 'Mensual'}
                     </span>
                   </div>
                 );
