@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MembresiasPage } from './MembresiasPage';
 import { SedeProvider } from '../context/SedeContext';
-import { ToastProvider } from '../context/ToastContext';
+import { ToastProvider, ToastContext } from '../context/ToastContext';
 import * as membresiasService from '../services/membresiasService';
-import type { MembresiaDTO, PlanDTO, SedeDTO } from '../types';
+import * as usuariosService from '../services/usuariosService';
+import { AppError } from '../services/httpClient';
+import type { MembresiaDTO, PlanDTO, SedeDTO, UsuarioDTO } from '../types';
 
 const mockSede: SedeDTO = {
   idSede: 1,
@@ -121,5 +123,123 @@ describe('MembresiasPage (Integración)', () => {
       // Y la tarjeta de acciones
       expect(screen.getByText(/Acciones de Membresía/i)).toBeInTheDocument();
     });
+  });
+
+  // ── SCRUM-125: Manejo de socio sin membresía en /membresias ─────────────────
+  it('SCRUM-125: al buscar un socio sin membresía muestra "Sin Membresía Activa" sin toasts de error y abrir "Asociar Membresía" precarga al socio en el modal', async () => {
+    const mockSocioSinMembresia: UsuarioDTO = {
+      idUsuario: 99,
+      authId: 'uuid-socio-99',
+      dni: '11222333',
+      nombre: 'Carlos',
+      apellido: 'SinMembresia',
+      email: 'carlos@fitzone.com',
+      telefono: '11-9999-8888',
+      fotoUrl: null,
+      tipoUsuario: 'SOCIO',
+      idSede: 1,
+    };
+
+    vi.spyOn(usuariosService, 'buscarUsuariosPorDni').mockResolvedValue([mockSocioSinMembresia]);
+    vi.spyOn(membresiasService, 'obtenerMembresiaPorUsuario').mockResolvedValue(null);
+
+    const mockAddToast = vi.fn();
+
+    render(
+      <ToastContext.Provider value={{ toasts: [], addToast: mockAddToast, removeToast: vi.fn() }}>
+        <SedeProvider sedes={[mockSede]} sedeInicial={mockSede}>
+          <MembresiasPage />
+        </SedeProvider>
+      </ToastContext.Provider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: /Membresías del Socio/i })).toBeInTheDocument();
+    });
+
+    // 1. Buscar socio por DNI
+    const inputBuscador = screen.getByPlaceholderText(/Buscar socio por DNI/i);
+    fireEvent.change(inputBuscador, { target: { value: '11222333' } });
+
+    const botonBuscar = screen.getByRole('button', { name: /^Buscar$/i });
+    fireEvent.click(botonBuscar);
+
+    // 2. Verificar que se despliega la tarjeta de estado con "Sin Membresía Activa"
+    await waitFor(() => {
+      expect(screen.getByText(/Sin Membresía Activa/i)).toBeInTheDocument();
+      expect(screen.getByText(/Carlos SinMembresia no posee un plan vigente asignado/i)).toBeInTheDocument();
+    });
+
+    // 3. Confirmar que NO se disparó ningún toast de tipo 'error'
+    const errorToasts = mockAddToast.mock.calls.filter(([toast]) => toast?.type === 'error');
+    expect(errorToasts).toHaveLength(0);
+
+    // 4. Hacer clic en "Asociar Membresía"
+    const botonAsociar = screen.getByTestId('btn-asociar-membresia');
+    expect(botonAsociar).toBeInTheDocument();
+    fireEvent.click(botonAsociar);
+
+    // 5. Debe abrir directamente el modal con el socio precargado
+    await waitFor(() => {
+      expect(screen.getByText('Asociar o Renovar Plan de Membresía')).toBeInTheDocument();
+      // El socio debe estar visible dentro del modal como titular precargado
+      const modal = screen.getByRole('dialog');
+      expect(within(modal).getByText('Carlos SinMembresia')).toBeInTheDocument();
+      expect(within(modal).getByText('DNI 11222333')).toBeInTheDocument();
+    });
+  });
+
+  it('SCRUM-125: si el backend responde con error 404 o mensaje de "sin membresía", la UI lo trata como SIN_MEMBRESIA sin disparar toast de error', async () => {
+    const mockSocioSinMembresia: UsuarioDTO = {
+      idUsuario: 88,
+      authId: 'uuid-socio-88',
+      dni: '44556677',
+      nombre: 'Mariana',
+      apellido: 'SinPlan',
+      email: 'mariana@fitzone.com',
+      telefono: '11-7777-6666',
+      fotoUrl: null,
+      tipoUsuario: 'SOCIO',
+      idSede: 1,
+    };
+
+    vi.spyOn(usuariosService, 'buscarUsuariosPorDni').mockResolvedValue([mockSocioSinMembresia]);
+    // Simula que el backend responde con 404 y el mensaje reportado en el bug
+    vi.spyOn(membresiasService, 'obtenerMembresiaPorUsuario').mockRejectedValue(
+      new AppError('El usuario no posee una membresía activa o suspendida', 404, {
+        codigo: 404,
+        mensaje: 'El usuario no posee una membresía activa o suspendida',
+        timestamp: new Date().toISOString(),
+      })
+    );
+
+    const mockAddToast = vi.fn();
+
+    render(
+      <ToastContext.Provider value={{ toasts: [], addToast: mockAddToast, removeToast: vi.fn() }}>
+        <SedeProvider sedes={[mockSede]} sedeInicial={mockSede}>
+          <MembresiasPage />
+        </SedeProvider>
+      </ToastContext.Provider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: /Membresías del Socio/i })).toBeInTheDocument();
+    });
+
+    const inputBuscador = screen.getByPlaceholderText(/Buscar socio por DNI/i);
+    fireEvent.change(inputBuscador, { target: { value: '44556677' } });
+
+    const botonBuscar = screen.getByRole('button', { name: /^Buscar$/i });
+    fireEvent.click(botonBuscar);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Sin Membresía Activa/i)).toBeInTheDocument();
+      expect(screen.getByText(/Mariana SinPlan no posee un plan vigente asignado/i)).toBeInTheDocument();
+    });
+
+    // Tampoco debe haberse disparado toast de error
+    const errorToasts = mockAddToast.mock.calls.filter(([toast]) => toast?.type === 'error');
+    expect(errorToasts).toHaveLength(0);
   });
 });

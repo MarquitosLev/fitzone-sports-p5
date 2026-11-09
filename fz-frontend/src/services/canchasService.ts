@@ -399,7 +399,7 @@ export function mapearCotizacion(api: CotizacionApi, esPico: boolean): Cotizacio
     porcentajeRecargoPico: hayRecargo ? Math.round((api.recargo / api.precioBase) * 100) : 0,
     descuentoSocio: api.descuento,
     porcentajeDescuentoSocio: hayDescuento
-      ? Math.round((api.descuento / (api.precioBase + api.recargo)) * 100)
+      ? Math.round((api.descuento / api.precioBase) * 100)
       : 0,
     esSocio: hayDescuento,
     total: api.precioFinal,

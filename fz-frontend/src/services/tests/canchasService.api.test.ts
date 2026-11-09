@@ -62,6 +62,14 @@ describe('canchasService con la API real', () => {
     expect(coti.total).toBe(24000);
   });
 
+  it('calcula el porcentaje de descuento de socio sobre la tarifa base aunque haya recargo pico', () => {
+    const coti = mapearCotizacion({ precioBase: 20000, descuento: 3000, recargo: 4000, precioFinal: 21000 }, true);
+
+    expect(coti.porcentajeDescuentoSocio).toBe(15);
+    expect(coti.descuentoSocio).toBe(3000);
+    expect(coti.total).toBe(21000);
+  });
+
   it('convierte la grilla del backend (LocalDateTime) en franjas de la pantalla', async () => {
     get.mockResolvedValue([
       { horaInicio: '2026-12-01T19:00:00', horaFin: '2026-12-01T20:00:00', estado: 'OCUPADO' },

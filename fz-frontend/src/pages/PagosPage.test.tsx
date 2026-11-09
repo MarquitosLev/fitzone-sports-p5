@@ -155,6 +155,17 @@ const membresiaSocio = {
   estado: 'ACTIVO',
 } as MembresiaDTO;
 
+const cotizacionTurno = {
+  precioBase: 8000,
+  esPico: false,
+  recargoPico: 0,
+  porcentajeRecargoPico: 0,
+  descuentoSocio: 1200,
+  porcentajeDescuentoSocio: 15,
+  esSocio: true,
+  total: 6800,
+};
+
 function renderWithProviders(ui: React.ReactElement) {
   // MemoryRouter: la página lee ?reserva= para preseleccionar el ítem a pagar
   return render(
@@ -176,6 +187,7 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
     vi.spyOn(pagosService, 'listarMisPagos').mockResolvedValue([...mockTransacciones]);
     vi.spyOn(canchasService, 'listarMisReservas').mockResolvedValue([reservaPendiente]);
     vi.spyOn(membresiasService, 'obtenerMembresiaPorUsuario').mockResolvedValue(membresiaSocio);
+    vi.spyOn(canchasService, 'cotizarTurno').mockResolvedValue(cotizacionTurno);
     vi.spyOn(pagosService, 'obtenerComprobantePorTransaccion').mockImplementation(async (id) =>
       id === 1 ? mockComprobante : null
     );
@@ -191,6 +203,23 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
     // En Checkout se muestran lo que el socio tiene pendiente de pago
     expect((await screen.findAllByText(/Turno · Pádel · Cancha 1/i)).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Renovación Membresía · Plan Trimestral/i)).toBeInTheDocument();
+  });
+
+  it('el pago de una cancha muestra el desglose de la cotización del backend (SCRUM-120)', async () => {
+    renderWithProviders(<PagosPage />);
+
+    expect(await screen.findByText(/desglose del turno/i)).toBeInTheDocument();
+    expect(screen.queryByText(/cuota membresía/i)).not.toBeInTheDocument();
+    expect(canchasService.cotizarTurno).toHaveBeenCalledWith(1, '19:00', true, '2099-01-10', '20:00');
+  });
+
+  it('si la cotización no coincide con el precio congelado, muestra el resumen del turno', async () => {
+    vi.spyOn(canchasService, 'cotizarTurno').mockResolvedValue({ ...cotizacionTurno, total: 8000 });
+    renderWithProviders(<PagosPage />);
+
+    expect(await screen.findByText(/resumen del turno/i)).toBeInTheDocument();
+    expect(screen.queryByText(/desglose del turno/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/cuota membresía/i)).not.toBeInTheDocument();
   });
 
   it('permite cambiar a la pestaña de Historial y muestra las transacciones y métricas', async () => {
@@ -284,5 +313,73 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
       expect(reintentarSpy).toHaveBeenCalledWith(2);
       expect(screen.getByText('¡Pago Confirmado!')).toBeInTheDocument();
     });
+  });
+
+  it('una membresía vencida muestra hasta cuándo queda vigente después de pagar (SCRUM-122)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 6, 10, 0, 0));
+    vi.spyOn(membresiasService, 'obtenerMembresiaPorUsuario').mockResolvedValue({
+      ...membresiaSocio,
+      plan: { ...membresiaSocio.plan, duracionMeses: 1 },
+      fechaVencimiento: '2026-10-22',
+      estado: 'VENCIDO',
+    });
+
+    renderWithProviders(<PagosPage />);
+    fireEvent.click(await screen.findByText(/Renovación Membresía · Plan Trimestral/i));
+
+    expect(screen.getAllByText(/06\/12\/2026/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/2026-10-22/)).not.toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('no ofrece pagar una membresía cancelada', async () => {
+    vi.spyOn(membresiasService, 'obtenerMembresiaPorUsuario').mockResolvedValue({
+      ...membresiaSocio,
+      estado: 'CANCELADO',
+    });
+
+    renderWithProviders(<PagosPage />);
+    expect((await screen.findAllByText(/Turno · Pádel · Cancha 1/i)).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Renovación Membresía/i)).not.toBeInTheDocument();
+  });
+
+  it('SCRUM-121: un pago rechazado no ofrece reintentar ni cuenta en métricas si ya existe una transacción confirmada para esa reserva', async () => {
+    // Transacción 2 rechazada para reservaCanchaId: 11
+    // Nueva transacción 4 confirmada para esa misma reserva 11
+    const transaccionAprobadaReintento: TransaccionDTO = {
+      idTransaccion: 4,
+      usuario: socio,
+      sede: mockSede,
+      membresiaId: null,
+      reservaCanchaId: 11,
+      concepto: 'RESERVA_SOCIO',
+      monto: 8000,
+      estadoPago: 'CONFIRMADO',
+      tokenTransaccionPasarela: 'tok_reintento_ok',
+      fechaHoraCreacion: '2026-10-16T18:05:00',
+      fechaHoraConfirmacion: '2026-10-16T18:06:00',
+      descripcion: 'Fútbol 5 · Cancha Central (Turno 20:00 a 21:00 hs)',
+    };
+
+    vi.spyOn(pagosService, 'listarMisPagos').mockResolvedValue([
+      mockTransacciones[0]!, // Transacción 1 (reserva 10, CONFIRMADO)
+      mockTransacciones[1]!, // Transacción 2 (reserva 11, RECHAZADO)
+      transaccionAprobadaReintento, // Transacción 4 (reserva 11, CONFIRMADO)
+    ]);
+
+    renderWithProviders(<PagosPage />);
+
+    const tabHistorial = screen.getByRole('button', { name: /Historial/i });
+    fireEvent.click(tabHistorial);
+
+    await waitFor(() => {
+      // La métrica "Rechazados / A Revisar" debe mostrar 0 reintentos disponibles (porque la reserva 11 ya fue pagada)
+      expect(screen.getByText('Rechazados / A Revisar')).toBeInTheDocument();
+      expect(screen.getByText('0')).toBeInTheDocument();
+    });
+
+    // En la vista de tarjetas no debe ofrecer el botón Reintentar para la transacción rechazada
+    expect(screen.queryByRole('button', { name: /Reintentar/i })).not.toBeInTheDocument();
   });
 });

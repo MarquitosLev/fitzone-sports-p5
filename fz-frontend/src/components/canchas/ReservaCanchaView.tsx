@@ -608,7 +608,7 @@ export function ReservaCanchaView({
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black uppercase text-fitzone-coral">
-                {canchaSeleccionada?.tipo ?? 'Deporte'}
+                {canchaSeleccionada?.tipo ? etiquetaTipo(canchaSeleccionada.tipo) : 'Deporte'}
               </span>
               <span className="text-xs text-slate-400 font-medium">
                 {canchaSeleccionada?.sede?.nombre}

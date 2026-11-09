@@ -19,6 +19,41 @@ export interface ResumenPagoProps {
   className?: string;
 }
 
+interface ResumenArancelProps {
+  titulo: string;
+  etiqueta: string;
+  sello?: string;
+  monto: number;
+}
+
+function ResumenArancel({ titulo, etiqueta, sello, monto }: ResumenArancelProps) {
+  return (
+    <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-100 space-y-3 text-xs">
+      <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+        <span className="text-xs font-black text-fitzone-navy uppercase tracking-wider font-outfit">
+          {titulo}
+        </span>
+        {sello && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#2E9E5B] bg-[#EAF7EE] px-2 py-0.5 rounded-md">
+            <Sparkles className="w-3 h-3 text-[#2E9E5B]" />
+            {sello}
+          </span>
+        )}
+      </div>
+      <div className="flex justify-between items-center text-slate-600">
+        <span className="font-medium">{etiqueta}</span>
+        <span className="font-extrabold text-fitzone-navy font-outfit">{formatearMonto(monto)}</span>
+      </div>
+      <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-sm sm:text-base font-black text-fitzone-navy">
+        <span>Total final a debitar</span>
+        <span className="text-xl sm:text-2xl font-black text-fitzone-navy font-outfit">
+          {formatearMonto(monto)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function ResumenPago({
   detalle,
   montoTotal,
@@ -88,7 +123,7 @@ export function ResumenPago({
               )}
               {detalle.fechaVencimiento && (
                 <div className="flex items-center justify-between text-slate-700">
-                  <span className="font-medium text-slate-500">Válido hasta:</span>
+                  <span className="font-medium text-slate-500">Queda vigente hasta:</span>
                   <span className="font-bold text-fitzone-navy">{detalle.fechaVencimiento}</span>
                 </div>
               )}
@@ -96,7 +131,6 @@ export function ResumenPago({
           )}
         </div>
 
-        {/* Desglose de precios: integra DesglosePrecio si es Cancha o resumen de abono si es Membresía */}
         {esCancha && detalle.cotizacion ? (
           <DesglosePrecio
             cotizacion={detalle.cotizacion}
@@ -104,31 +138,22 @@ export function ResumenPago({
             variant="card"
             titulo="Desglose del Turno"
           />
+        ) : esCancha ? (
+          <ResumenArancel
+            titulo="Resumen del Turno"
+            etiqueta={`Turno de cancha (${detalle.canchaNombre || detalle.titulo})`}
+            monto={montoTotal}
+          />
         ) : (
-          <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-100 space-y-3 text-xs">
-            <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
-              <span className="text-xs font-black text-fitzone-navy uppercase tracking-wider font-outfit">
-                Resumen del Arancel
-              </span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#2E9E5B] bg-[#EAF7EE] px-2 py-0.5 rounded-md">
-                <Sparkles className="w-3 h-3 text-[#2E9E5B]" />
-                Acceso Total
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-slate-600">
-              <span className="font-medium">Cuota membresía ({detalle.planNombre || 'Socio'})</span>
-              <span className="font-extrabold text-fitzone-navy font-outfit">{formatearMonto(montoTotal)}</span>
-            </div>
-            <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-sm sm:text-base font-black text-fitzone-navy">
-              <span>Total final a debitar</span>
-              <span className="text-xl sm:text-2xl font-black text-fitzone-navy font-outfit">
-                {formatearMonto(montoTotal)}
-              </span>
-            </div>
-          </div>
+          <ResumenArancel
+            titulo="Resumen del Arancel"
+            sello="Acceso Total"
+            etiqueta={`Cuota membresía (${detalle.planNombre || 'Socio'})`}
+            monto={montoTotal}
+          />
         )}
 
-        {/* Notificación de seguridad RNF-02 */}
+        {/* Notificación de seguridad */}
         <div className="p-3.5 bg-slate-50 rounded-xl text-xs text-slate-600 flex items-start gap-2.5 border border-slate-100">
           <ShieldCheck className="w-4 h-4 text-[#2E9E5B] shrink-0 mt-0.5" />
           <p className="text-[11px] leading-relaxed">

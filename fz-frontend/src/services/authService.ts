@@ -106,16 +106,16 @@ let _mockUsers = [...MOCK_AUTH_USERS];
 
 function persistSession(session: AuthResponseDTO): void {
   try {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+    sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
     setAuthToken(session.token);
   } catch {
-    // Si localStorage no está disponible (ej. modo incógnito estricto), continúa
+    // Si sessionStorage no está disponible (ej. modo incógnito estricto), continúa
   }
 }
 
 function clearSession(): void {
   try {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
     setAuthToken(null);
   } catch {
     // No-op
@@ -123,11 +123,11 @@ function clearSession(): void {
 }
 
 /**
- * Obtiene la sesión activa almacenada (en localStorage) y sincroniza el token en httpClient.
+ * Obtiene la sesión activa almacenada (en sessionStorage, propia de cada pestaña) y sincroniza el token en httpClient.
  */
 export function obtenerSesionActual(): AuthResponseDTO | null {
   try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    const raw = sessionStorage.getItem(AUTH_STORAGE_KEY);
     if (!raw) return null;
     const session = JSON.parse(raw) as AuthResponseDTO;
     if (session?.token) {
