@@ -92,6 +92,7 @@ export function MembresiaEstadoCard({
               onClick={onRenovarClick}
               leftIcon={RefreshCw}
               className="shrink-0"
+              data-testid="btn-asociar-membresia"
             >
               Asociar Membresía
             </Button>

@@ -25,6 +25,7 @@ import {
   cambiarEstadoMembresia,
   crearMembresia,
 } from '../services/membresiasService';
+import { AppError } from '../services/httpClient';
 import { buscarUsuariosPorDni } from '../services/usuariosService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
@@ -86,6 +87,18 @@ export function MembresiasPage() {
       const m = await obtenerMembresiaPorUsuario(usuario.idUsuario);
       setMembresiaSocio(m);
     } catch (err: unknown) {
+      // Captura 404 o mensajes de sin membresía como estado válido de UI (SIN_MEMBRESIA), sin disparar toast de error
+      const msg = err instanceof Error ? err.message.toLowerCase() : '';
+      const esSinMembresia =
+        (err instanceof AppError && err.status === 404) ||
+        msg.includes('no posee una membresía') ||
+        msg.includes('sin membresía');
+
+      if (esSinMembresia) {
+        setMembresiaSocio(null);
+        return;
+      }
+
       addToast({
         type: 'error',
         title: 'Error al consultar membresía',
@@ -180,13 +193,14 @@ export function MembresiasPage() {
   };
 
   // Abrir modal de alta / renovación
-  const handleAbrirModalAlta = (planInicial?: PlanDTO) => {
+  const handleAbrirModalAlta = (planInicial?: PlanDTO, socio?: UsuarioDTO | null) => {
     if (planInicial) {
       setModalIdPlan(planInicial.idPlan);
     } else if (planes.length > 0) {
       setModalIdPlan(planes[0].idPlan);
     }
-    setModalSocio(socioSeleccionado);
+    const socioParaModal = socio !== undefined ? socio : socioSeleccionado;
+    setModalSocio(socioParaModal);
     setModalFechaInicio(new Date().toISOString().split('T')[0]);
     setBusquedaModalSocios([]);
     setIsModalAltaOpen(true);
@@ -439,7 +453,11 @@ export function MembresiasPage() {
             <MembresiaEstadoCard
               membresia={membresiaSocio}
               socio={socioSeleccionado}
-              onRenovarClick={membresiaSocio ? handleRenovar : () => handleAbrirModalAlta()}
+              onRenovarClick={
+                membresiaSocio
+                  ? handleRenovar
+                  : () => handleAbrirModalAlta(undefined, socioSeleccionado)
+              }
             />
 
             {/* Barra de acciones si posee membresía */}
