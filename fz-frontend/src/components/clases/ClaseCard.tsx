@@ -62,14 +62,14 @@ export function ClaseCard({
   let accion: AccionBtn;
   if (estaReservada) {
     accion = 'ya-reservada';
-  } else if (estaEnEspera) {
-    accion = onSalirDeEspera && !yaEmpezo ? 'salir-espera' : 'en-espera';
   } else if (!enVentana) {
     accion = 'fuera-de-ventana';
-  } else if (sinCupo) {
-    accion = 'espera';
-  } else {
+  } else if (!sinCupo) {
     accion = 'reservar';
+  } else if (estaEnEspera) {
+    accion = onSalirDeEspera && !yaEmpezo ? 'salir-espera' : 'en-espera';
+  } else {
+    accion = 'espera';
   }
 
   const btnConfig: Record<AccionBtn, { label: string; variant: Parameters<typeof Button>[0]['variant']; disabled: boolean }> = {

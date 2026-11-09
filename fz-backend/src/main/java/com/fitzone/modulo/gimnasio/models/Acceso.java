@@ -44,7 +44,7 @@ public class Acceso extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_usuario", nullable = false, foreignKey = @ForeignKey(name = "fk_gym_accesos_usuarios"))
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "authId", "createdBy", "updatedBy", "deletedAt"})
     private Usuario usuario;
 
     @ManyToOne(fetch = FetchType.LAZY)

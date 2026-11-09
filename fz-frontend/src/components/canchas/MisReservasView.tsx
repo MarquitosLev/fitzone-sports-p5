@@ -22,6 +22,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { Button, StatusBadge, ConfirmDialog, Spinner, EmptyState, Alert } from '../ui';
+import { etiquetaTipo } from './tiposCancha';
 import {
   listarMisReservas,
   cancelarReserva,
@@ -336,7 +337,7 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black uppercase text-fitzone-coral tracking-wider">
-                        {b.cancha.tipo ?? 'Cancha'}
+                        {b.cancha.tipo ? etiquetaTipo(b.cancha.tipo) : 'Cancha'}
                       </span>
                       <span className="text-base font-black text-fitzone-navy font-outfit">
                         {b.cancha.nombre}

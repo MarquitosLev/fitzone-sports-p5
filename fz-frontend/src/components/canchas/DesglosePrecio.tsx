@@ -143,7 +143,7 @@ export function DesglosePrecio({
           <Info className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
           <span>
             {esSocio && descuentoSocio > 0
-              ? `El descuento de socio se aplica sobre la tarifa calculada (${formatearMonto(subtotal)}).`
+              ? `El descuento de socio se aplica sobre la tarifa base (${formatearMonto(precioBase)}).`
               : 'Los socios con la membresía vigente tienen descuento en las reservas.'}
           </span>
         </div>

@@ -353,7 +353,7 @@ export function AccesoPage() {
   };
 
   const handleRenovar = () => {
-    navigate('/membresias');
+    navigate('/pagos?item=membresia');
   };
 
   const tieneAccesoHabilitado = membresia !== null && membresia.estado === 'ACTIVO';
@@ -544,7 +544,7 @@ export function AccesoPage() {
                           onClick={handleRenovar}
                           leftIcon={RefreshCw}
                         >
-                          Regularizar en Membresías
+                          Regularizar membresía
                         </Button>
                       }
                     />
@@ -572,7 +572,7 @@ export function AccesoPage() {
                           onClick={handleRenovar}
                           rightIcon={ExternalLink}
                         >
-                          Ir a Gestión de Membresías
+                          Ir a Pagos
                         </Button>
                       </div>
                     </Card>
