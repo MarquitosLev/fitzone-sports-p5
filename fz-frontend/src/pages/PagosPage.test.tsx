@@ -285,4 +285,43 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
       expect(screen.getByText('¡Pago Confirmado!')).toBeInTheDocument();
     });
   });
+
+  it('SCRUM-121: un pago rechazado no ofrece reintentar ni cuenta en métricas si ya existe una transacción confirmada para esa reserva', async () => {
+    // Transacción 2 rechazada para reservaCanchaId: 11
+    // Nueva transacción 4 confirmada para esa misma reserva 11
+    const transaccionAprobadaReintento: TransaccionDTO = {
+      idTransaccion: 4,
+      usuario: socio,
+      sede: mockSede,
+      membresiaId: null,
+      reservaCanchaId: 11,
+      concepto: 'RESERVA_SOCIO',
+      monto: 8000,
+      estadoPago: 'CONFIRMADO',
+      tokenTransaccionPasarela: 'tok_reintento_ok',
+      fechaHoraCreacion: '2026-10-16T18:05:00',
+      fechaHoraConfirmacion: '2026-10-16T18:06:00',
+      descripcion: 'Fútbol 5 · Cancha Central (Turno 20:00 a 21:00 hs)',
+    };
+
+    vi.spyOn(pagosService, 'listarMisPagos').mockResolvedValue([
+      mockTransacciones[0]!, // Transacción 1 (reserva 10, CONFIRMADO)
+      mockTransacciones[1]!, // Transacción 2 (reserva 11, RECHAZADO)
+      transaccionAprobadaReintento, // Transacción 4 (reserva 11, CONFIRMADO)
+    ]);
+
+    renderWithProviders(<PagosPage />);
+
+    const tabHistorial = screen.getByRole('button', { name: /Historial/i });
+    fireEvent.click(tabHistorial);
+
+    await waitFor(() => {
+      // La métrica "Rechazados / A Revisar" debe mostrar 0 reintentos disponibles (porque la reserva 11 ya fue pagada)
+      expect(screen.getByText('Rechazados / A Revisar')).toBeInTheDocument();
+      expect(screen.getByText('0')).toBeInTheDocument();
+    });
+
+    // En la vista de tarjetas no debe ofrecer el botón Reintentar para la transacción rechazada
+    expect(screen.queryByRole('button', { name: /Reintentar/i })).not.toBeInTheDocument();
+  });
 });
