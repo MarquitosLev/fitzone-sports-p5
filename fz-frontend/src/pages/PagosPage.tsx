@@ -50,7 +50,8 @@ import type {
   ResultadoPagoDTO,
   UsuarioDTO,
 } from '../types';
-import { formatearFechaHora, formatearMonto, toLocalISOString } from '../utils/formatters';
+import { formatearFecha, formatearFechaHora, formatearMonto, toLocalISOString } from '../utils/formatters';
+import { calcularVencimientoTrasPago } from '../utils/membresias';
 
 interface ItemCobro {
   id: string;
@@ -125,7 +126,12 @@ async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobro[]> 
 
   if (usuario.tipoUsuario === 'SOCIO') {
     const membresia = await obtenerMembresiaPorUsuario(usuario.idUsuario);
-    if (membresia) {
+    // Una membresía cancelada no se puede renovar: el backend responde 422
+    if (membresia && membresia.estado !== 'CANCELADO') {
+      const tienePagoConfirmado = pagos.some(
+        (p) => p.estadoPago === 'CONFIRMADO' && p.membresiaId === membresia.idMembresia
+      );
+      const vigenteHasta = calcularVencimientoTrasPago(membresia, tienePagoConfirmado);
       items.push({
         id: `membresia-${membresia.idMembresia}`,
         monto: Number(membresia.plan.precioBase),
@@ -134,11 +140,13 @@ async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobro[]> 
         detalle: {
           tipo: 'MEMBRESIA',
           titulo: `Renovación Membresía · ${membresia.plan.nombre}`,
-          subtitulo: `Vence el ${membresia.fechaVencimiento}`,
+          subtitulo: vigenteHasta
+            ? `Queda vigente hasta el ${formatearFecha(vigenteHasta)}`
+            : membresia.plan.nombre,
           planNombre: membresia.plan.nombre,
           duracionMeses: membresia.plan.duracionMeses,
           fechaInicio: membresia.fechaInicio,
-          fechaVencimiento: membresia.fechaVencimiento,
+          fechaVencimiento: vigenteHasta ? formatearFecha(vigenteHasta) : undefined,
         },
       });
     }
