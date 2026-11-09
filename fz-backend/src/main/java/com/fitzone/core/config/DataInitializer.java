@@ -162,13 +162,13 @@ public class DataInitializer implements CommandLineRunner {
                                         .build());
                         log.info("[DEV SEED] Creado Plan Trimestral");
                 }
-                if (!planRepository.existsByNombre("Plan Anual")) {
+                if (!planRepository.existsByNombre("Plan Anual VIP")) {
                         planRepository.save(Plan.builder()
-                                        .nombre("Plan Anual")
+                                        .nombre("Plan Anual VIP")
                                         .precioBase(new BigDecimal("140000.00"))
                                         .duracionMeses(12)
                                         .build());
-                        log.info("[DEV SEED] Creado Plan Anual");
+                        log.info("[DEV SEED] Creado Plan Anual VIP");
                 }
 
                 // 4. Membresías semilla (idempotente por usuario)

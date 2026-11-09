@@ -19,8 +19,16 @@ import java.util.UUID;
 
 /**
  * Convertidor de autenticación JWT (ADR-002).
- * Extrae el claim 'sub' (UUID en Supabase Auth), busca el usuario en la BD
- * y asigna la autoridad 'ROLE_<TIPO_USUARIO>' para autorización RBAC en Spring Security.
+ * Extrae el claim 'sub' (UUID de Supabase Auth), busca el usuario en la BD por authId y,
+ * si no lo encuentra, hace un fallback por email para vincular el authId definitivo
+ * en el primer login real. Asigna la autoridad 'ROLE_<TIPO_USUARIO>' para RBAC.
+ *
+ * Flujo de vinculacion automatica:
+ *   1. Busca por authId (sub del JWT). Ruta rapida para usuarios ya vinculados.
+ *   2. Si no existe por authId, busca por email (claim del JWT).
+ *   3. Si lo encuentra por email, actualiza su authId con el sub real y guarda.
+ *   Este mecanismo permite que los usuarios del seed (con authId provisorio) se vinculen
+ *   automaticamente en su primer inicio de sesion real contra Supabase Auth.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -45,19 +53,39 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
             return authorities;
         }
 
+        UUID authId;
         try {
-            UUID authId = UUID.fromString(sub);
-            Optional<Usuario> usuarioOpt = usuarioRepository.findByAuthId(authId);
-            if (usuarioOpt.isPresent()) {
-                Usuario usuario = usuarioOpt.get();
-                if (usuario.getTipoUsuario() != null) {
-                    authorities.add(new SimpleGrantedAuthority("ROLE_" + usuario.getTipoUsuario().name()));
-                }
-            } else {
-                log.warn("JWT recibido con sub {} pero no se encontró usuario vinculado en la BD", sub);
-            }
+            authId = UUID.fromString(sub);
         } catch (IllegalArgumentException e) {
-            log.warn("El claim sub '{}' del JWT no es un UUID válido", sub);
+            log.warn("El claim sub '{}' del JWT no es un UUID valido", sub);
+            return authorities;
+        }
+
+        // Ruta 1: usuario ya vinculado por authId (caso normal post-primer-login)
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByAuthId(authId);
+
+        // Ruta 2: primer login real con authId del seed todavia pendiente de vincular
+        if (usuarioOpt.isEmpty()) {
+            String email = jwt.getClaimAsString("email");
+            if (email != null && !email.isBlank()) {
+                usuarioOpt = usuarioRepository.findByEmailIgnoreCase(email.trim());
+                if (usuarioOpt.isPresent()) {
+                    Usuario usuario = usuarioOpt.get();
+                    log.info("Vinculando authId {} al usuario '{}' por coincidencia de email (primer login real)",
+                            authId, email);
+                    usuario.setAuthId(authId);
+                    usuarioOpt = Optional.of(usuarioRepository.save(usuario));
+                }
+            }
+        }
+
+        if (usuarioOpt.isPresent()) {
+            Usuario usuario = usuarioOpt.get();
+            if (usuario.getTipoUsuario() != null) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + usuario.getTipoUsuario().name()));
+            }
+        } else {
+            log.warn("JWT recibido con sub {} pero no se encontro usuario vinculado en la BD (ni por authId ni por email)", sub);
         }
 
         return authorities;

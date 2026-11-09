@@ -68,11 +68,11 @@ VALUES
 ON CONFLICT (id_clase) DO NOTHING;
 
 -- Los INSERT usan ids fijos: se adelantan las secuencias IDENTITY para que la app no repita ids
-PERFORM setval(pg_get_serial_sequence('fz_sedes', 'id_sede'), (SELECT max(id_sede) FROM fz_sedes));
-PERFORM setval(pg_get_serial_sequence('fz_pag_planes', 'id_plan'), (SELECT max(id_plan) FROM fz_pag_planes));
-PERFORM setval(pg_get_serial_sequence('fz_usr_usuarios', 'id_usuario'), (SELECT max(id_usuario) FROM fz_usr_usuarios));
-PERFORM setval(pg_get_serial_sequence('fz_pag_membresias', 'id_membresia'), (SELECT max(id_membresia) FROM fz_pag_membresias));
-PERFORM setval(pg_get_serial_sequence('fz_cch_canchas', 'id_cancha'), (SELECT max(id_cancha) FROM fz_cch_canchas));
-PERFORM setval(pg_get_serial_sequence('fz_cls_clases_grupales', 'id_clase'), (SELECT max(id_clase) FROM fz_cls_clases_grupales));
+PERFORM setval(pg_get_serial_sequence('fz_sedes', 'id_sede'), COALESCE((SELECT max(id_sede) FROM fz_sedes), 1));
+PERFORM setval(pg_get_serial_sequence('fz_pag_planes', 'id_plan'), COALESCE((SELECT max(id_plan) FROM fz_pag_planes), 1));
+PERFORM setval(pg_get_serial_sequence('fz_usr_usuarios', 'id_usuario'), COALESCE((SELECT max(id_usuario) FROM fz_usr_usuarios), 1));
+PERFORM setval(pg_get_serial_sequence('fz_pag_membresias', 'id_membresia'), COALESCE((SELECT max(id_membresia) FROM fz_pag_membresias), 1));
+PERFORM setval(pg_get_serial_sequence('fz_cch_canchas', 'id_cancha'), COALESCE((SELECT max(id_cancha) FROM fz_cch_canchas), 1));
+PERFORM setval(pg_get_serial_sequence('fz_cls_clases_grupales', 'id_clase'), COALESCE((SELECT max(id_clase) FROM fz_cls_clases_grupales), 1));
 END
 $seed$;

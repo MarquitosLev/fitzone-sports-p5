@@ -33,7 +33,7 @@ public class AuthController {
         SupabaseAuthClient.SesionSupabase sesion = supabaseAuthClient.iniciarSesion(emailNormalizado, request.getPassword());
 
         Usuario usuario = usuarioRepository.findByAuthId(sesion.authId())
-                .or(() -> usuarioRepository.findByEmail(emailNormalizado))
+                .or(() -> usuarioRepository.findByEmailIgnoreCase(emailNormalizado))
                 .orElseThrow(() -> new AccesoNoAutorizadoException("Credenciales inválidas. Verifique su correo y contraseña."));
 
         if (!sesion.authId().equals(usuario.getAuthId())) {

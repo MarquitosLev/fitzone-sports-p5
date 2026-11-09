@@ -31,7 +31,9 @@ public class UsuarioActual {
         if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
             throw new AccesoNoAutorizadoException("Debe iniciar sesión para realizar esta operación");
         }
-        return usuarioRepository.findByAuthId(authIdDe(jwt))
+        UUID authId = authIdDe(jwt);
+        return usuarioRepository.findByAuthId(authId)
+                .or(() -> resolverPorEmail(jwt, authId))
                 .orElseThrow(() -> new AccesoNoAutorizadoException(USUARIO_NO_REGISTRADO));
     }
 
@@ -45,10 +47,26 @@ public class UsuarioActual {
             return Optional.empty();
         }
         try {
-            return usuarioRepository.findByAuthId(UUID.fromString(jwt.getSubject()));
+            UUID authId = UUID.fromString(jwt.getSubject());
+            return usuarioRepository.findByAuthId(authId)
+                    .or(() -> resolverPorEmail(jwt, authId));
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }
+    }
+
+    private Optional<Usuario> resolverPorEmail(Jwt jwt, UUID authId) {
+        String email = jwt.getClaimAsString("email");
+        if (email == null || email.isBlank()) {
+            return Optional.empty();
+        }
+        return usuarioRepository.findByEmailIgnoreCase(email.trim()).map(usuario -> {
+            if (!authId.equals(usuario.getAuthId())) {
+                usuario.setAuthId(authId);
+                return usuarioRepository.save(usuario);
+            }
+            return usuario;
+        });
     }
 
     public void validarSede(Long idSede) {
