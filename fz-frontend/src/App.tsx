@@ -139,12 +139,12 @@ export default function App() {
                   <Route path="reserva-invitado/:codigo" element={<CheckoutInvitadoPage />} />
 
                   {/* Clases: la agenda exige sesión de SOCIO, RECEPCIONISTA o GERENTE (M3) */}
-                  <Route element={<RoleMiddleware prestacionRequerida="CLASES_VER" />}>
+                  <Route element={<RoleMiddleware prestacionRequerida="CLASES_VER" invitarAsociarse />}>
                     <Route path="clases" element={<ClasesPage />} />
                   </Route>
 
                   {/* Mi Pase QR (Socio) */}
-                  <Route element={<RoleMiddleware prestacionRequerida="ACCESO_MI_QR" />}>
+                  <Route element={<RoleMiddleware prestacionRequerida="ACCESO_MI_QR" invitarAsociarse />}>
                     <Route path="mi-qr" element={<AccesoPage />} />
                   </Route>
 

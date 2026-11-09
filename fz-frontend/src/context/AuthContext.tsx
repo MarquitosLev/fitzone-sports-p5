@@ -2,12 +2,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import type {
   UsuarioDTO,
   LoginCredentialsDTO,
-  RegistroUsuarioDTO,
+  AltaSocioDTO,
+  AltaSocioResultadoDTO,
   AuthResponseDTO,
 } from '../types';
 import {
   iniciarSesion,
-  registrarUsuario,
+  darAltaSocio,
   cerrarSesion,
   obtenerSesionActual,
   obtenerUsuarioActual,
@@ -21,7 +22,8 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginCredentialsDTO) => Promise<AuthResponseDTO>;
-  register: (datos: RegistroUsuarioDTO) => Promise<AuthResponseDTO>;
+  /** Alta de socio con el pago de la suscripción. Con token en el resultado, la sesión queda iniciada. */
+  register: (datos: AltaSocioDTO) => Promise<AltaSocioResultadoDTO>;
   logout: () => void;
 }
 
@@ -99,13 +101,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  const register = useCallback(async (datos: RegistroUsuarioDTO): Promise<AuthResponseDTO> => {
+  const register = useCallback(async (datos: AltaSocioDTO): Promise<AltaSocioResultadoDTO> => {
     setIsLoading(true);
     try {
-      const sesion = await registrarUsuario(datos);
-      setUsuario(sesion.usuario);
-      setToken(sesion.token);
-      return sesion;
+      const resultado = await darAltaSocio(datos);
+      if (resultado.token) {
+        setUsuario(resultado.usuario);
+        setToken(resultado.token);
+      }
+      return resultado;
     } finally {
       setIsLoading(false);
     }

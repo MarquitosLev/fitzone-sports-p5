@@ -16,7 +16,7 @@ describe('SCRUM-89: LoginForm Component', () => {
     expect(screen.getByLabelText(/^contraseña/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /iniciar sesión/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /¿olvidaste tu contraseña\?/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /registrate acá/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /hacete socio/i })).toBeInTheDocument();
   });
 
   it('muestra errores de validación si se envía el formulario vacío', async () => {
@@ -97,7 +97,7 @@ describe('SCRUM-89: LoginForm Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /¿olvidaste tu contraseña\?/i }));
     expect(handleForgot).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole('button', { name: /registrate acá/i }));
+    fireEvent.click(screen.getByRole('button', { name: /hacete socio/i }));
     expect(handleRegister).toHaveBeenCalledTimes(1);
   });
 });

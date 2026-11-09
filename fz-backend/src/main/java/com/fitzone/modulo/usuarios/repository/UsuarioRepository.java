@@ -22,6 +22,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     boolean existsByDni(String dni);
 
+    @Query(value = "SELECT EXISTS (SELECT 1 FROM fz_usr_usuarios WHERE dni = :dni)", nativeQuery = true)
+    boolean existsByDniIncluidosBajas(@Param("dni") String dni);
+
     Optional<Usuario> findByDni(String dni);
 
     Optional<Usuario> findByAuthId(UUID authId);

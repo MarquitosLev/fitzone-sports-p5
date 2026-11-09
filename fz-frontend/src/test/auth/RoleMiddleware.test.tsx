@@ -66,6 +66,9 @@ function renderEnRuta(ruta: string, usuario: UsuarioDTO | null, isLoading = fals
               <Route element={<RoleMiddleware allowedRoles={['GERENTE']} />}>
                 <Route path="/admin/roles" element={<div>Panel Gerente</div>} />
               </Route>
+              <Route element={<RoleMiddleware prestacionRequerida="CLASES_VER" invitarAsociarse />}>
+                <Route path="/clases" element={<div>Agenda de clases</div>} />
+              </Route>
             </Routes>
           </AuthContext.Provider>
         </ToastProvider>
@@ -102,6 +105,21 @@ describe('SCRUM-92: RoleMiddleware (RutaProtegida)', () => {
     renderEnRuta('/usuarios', crearUsuario('GERENTE'), true);
     expect(screen.getByRole('status', { name: 'Verificando sesión...' })).toBeInTheDocument();
     expect(screen.queryByText('Pantalla Usuarios')).toBeNull();
+  });
+
+  it('sin sesión y con invitarAsociarse muestra la invitación a asociarse en vez de redirigir al login', () => {
+    renderEnRuta('/clases', null);
+
+    expect(screen.getByText('Esto es para socios')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Hacete socio' })).toHaveAttribute('href', '/registro');
+    expect(screen.getByRole('link', { name: 'Ya soy socio' })).toHaveAttribute('href', '/login?returnTo=%2Fclases');
+    expect(screen.queryByText('Agenda de clases')).not.toBeInTheDocument();
+  });
+
+  it('con invitarAsociarse, un socio con sesión entra a la pantalla', () => {
+    renderEnRuta('/clases', crearUsuario('SOCIO'));
+
+    expect(screen.getByText('Agenda de clases')).toBeInTheDocument();
   });
 });
 

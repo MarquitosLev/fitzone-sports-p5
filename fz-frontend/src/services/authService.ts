@@ -2,7 +2,9 @@ import { httpClient, AppError, setAuthToken } from './httpClient';
 import { USE_MOCK } from '../config';
 import type {
   LoginCredentialsDTO,
-  RegistroUsuarioDTO,
+  AltaSocioDTO,
+  AltaSocioResultadoDTO,
+  ReintentoCuentaDTO,
   AuthResponseDTO,
   UsuarioDTO,
 } from '../types';
@@ -12,7 +14,8 @@ import type {
  */
 export const AUTH_ENDPOINTS = {
   LOGIN: '/v1/auth/login',
-  REGISTRO: '/v1/auth/registro',
+  ALTA_SOCIO: '/v1/auth/alta-socio',
+  REINTENTAR_CUENTA: '/v1/auth/alta-socio/reintentar-cuenta',
   LOGOUT: '/v1/auth/logout',
   /** Perfil del usuario dueño del token (UsuarioController#obtenerMiPerfil). */
   ME: '/v1/usuarios/me',
@@ -179,74 +182,25 @@ export async function iniciarSesion(
 }
 
 /**
- * Registra un nuevo usuario en el sistema.
- * El formulario público asigna fijamente tipoUsuario = 'EXTERNO' e idSede = null.
+ * Alta de socio online: paga la suscripción y, con el pago aprobado, el backend crea la cuenta.
+ * Responde 422 si el pago se rechazó (no se crea nada) y 409 si el DNI o el email ya son de una cuenta.
+ * Con token en la respuesta la sesión queda iniciada.
  */
-export async function registrarUsuario(
-  datos: RegistroUsuarioDTO
-): Promise<AuthResponseDTO> {
-  if (USE_MOCK) {
-    const normalizedEmail = datos.email.trim().toLowerCase();
-    const normalizedDni = datos.dni.trim();
-
-    // Validación de duplicados (409 Conflict)
-    const emailExiste = _mockUsers.some(
-      (item) => item.credentials.email.toLowerCase() === normalizedEmail
-    );
-    if (emailExiste) {
-      throw new AppError(
-        'El correo electrónico ya se encuentra registrado.',
-        409
-      );
-    }
-
-    const dniExiste = _mockUsers.some(
-      (item) => item.usuario.dni === normalizedDni
-    );
-    if (dniExiste) {
-      throw new AppError(
-        'El DNI ingresado ya se encuentra registrado.',
-        409
-      );
-    }
-
-    const nuevoUsuario: UsuarioDTO = {
-      idUsuario: Date.now(),
-      authId: `mock-auth-${Date.now()}`,
-      dni: normalizedDni,
-      nombre: datos.nombre.trim(),
-      apellido: datos.apellido.trim(),
-      email: normalizedEmail,
-      telefono: datos.telefono.trim(),
-      fotoUrl: null,
-      tipoUsuario: datos.tipoUsuario ?? 'EXTERNO',
-      idSede: datos.idSede ?? 1,
-    };
-
-    _mockUsers.push({
-      credentials: {
-        email: normalizedEmail,
-        password: datos.password,
-      },
-      usuario: nuevoUsuario,
-    });
-
-    const response: AuthResponseDTO = {
-      token: `tok_mock_externo_${Date.now()}`,
-      usuario: nuevoUsuario,
-    };
-
-    persistSession(response);
-    return response;
+export async function darAltaSocio(datos: AltaSocioDTO): Promise<AltaSocioResultadoDTO> {
+  const response = await httpClient.post<AltaSocioResultadoDTO>(AUTH_ENDPOINTS.ALTA_SOCIO, {
+    body: JSON.stringify(datos),
+  });
+  if (response.token) {
+    persistSession({ token: response.token, usuario: response.usuario });
   }
-
-  const response = await httpClient.post<AuthResponseDTO>(
-    AUTH_ENDPOINTS.REGISTRO,
-    { body: JSON.stringify(datos) }
-  );
-
-  persistSession(response);
   return response;
+}
+
+/** Crea la cuenta de un socio que ya pagó y quedó con la cuenta pendiente; el comprobante prueba que pagó. */
+export async function reintentarCuentaSocio(datos: ReintentoCuentaDTO): Promise<AltaSocioResultadoDTO> {
+  return httpClient.post<AltaSocioResultadoDTO>(AUTH_ENDPOINTS.REINTENTAR_CUENTA, {
+    body: JSON.stringify(datos),
+  });
 }
 
 /**
