@@ -507,7 +507,7 @@ export function PagosPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-black uppercase text-fitzone-coral tracking-widest block">
-            Módulo de Pagos & Facturación (RF-13, RF-14)
+            Módulo de Pagos & Facturación
           </span>
           <h1 className="text-2xl sm:text-3xl font-black text-fitzone-navy font-outfit mt-0.5 flex items-center gap-2.5">
             <DollarSign className="w-7 h-7 text-fitzone-coral" />
