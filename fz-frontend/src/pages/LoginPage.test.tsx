@@ -17,7 +17,7 @@ vi.mock('react-router-dom', async () => {
 describe('SCRUM-89: LoginPage Component & Role Redirection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
+    sessionStorage.clear();
     _resetMockUsersForTest();
   });
 
