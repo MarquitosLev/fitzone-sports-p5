@@ -50,7 +50,6 @@ public class Usuario extends BaseEntity {
     private Long idUsuario;
 
     @Column(name = "auth_id", unique = true)
-    @JsonIgnore
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private UUID authId;
 

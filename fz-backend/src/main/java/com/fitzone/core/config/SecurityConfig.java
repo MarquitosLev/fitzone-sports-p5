@@ -80,6 +80,8 @@ public class SecurityConfig {
                                 "/v1/canchas/*/disponibilidad", "/v1/canchas/*/cotizacion").permitAll()
                         .requestMatchers(HttpMethod.POST, "/v1/canchas", "/v1/clases").hasRole("GERENTE")
                         .requestMatchers(HttpMethod.PUT, "/v1/canchas/*", "/v1/clases/*").hasRole("GERENTE")
+                        .requestMatchers(HttpMethod.PATCH, "/v1/canchas/*/mantenimiento").hasRole("GERENTE")
+                        .requestMatchers(HttpMethod.DELETE, "/v1/clases/*").hasRole("GERENTE")
                         // Muestran el formato de error; solo se registran fuera del perfil prod
                         .requestMatchers("/v1/prueba/**").permitAll()
                         // Endpoint administrativo protegido internamente con Bearer Root Key
