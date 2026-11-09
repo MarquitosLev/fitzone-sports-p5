@@ -394,7 +394,7 @@ export function ReservaCanchaView({
         <Alert
           type="info"
           title="El personal no reserva turnos"
-          message="Con tu rol podés consultar la disponibilidad. El turno lo reserva el socio desde su cuenta o el cliente como invitado."
+          message="Con tu rol podés consultar la disponibilidad. El turno lo reserva el socio desde su cuenta o el cliente externo sin cuenta."
         />
       )}
 

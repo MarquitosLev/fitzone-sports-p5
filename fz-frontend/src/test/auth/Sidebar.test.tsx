@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { AuthContext } from '../../context/AuthContext';
@@ -75,5 +75,18 @@ describe('SCRUM-92: Sidebar muestra solo los módulos del rol', () => {
     renderSidebar(null);
     expect(screen.getByText('Iniciar sesión')).toBeInTheDocument();
     expect(screen.queryByText('Cerrar sesión')).toBeNull();
+  });
+
+  it('"Portal de Gestión" aparece solo para el personal', () => {
+    renderSidebar(null);
+    expect(screen.queryByText(/Portal de Gestión/)).toBeNull();
+    cleanup();
+
+    renderSidebar('SOCIO');
+    expect(screen.queryByText(/Portal de Gestión/)).toBeNull();
+    cleanup();
+
+    renderSidebar('RECEPCIONISTA');
+    expect(screen.getByText(/Portal de Gestión/)).toBeInTheDocument();
   });
 });

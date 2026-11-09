@@ -83,7 +83,7 @@ export const ROLES_BASE_SISTEMA: RolDTO[] = [
   },
   {
     codigo: 'EXTERNO',
-    nombre: 'Invitado (sin cuenta)',
+    nombre: 'Cliente externo (sin cuenta)',
     descripcion: 'Cliente sin cuenta: reserva y paga canchas con sus datos y un código. No inicia sesión.',
     esSistema: true,
     prestaciones: [PRESTACIONES.CANCHAS_VER],
