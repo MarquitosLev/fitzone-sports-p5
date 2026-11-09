@@ -60,7 +60,7 @@ export function ValidadorIngreso({
           <TextField
             id="input-token-acceso"
             label="Código o Token del Pase QR"
-            placeholder="Pegá o escaneá el token (ej. FZ-QR-8910 o DNI)"
+            placeholder="Ingresá el código QR o DNI del socio"
             value={tokenInput}
             onChange={(e) => setTokenInput(e.target.value)}
             disabled={disabled || loading}

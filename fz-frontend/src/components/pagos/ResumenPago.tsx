@@ -153,7 +153,7 @@ export function ResumenPago({
           />
         )}
 
-        {/* Notificación de seguridad RNF-02 */}
+        {/* Notificación de seguridad */}
         <div className="p-3.5 bg-slate-50 rounded-xl text-xs text-slate-600 flex items-start gap-2.5 border border-slate-100">
           <ShieldCheck className="w-4 h-4 text-[#2E9E5B] shrink-0 mt-0.5" />
           <p className="text-[11px] leading-relaxed">
