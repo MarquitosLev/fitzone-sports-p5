@@ -206,8 +206,9 @@ async function httpRequest<T>(
       : `Error ${response.status}: ${response.statusText}`;
   }
 
-  // Disparamos el toast de error si hay un handler registrado y la petición no es silenciosa
-  if (_onError && !options.silent) {
+  // Disparamos el toast de error si hay un handler registrado, no es 404 y la petición no es silenciosa.
+  // Un 404 representa recurso no encontrado y debe ser gestionado por la lógica del servicio o llamador.
+  if (_onError && response.status !== 404 && !options.silent) {
     _onError(userMessage, response.status);
   }
 

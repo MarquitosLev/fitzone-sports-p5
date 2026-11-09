@@ -51,6 +51,10 @@ function HttpErrorConnector({ children }: { children: React.ReactNode }) {
         addToast({ type: 'warning', title: 'Sin permiso', message });
         return;
       }
+      if (status === 404) {
+        // Recurso no encontrado: lo maneja cada servicio o pantalla según su flujo de negocio (SCRUM-125)
+        return;
+      }
       addToast({ type: 'error', title: 'Error de servidor', message });
     });
   }, [addToast]);

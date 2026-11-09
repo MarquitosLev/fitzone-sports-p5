@@ -97,7 +97,7 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
     expect(handler).toHaveBeenCalledWith('Turno ocupado', 409);
   });
 
-  it('SCRUM-125: si la petición tiene silent: true no invoca al handler global de errores', async () => {
+  it('SCRUM-125: ante un error 404 lanza AppError pero no invoca al handler global de errores', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
@@ -109,11 +109,30 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
       )
     );
 
+    const error = await httpClient.get('/v1/usuarios/11222333/membresia').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(AppError);
+    expect((error as AppError).status).toBe(404);
+    // El handler NO debe ser invocado ante un 404 para evitar toasts globales de error de servidor
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('SCRUM-125: si la petición tiene silent: true no invoca al handler global incluso ante errores 500', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        respuestaJson(500, {
+          codigo: 500,
+          mensaje: 'Error interno del servidor',
+          timestamp: '',
+        })
+      )
+    );
+
     await expect(
       httpClient.get('/v1/usuarios/11222333/membresia', { silent: true })
     ).rejects.toBeInstanceOf(AppError);
 
-    // El error se lanza como AppError, pero el handler NO fue invocado para evitar toasts rojos no deseados
     expect(handler).not.toHaveBeenCalled();
   });
 });

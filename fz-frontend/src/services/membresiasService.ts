@@ -207,13 +207,15 @@ export async function obtenerMembresiaPorUsuario(idUsuario: number): Promise<Mem
     return { ...membresiasUsuario[membresiasUsuario.length - 1] };
   }
   try {
-    return await httpClient.get<MembresiaDTO>(`/v1/usuarios/${idUsuario}/membresia`, { silent: true });
+    return await httpClient.get<MembresiaDTO>(`/v1/usuarios/${idUsuario}/membresia`);
   } catch (err: unknown) {
+    if (err instanceof AppError && err.status === 404) {
+      return null;
+    }
     if (err instanceof AppError) {
       const msg = (err.message || '').toLowerCase();
       const backendMsg = (err.backendResponse?.mensaje || '').toLowerCase();
       const esSinMembresia =
-        err.status === 404 ||
         msg.includes('no posee una membresía') ||
         msg.includes('sin membresía') ||
         backendMsg.includes('no posee una membresía') ||
