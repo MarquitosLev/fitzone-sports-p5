@@ -1,0 +1,11 @@
+meta {
+  name: 02 - Consultar Reserva de Invitado
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/invitados/reservas/{{codigoReserva}}
+  body: none
+  auth: none
+}

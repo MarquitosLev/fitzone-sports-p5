@@ -26,6 +26,8 @@ const {
   obtenerComprobantePorTransaccion,
   descargarComprobantePdf,
   mapearTransaccion,
+  pagarReservaInvitado,
+  descargarComprobanteInvitado,
 } = await import('../pagosService');
 
 const usuario = {
@@ -167,5 +169,49 @@ describe('pagosService con la API real', () => {
     expect(init.headers.Authorization).toBe('Bearer token-de-prueba');
 
     vi.unstubAllGlobals();
+  });
+
+  describe('checkout de invitado', () => {
+    it('paga con el código, sin sesión, y arma el comprobante con los datos de la respuesta', async () => {
+      post.mockResolvedValue({
+        aprobado: true,
+        transaccion: transaccionApi('CONFIRMADO'),
+        idComprobante: 8,
+        numeroFactura: '0001-00000008',
+      });
+
+      const res = await pagarReservaInvitado('abc');
+
+      expect(post).toHaveBeenCalledWith('/v1/invitados/reservas/abc/pago', { body: '{}' });
+      expect(res.aprobado).toBe(true);
+      expect(res.comprobante).toMatchObject({ idComprobante: 8, numeroFactura: '0001-00000008' });
+    });
+
+    it('un pago rechazado no trae comprobante', async () => {
+      post.mockResolvedValue({
+        aprobado: false,
+        transaccion: transaccionApi('RECHAZADO'),
+        idComprobante: null,
+        numeroFactura: null,
+      });
+
+      const res = await pagarReservaInvitado('abc');
+
+      expect(res.aprobado).toBe(false);
+      expect(res.comprobante).toBeNull();
+    });
+
+    it('descarga el PDF del invitado sin enviar token', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response('%PDF-', { status: 200 }));
+      vi.stubGlobal('fetch', fetchMock);
+
+      await descargarComprobanteInvitado('abc');
+
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toContain('/v1/invitados/reservas/abc/comprobante/pdf');
+      expect(init.headers.Authorization).toBeUndefined();
+
+      vi.unstubAllGlobals();
+    });
   });
 });

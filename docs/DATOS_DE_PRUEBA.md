@@ -15,7 +15,7 @@ Todos los usuarios de prueba comparten la contraseña inicial: `password123`.
 | **RECEPCIONISTA** | `recepcionista@fitzone.com` | `password123` | `00000002` | Sede Central (1) | — | Alta de socios, cobros, validación de ingresos QR y aforo |
 | **SOCIO (Al día)** | `socio@fitzone.com` | `password123` | `00000003` | *Global (null)* | **ACTIVO** (vence en 25 días) | Reserva de clases, descuento -15% en canchas, pase QR |
 | **SOCIO (Moroso)** | `socio.vencido@fitzone.com` | `password123` | `00000005` | *Global (null)* | **VENCIDO** (vencida hace 10 días) | **RN-03**: Bloqueo de clases/descuentos; flujo de renovación |
-| **EXTERNO** | `externo@fitzone.com` | `password123` | `00000004` | *Global (null)* | — | Checkout de invitado para alquiler de canchas sin descuento |
+| **EXTERNO (invitado)** | `externo@fitzone.com` | — (sin cuenta, no inicia sesión) | `00000004` | *Global (null)* | — | Invitado sin cuenta: reserva y paga canchas en `/canchas` sin sesión. Para probar que se reutiliza por DNI, reservá como invitado con el DNI `00000004`. |
 
 ---
 

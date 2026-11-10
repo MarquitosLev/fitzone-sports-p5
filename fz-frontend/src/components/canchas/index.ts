@@ -14,6 +14,9 @@ export type { MantenimientoToggleProps } from './MantenimientoToggle';
 export { GrillaDisponibilidad } from './GrillaDisponibilidad';
 export type { GrillaDisponibilidadProps } from './GrillaDisponibilidad';
 
+export { FormularioInvitado } from './FormularioInvitado';
+export type { FormularioInvitadoProps } from './FormularioInvitado';
+
 export { DesglosePrecio } from './DesglosePrecio';
 export type { DesglosePrecioProps } from './DesglosePrecio';
 

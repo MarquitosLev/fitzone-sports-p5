@@ -78,6 +78,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/v1/sedes", "/v1/sedes/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/canchas", "/v1/canchas/*",
                                 "/v1/canchas/*/disponibilidad", "/v1/canchas/*/cotizacion").permitAll()
+                        .requestMatchers("/v1/invitados/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/v1/canchas", "/v1/clases").hasRole("GERENTE")
                         .requestMatchers(HttpMethod.PUT, "/v1/canchas/*", "/v1/clases/*").hasRole("GERENTE")
                         .requestMatchers(HttpMethod.PATCH, "/v1/canchas/*/mantenimiento").hasRole("GERENTE")
