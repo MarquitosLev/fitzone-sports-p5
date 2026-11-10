@@ -17,6 +17,7 @@ import java.util.UUID;
 /**
  * Resuelve el usuario logueado a partir del claim 'sub' del JWT, para que los servicios
  * no dependan de un id que venga en el request (SCRUM-91).
+ * La vinculacion de auth_id la gestiona JwtAuthConverter en el momento de autenticar.
  */
 @Component
 @RequiredArgsConstructor
@@ -31,7 +32,8 @@ public class UsuarioActual {
         if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
             throw new AccesoNoAutorizadoException("Debe iniciar sesión para realizar esta operación");
         }
-        return usuarioRepository.findByAuthId(authIdDe(jwt))
+        UUID authId = authIdDe(jwt);
+        return usuarioRepository.findByAuthId(authId)
                 .orElseThrow(() -> new AccesoNoAutorizadoException(USUARIO_NO_REGISTRADO));
     }
 
@@ -45,7 +47,8 @@ public class UsuarioActual {
             return Optional.empty();
         }
         try {
-            return usuarioRepository.findByAuthId(UUID.fromString(jwt.getSubject()));
+            UUID authId = UUID.fromString(jwt.getSubject());
+            return usuarioRepository.findByAuthId(authId);
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }

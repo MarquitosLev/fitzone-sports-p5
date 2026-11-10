@@ -38,11 +38,11 @@ ON CONFLICT (id_plan) DO NOTHING;
 -- 3. Usuarios de Prueba
 INSERT INTO fz_usr_usuarios (id_usuario, dni, nombre, apellido, email, telefono, tipo_usuario, id_sede, auth_id, created_at, updated_at, created_by, updated_by, is_deleted)
 VALUES
-    (1, '00000001', 'Admin', 'Gerente', 'gerente@fitzone.com', '+5491100000000', 'GERENTE', 1, gen_random_uuid(), NOW(), NOW(), 'system', 'system', false),
-    (2, '00000002', 'Lucía', 'Recepcionista', 'recepcionista@fitzone.com', '+5491100000001', 'RECEPCIONISTA', 1, gen_random_uuid(), NOW(), NOW(), 'system', 'system', false),
-    (3, '00000003', 'Martín', 'Socio', 'socio@fitzone.com', '+5491100000002', 'SOCIO', null, gen_random_uuid(), NOW(), NOW(), 'system', 'system', false),
+    (1, '00000001', 'Admin', 'Gerente', 'gerente@fitzone.com', '+5491100000000', 'GERENTE', 1, null, NOW(), NOW(), 'system', 'system', false),
+    (2, '00000002', 'Lucía', 'Recepcionista', 'recepcionista@fitzone.com', '+5491100000001', 'RECEPCIONISTA', 1, null, NOW(), NOW(), 'system', 'system', false),
+    (3, '00000003', 'Martín', 'Socio', 'socio@fitzone.com', '+5491100000002', 'SOCIO', null, null, NOW(), NOW(), 'system', 'system', false),
     (4, '00000004', 'Laura', 'Externo', 'externo@fitzone.com', '+5491100000003', 'EXTERNO', null, null, NOW(), NOW(), 'system', 'system', false),
-    (5, '00000005', 'Pablo', 'Moroso', 'socio.vencido@fitzone.com', '+5491100000004', 'SOCIO', null, gen_random_uuid(), NOW(), NOW(), 'system', 'system', false)
+    (5, '00000005', 'Pablo', 'Moroso', 'socio.vencido@fitzone.com', '+5491100000004', 'SOCIO', null, null, NOW(), NOW(), 'system', 'system', false)
 ON CONFLICT (id_usuario) DO NOTHING;
 
 -- 4. Membresías (Activa y Vencida para probar RN-03)
@@ -68,11 +68,11 @@ VALUES
 ON CONFLICT (id_clase) DO NOTHING;
 
 -- Los INSERT usan ids fijos: se adelantan las secuencias IDENTITY para que la app no repita ids
-PERFORM setval(pg_get_serial_sequence('fz_sedes', 'id_sede'), (SELECT max(id_sede) FROM fz_sedes));
-PERFORM setval(pg_get_serial_sequence('fz_pag_planes', 'id_plan'), (SELECT max(id_plan) FROM fz_pag_planes));
-PERFORM setval(pg_get_serial_sequence('fz_usr_usuarios', 'id_usuario'), (SELECT max(id_usuario) FROM fz_usr_usuarios));
-PERFORM setval(pg_get_serial_sequence('fz_pag_membresias', 'id_membresia'), (SELECT max(id_membresia) FROM fz_pag_membresias));
-PERFORM setval(pg_get_serial_sequence('fz_cch_canchas', 'id_cancha'), (SELECT max(id_cancha) FROM fz_cch_canchas));
-PERFORM setval(pg_get_serial_sequence('fz_cls_clases_grupales', 'id_clase'), (SELECT max(id_clase) FROM fz_cls_clases_grupales));
+PERFORM setval(pg_get_serial_sequence('fz_sedes', 'id_sede'), COALESCE((SELECT max(id_sede) FROM fz_sedes), 1));
+PERFORM setval(pg_get_serial_sequence('fz_pag_planes', 'id_plan'), COALESCE((SELECT max(id_plan) FROM fz_pag_planes), 1));
+PERFORM setval(pg_get_serial_sequence('fz_usr_usuarios', 'id_usuario'), COALESCE((SELECT max(id_usuario) FROM fz_usr_usuarios), 1));
+PERFORM setval(pg_get_serial_sequence('fz_pag_membresias', 'id_membresia'), COALESCE((SELECT max(id_membresia) FROM fz_pag_membresias), 1));
+PERFORM setval(pg_get_serial_sequence('fz_cch_canchas', 'id_cancha'), COALESCE((SELECT max(id_cancha) FROM fz_cch_canchas), 1));
+PERFORM setval(pg_get_serial_sequence('fz_cls_clases_grupales', 'id_clase'), COALESCE((SELECT max(id_clase) FROM fz_cls_clases_grupales), 1));
 END
 $seed$;

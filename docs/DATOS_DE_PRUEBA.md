@@ -41,11 +41,45 @@ Todos los usuarios de prueba comparten la contraseña inicial: `password123`.
 
 ### Clases Grupales
 - **Spinning Pro** (Sede Central): Mañana 18:00 hs, Duración: 60 min, Cupo: 20/20 disponibles.
-- **Yoga Integral (Completa)** (Sede Central): Pasado mañana 10:00 hs, Duración: 45 min, Cupo: 0/1 disponible (**Completa** — permite probar Lista de Espera).
+- **Yoga Integral (Completa)** (Sede Central): Pasado mañana 10:00 hs, Duración: 45 min, Cupo: 0/1 disponible (Completa — permite probar Lista de Espera).
 
 ---
 
-## 4. Cómo Iniciar y Cargar los Datos
+## 4. Sincronización Automática de auth_id con Supabase Auth (SCRUM-130)
+
+### El problema de los usuarios semilla sin vincular
+
+Al inicializar la base de datos localmente (vía `01-init-data.sql` o `DataInitializer.java`), los usuarios del seed nacen con `auth_id = null`. Esto evita UUIDs aleatorios locales que no coinciden con el UID real que Supabase Auth genera al registrar cada cuenta en su servicio de autenticación.
+
+### Mecanismo de vinculación TOFU (Trust On First Use)
+
+Para permitir que el equipo inicie sesión sin requerir ajustes manuales en la base de datos ni vulnerar la seguridad de las cuentas existentes, el backend implementa un enlace por correo electrónico estrictamente protegido:
+
+1. **Capa 1 — Endpoint de login (`AuthController.java`):**
+   Al invocar `POST /auth/login`, el backend autentica contra Supabase Auth y recibe el `authId` real.
+   - Si el usuario ya está vinculado por `authId`, se retorna inmediatamente.
+   - Si no está vinculado por `authId`, busca por `email` (insensible a mayúsculas/minúsculas).
+   - **Regla TOFU:** solo se vincula si el usuario local tiene `auth_id == null` y `tipoUsuario != EXTERNO`. Si ya tenía un `auth_id` asignado diferente, se rechaza la operación para prevenir ataques de sustitución de identidad (Account Takeover).
+   - Los usuarios `EXTERNO` no pueden iniciar sesión (son invitados sin credenciales).
+
+2. **Capa 2 — Filtro de seguridad JWT (`JwtAuthConverter.java`):**
+   Cuando el cliente envía peticiones con `Authorization: Bearer <token>`, `JwtAuthConverter` busca al usuario por el `sub` del token.
+   - Si no lo encuentra, busca por el claim `email`.
+   - Si el usuario local tiene `auth_id == null` y no es `EXTERNO`, enlaza el `auth_id` de forma definitiva y persiste el cambio (primer login TOFU).
+   - Si el usuario ya posee un `auth_id` distinto o es `EXTERNO`, no asigna autoridades para impedir accesos indebidos.
+
+### Limpieza de volúmenes viejos en Docker
+
+Si en un entorno local previo persiste un usuario desactualizado u obsoleto como `lucas.socio@fitzone.com` (debido a que `01-init-data.sql` utiliza `ON CONFLICT DO NOTHING` y no sobrescribe volúmenes de PostgreSQL ya creados), se debe reiniciar el volumen de base de datos desde cero ejecutando:
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+---
+
+## 5. Cómo Iniciar y Cargar los Datos
 
 ### Opción A: Automático con Spring Boot (Recomendado en Local)
 1. Iniciar la base de datos con Docker:
@@ -64,7 +98,7 @@ El archivo `docker-compose.yml` mapea la carpeta `./docker/initdb` hacia `/docke
 
 ---
 
-## 5. Pruebas de Flujos Principales ([SCRUM-105](https://integrador-p5.atlassian.net/browse/SCRUM-105))
+## 6. Pruebas de Flujos Principales ([SCRUM-105](https://integrador-p5.atlassian.net/browse/SCRUM-105))
 
 1. **Flujo 1 (Membresías y Acceso)**:
    - Iniciar sesión como `recepcionista@fitzone.com`.
