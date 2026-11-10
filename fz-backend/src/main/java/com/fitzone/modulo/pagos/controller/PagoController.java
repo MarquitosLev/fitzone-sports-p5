@@ -22,7 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/pagos")
-@PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO', 'RECEPCIONISTA', 'GERENTE')")
+@PreAuthorize("hasAnyRole('SOCIO', 'RECEPCIONISTA', 'GERENTE')")
 @RequiredArgsConstructor
 @Tag(name = "Pagos", description = "Endpoints de procesamiento de pagos y consulta de transacciones")
 public class PagoController {
@@ -32,8 +32,8 @@ public class PagoController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    // Se paga solo lo propio; el cobro del personal para otro usuario es la historia de cobro en mostrador
-    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
+    // Con sesión paga solo el socio lo propio; el invitado paga por /invitados/reservas
+    @PreAuthorize("hasRole('SOCIO')")
     @Operation(summary = "Pago simulado de una membresía o reserva propia del usuario logueado")
     public Transaccion procesarPago(@Valid @RequestBody PagoRequest request) {
         return pagoService.procesarPago(request);

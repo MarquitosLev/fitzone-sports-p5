@@ -28,15 +28,17 @@ import static org.mockito.Mockito.when;
 /**
  * Tests unitarios para JwtAuthConverter.
  *
- * Cubre el flujo de vinculacion automatica de authId: cuando el usuario del seed
- * tiene un authId provisorio distinto al sub del JWT real de Supabase, el converter
- * lo encuentra por email, actualiza el authId y asigna el rol correctamente.
+ * Cubre el flujo de vinculacion automatica de authId (TOFU - Trust On First Use):
+ * cuando el usuario del seed tiene authId null, el converter lo encuentra por email,
+ * actualiza el authId definitivo de Supabase y asigna el rol correspondiente.
+ * Tambien valida los guardarrailes de seguridad ante intentos de Account Takeover
+ * y exclusion de usuarios EXTERNO.
  */
 @ExtendWith(MockitoExtension.class)
 class JwtAuthConverterTest {
 
     private static final UUID AUTH_ID_REAL    = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
-    private static final UUID AUTH_ID_SEED    = UUID.fromString("11111111-2222-3333-4444-555555555555");
+    private static final UUID AUTH_ID_PREVIO  = UUID.fromString("11111111-2222-3333-4444-555555555555");
     private static final String EMAIL_SOCIO   = "socio@fitzone.com";
 
     @Mock
@@ -81,31 +83,27 @@ class JwtAuthConverterTest {
         verify(usuarioRepository, never()).save(any());
     }
 
-    // ── Ruta 2: primer login real, authId del seed distinto al sub del JWT ──────
+    // ── Ruta 2: primer login real (TOFU con authId == null) ─────────────────────
 
     @Test
-    @DisplayName("primer login real vincula authId por email y asigna el rol correctamente")
-    void convert_authIdDesactualizadoPeroEmailCoincide_vinculaYAsignaRol() {
-        // El usuario del seed tiene un authId provisorio (AUTH_ID_SEED)
-        Usuario socioConAuthIdSeed = Usuario.builder()
+    @DisplayName("primer login real con authId null vincula authId por email y asigna el rol")
+    void convert_authIdNullPeroEmailCoincide_vinculaYAsignaRol() {
+        Usuario socioSeedSinVincular = Usuario.builder()
                 .idUsuario(3L)
-                .authId(AUTH_ID_SEED)
+                .authId(null)
                 .email(EMAIL_SOCIO)
                 .tipoUsuario(TipoUsuario.SOCIO)
                 .build();
 
-        // El JWT llega con el sub real de Supabase (AUTH_ID_REAL) y el email del seed
         when(usuarioRepository.findByAuthId(AUTH_ID_REAL)).thenReturn(Optional.empty());
-        when(usuarioRepository.findByEmailIgnoreCase(EMAIL_SOCIO)).thenReturn(Optional.of(socioConAuthIdSeed));
+        when(usuarioRepository.findByEmailIgnoreCase(EMAIL_SOCIO)).thenReturn(Optional.of(socioSeedSinVincular));
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
 
         JwtAuthenticationToken token = (JwtAuthenticationToken) converter.convert(buildJwt(AUTH_ID_REAL, EMAIL_SOCIO));
 
-        // El rol se asigna correctamente
         assertThat(token).isNotNull();
         assertThat(extractRoles(token)).containsExactly("ROLE_SOCIO");
 
-        // El authId del usuario se actualiza al UUID real de Supabase
         ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(captor.capture());
         assertThat(captor.getValue().getAuthId()).isEqualTo(AUTH_ID_REAL);
@@ -119,7 +117,7 @@ class JwtAuthConverterTest {
 
         Usuario gerente = Usuario.builder()
                 .idUsuario(1L)
-                .authId(UUID.randomUUID())
+                .authId(null)
                 .email(emailGerente)
                 .tipoUsuario(TipoUsuario.GERENTE)
                 .build();
@@ -134,6 +132,49 @@ class JwtAuthConverterTest {
         ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(captor.capture());
         assertThat(captor.getValue().getAuthId()).isEqualTo(subReal);
+    }
+
+    // ── Seguridad TOFU: proteccion contra Account Takeover y EXTERNO ─────────────
+
+    @Test
+    @DisplayName("usuario ya vinculado a otro authId no se sobrescribe y devuelve token sin authorities")
+    void convert_usuarioYaVinculadoAOtroAuthId_noSobrescribeNiAsignaRol() {
+        Usuario usuarioConOtroAuthId = Usuario.builder()
+                .idUsuario(3L)
+                .authId(AUTH_ID_PREVIO)
+                .email(EMAIL_SOCIO)
+                .tipoUsuario(TipoUsuario.SOCIO)
+                .build();
+
+        when(usuarioRepository.findByAuthId(AUTH_ID_REAL)).thenReturn(Optional.empty());
+        when(usuarioRepository.findByEmailIgnoreCase(EMAIL_SOCIO)).thenReturn(Optional.of(usuarioConOtroAuthId));
+
+        JwtAuthenticationToken token = (JwtAuthenticationToken) converter.convert(buildJwt(AUTH_ID_REAL, EMAIL_SOCIO));
+
+        assertThat(token).isNotNull();
+        assertThat(token.getAuthorities()).isEmpty();
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("usuario EXTERNO nunca se vincula via JWT y devuelve token sin authorities")
+    void convert_usuarioExternoNuncaVinculado_sinAuthorities() {
+        String emailExterno = "externo@fitzone.com";
+        Usuario usuarioExterno = Usuario.builder()
+                .idUsuario(4L)
+                .authId(null)
+                .email(emailExterno)
+                .tipoUsuario(TipoUsuario.EXTERNO)
+                .build();
+
+        when(usuarioRepository.findByAuthId(AUTH_ID_REAL)).thenReturn(Optional.empty());
+        when(usuarioRepository.findByEmailIgnoreCase(emailExterno)).thenReturn(Optional.of(usuarioExterno));
+
+        JwtAuthenticationToken token = (JwtAuthenticationToken) converter.convert(buildJwt(AUTH_ID_REAL, emailExterno));
+
+        assertThat(token).isNotNull();
+        assertThat(token.getAuthorities()).isEmpty();
+        verify(usuarioRepository, never()).save(any());
     }
 
     // ── Casos de borde ──────────────────────────────────────────────────────────

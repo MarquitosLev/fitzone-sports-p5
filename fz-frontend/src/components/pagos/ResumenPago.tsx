@@ -123,7 +123,7 @@ export function ResumenPago({
               )}
               {detalle.fechaVencimiento && (
                 <div className="flex items-center justify-between text-slate-700">
-                  <span className="font-medium text-slate-500">Válido hasta:</span>
+                  <span className="font-medium text-slate-500">Queda vigente hasta:</span>
                   <span className="font-bold text-fitzone-navy">{detalle.fechaVencimiento}</span>
                 </div>
               )}

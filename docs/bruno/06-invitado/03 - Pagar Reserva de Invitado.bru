@@ -1,0 +1,17 @@
+meta {
+  name: 03 - Pagar Reserva de Invitado
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/invitados/reservas/{{codigoReserva}}/pago
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "forzarRechazo": false
+  }
+}

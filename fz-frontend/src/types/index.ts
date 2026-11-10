@@ -33,6 +33,8 @@ export type {
   CotizacionReservaDTO,
   EstadoReservaCancha,
   CrearReservaPayload,
+  DatosInvitado,
+  ReservaInvitadoDTO,
 } from './cancha';
 export type {
   EstadoPago,

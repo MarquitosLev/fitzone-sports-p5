@@ -38,11 +38,11 @@ ON CONFLICT (id_plan) DO NOTHING;
 -- 3. Usuarios de Prueba
 INSERT INTO fz_usr_usuarios (id_usuario, dni, nombre, apellido, email, telefono, tipo_usuario, id_sede, auth_id, created_at, updated_at, created_by, updated_by, is_deleted)
 VALUES
-    (1, '00000001', 'Admin', 'Gerente', 'gerente@fitzone.com', '+5491100000000', 'GERENTE', 1, gen_random_uuid(), NOW(), NOW(), 'system', 'system', false),
-    (2, '00000002', 'Lucía', 'Recepcionista', 'recepcionista@fitzone.com', '+5491100000001', 'RECEPCIONISTA', 1, gen_random_uuid(), NOW(), NOW(), 'system', 'system', false),
-    (3, '00000003', 'Martín', 'Socio', 'socio@fitzone.com', '+5491100000002', 'SOCIO', null, gen_random_uuid(), NOW(), NOW(), 'system', 'system', false),
+    (1, '00000001', 'Admin', 'Gerente', 'gerente@fitzone.com', '+5491100000000', 'GERENTE', 1, null, NOW(), NOW(), 'system', 'system', false),
+    (2, '00000002', 'Lucía', 'Recepcionista', 'recepcionista@fitzone.com', '+5491100000001', 'RECEPCIONISTA', 1, null, NOW(), NOW(), 'system', 'system', false),
+    (3, '00000003', 'Martín', 'Socio', 'socio@fitzone.com', '+5491100000002', 'SOCIO', null, null, NOW(), NOW(), 'system', 'system', false),
     (4, '00000004', 'Laura', 'Externo', 'externo@fitzone.com', '+5491100000003', 'EXTERNO', null, null, NOW(), NOW(), 'system', 'system', false),
-    (5, '00000005', 'Pablo', 'Moroso', 'socio.vencido@fitzone.com', '+5491100000004', 'SOCIO', null, gen_random_uuid(), NOW(), NOW(), 'system', 'system', false)
+    (5, '00000005', 'Pablo', 'Moroso', 'socio.vencido@fitzone.com', '+5491100000004', 'SOCIO', null, null, NOW(), NOW(), 'system', 'system', false)
 ON CONFLICT (id_usuario) DO NOTHING;
 
 -- 4. Membresías (Activa y Vencida para probar RN-03)

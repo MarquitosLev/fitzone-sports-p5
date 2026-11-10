@@ -98,13 +98,13 @@ El rol se valida con `@PreAuthorize` en el controlador. Que un recurso sea propi
 | 401 | Sin token, token vencido o firma inválida | `RespuestaError` con `ACCESO_DENEGADO` |
 | 403 | Token válido pero el rol no alcanza (o el usuario no existe en `fz_usr_usuarios`) | `RespuestaError` con `ACCESO_DENEGADO` |
 
-Rutas públicas: `/ping`, `/health`, Swagger, `/v1/auth/**` (login y logout), `GET /v1/planes`, `GET /v1/sedes` y `/v1/sedes/{id}`, `GET /v1/canchas`, `/v1/canchas/{id}`, `/disponibilidad` y `/cotizacion`, `/v1/prueba/**` (no existe en `prod`) y `/admin/database/**` (protegido por Root Key).
+Rutas públicas: `/ping`, `/health`, Swagger, `/v1/auth/**` (login y logout), `GET /v1/planes`, `GET /v1/sedes` y `/v1/sedes/{id}`, `GET /v1/canchas`, `/v1/canchas/{id}`, `/disponibilidad` y `/cotizacion`, `/v1/invitados/**` (checkout de invitado: el código de la reserva da el acceso), `/v1/prueba/**` (no existe en `prod`) y `/admin/database/**` (protegido por Root Key).
 
 En Swagger: hacé `POST /v1/auth/login`, copiá el `token` y cargalo en **Authorize**.
 
 #### Matriz de permisos por rol
 
-| Módulo / operación | Sin sesión | SOCIO | EXTERNO | RECEPCIONISTA | GERENTE |
+| Módulo / operación | Sin sesión (invitado) | SOCIO | EXTERNO* | RECEPCIONISTA | GERENTE |
 | :-- | :-- | :-- | :-- | :-- | :-- |
 | Ver planes, sedes, canchas, disponibilidad y cotización | Sí | Sí | Sí | Sí | Sí |
 | M1 Perfil propio (`/usuarios/me`) | — | Sí | Sí | Sí | Sí |
@@ -115,10 +115,13 @@ En Swagger: hacé `POST /v1/auth/login`, copiá el `token` y cargalo en **Author
 | M3 Clases | — | ver tabla de abajo | | | |
 | M4 Cotización con descuento de socio (token opcional) | Sin descuento | 15% si la membresía está vigente | Sin descuento | Sin descuento | Sin descuento |
 | M4 Alta, edición y mantenimiento de canchas | — | — | — | — | Su sede |
-| M4 Reservar un turno (a nombre del logueado) y `/usuarios/me/reservas-cancha` | — | Sí | Sí | — | — |
-| M5 Pagar (`POST /pagos`), solo membresías y reservas propias | — | Sí | Sí | — | — |
-| M5 Ver un pago, su comprobante y el PDF | — | Los propios | Los propios | Su sede | Su sede |
-| M5 `/usuarios/me/pagos` | — | Sí | Sí | — | — |
+| M4 Reservar un turno con sesión (a nombre del logueado) y `/usuarios/me/reservas-cancha` | — | Sí | — | — | — |
+| M4/M5 Reservar, pagar y bajar el comprobante como invitado (`/invitados/reservas`, con el código de la reserva) | Sí | — | — | — | — |
+| M5 Pagar (`POST /pagos`), solo membresías y reservas propias | — | Sí | — | — | — |
+| M5 Ver un pago, su comprobante y el PDF | — | Los propios | — | Su sede | Su sede |
+| M5 `/usuarios/me/pagos` | — | Sí | — | — | — |
+
+\* `EXTERNO` es el invitado sin cuenta (`auth_id` nulo): no inicia sesión. La columna queda por si llega un token viejo.
 
 La pertenencia se valida en el servicio: `UsuarioActual` para lo propio y `AccesoPagos` (`modulo/pagos/service`) para leer pagos y comprobantes. El monto lo calcula siempre el servidor (precio del plan o precio congelado de la reserva) y un `idUsuario` en el body se ignora.
 

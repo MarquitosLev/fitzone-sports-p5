@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 class AuthControllerTest {
 
     private static final UUID AUTH_ID_SUPABASE = UUID.fromString("11111111-2222-3333-4444-555555555555");
-    private static final UUID AUTH_ID_SEED     = UUID.fromString("99999999-8888-7777-6666-555555555555");
+    private static final UUID AUTH_ID_PREVIO   = UUID.fromString("99999999-8888-7777-6666-555555555555");
     private static final String EMAIL          = "socio@fitzone.com";
     private static final String PASSWORD       = "password123";
     private static final String ACCESS_TOKEN   = "jwt-token-real";
@@ -44,7 +44,7 @@ class AuthControllerTest {
     private AuthController authController;
 
     @Test
-    @DisplayName("login actualiza authId provisorio del seed con el real devuelto por Supabase")
+    @DisplayName("login vincula authId al usuario semilla con authId null (primer login TOFU)")
     void login_actualizaAuthIdProvisorio() {
         LoginRequest request = new LoginRequest();
         request.setEmail(EMAIL);
@@ -53,15 +53,15 @@ class AuthControllerTest {
         SupabaseAuthClient.SesionSupabase sesion = new SupabaseAuthClient.SesionSupabase(ACCESS_TOKEN, AUTH_ID_SUPABASE);
         when(supabaseAuthClient.iniciarSesion(EMAIL, PASSWORD)).thenReturn(sesion);
 
-        Usuario usuarioSeed = Usuario.builder()
+        Usuario usuarioSeedSinVincular = Usuario.builder()
                 .idUsuario(3L)
                 .email(EMAIL)
-                .authId(AUTH_ID_SEED)
+                .authId(null)
                 .tipoUsuario(TipoUsuario.SOCIO)
                 .build();
 
         when(usuarioRepository.findByAuthId(AUTH_ID_SUPABASE)).thenReturn(Optional.empty());
-        when(usuarioRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(usuarioSeed));
+        when(usuarioRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(usuarioSeedSinVincular));
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
 
         AuthResponse response = authController.login(request);
@@ -102,6 +102,61 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("seguridad TOFU: usuario encontrado por email que ya tiene otro authId lanza 401")
+    void login_usuarioYaVinculadoAOtroAuthId_lanza401() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail(EMAIL);
+        request.setPassword(PASSWORD);
+
+        SupabaseAuthClient.SesionSupabase sesion = new SupabaseAuthClient.SesionSupabase(ACCESS_TOKEN, AUTH_ID_SUPABASE);
+        when(supabaseAuthClient.iniciarSesion(EMAIL, PASSWORD)).thenReturn(sesion);
+
+        Usuario usuarioConOtroAuthId = Usuario.builder()
+                .idUsuario(3L)
+                .email(EMAIL)
+                .authId(AUTH_ID_PREVIO)
+                .tipoUsuario(TipoUsuario.SOCIO)
+                .build();
+
+        when(usuarioRepository.findByAuthId(AUTH_ID_SUPABASE)).thenReturn(Optional.empty());
+        when(usuarioRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(usuarioConOtroAuthId));
+
+        assertThatThrownBy(() -> authController.login(request))
+                .isInstanceOf(AccesoNoAutorizadoException.class)
+                .hasMessageContaining("Credenciales inválidas");
+
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("usuario EXTERNO no puede iniciar sesion y lanza 401 explicativo")
+    void login_usuarioExterno_lanza401() {
+        String emailExterno = "externo@fitzone.com";
+        LoginRequest request = new LoginRequest();
+        request.setEmail(emailExterno);
+        request.setPassword(PASSWORD);
+
+        SupabaseAuthClient.SesionSupabase sesion = new SupabaseAuthClient.SesionSupabase(ACCESS_TOKEN, AUTH_ID_SUPABASE);
+        when(supabaseAuthClient.iniciarSesion(emailExterno, PASSWORD)).thenReturn(sesion);
+
+        Usuario usuarioExterno = Usuario.builder()
+                .idUsuario(4L)
+                .email(emailExterno)
+                .authId(null)
+                .tipoUsuario(TipoUsuario.EXTERNO)
+                .build();
+
+        when(usuarioRepository.findByAuthId(AUTH_ID_SUPABASE)).thenReturn(Optional.empty());
+        when(usuarioRepository.findByEmailIgnoreCase(emailExterno)).thenReturn(Optional.of(usuarioExterno));
+
+        assertThatThrownBy(() -> authController.login(request))
+                .isInstanceOf(AccesoNoAutorizadoException.class)
+                .hasMessageContaining("Los clientes sin cuenta no inician sesión");
+
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("login con credenciales validas en Supabase pero sin usuario local lanza 401")
     void login_usuarioNoExisteEnBD_lanza401() {
         LoginRequest request = new LoginRequest();
@@ -124,4 +179,3 @@ class AuthControllerTest {
         authController.logout();
     }
 }
-

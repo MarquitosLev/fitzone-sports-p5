@@ -24,6 +24,7 @@ import { MembresiasPage } from './pages/MembresiasPage';
 import { AccesoPage } from './pages/AccesoPage';
 import { ClasesPage } from './pages/ClasesPage';
 import { CanchasPage } from './pages/CanchasPage';
+import { CheckoutInvitadoPage } from './pages/CheckoutInvitadoPage';
 import { PagosPage } from './pages/PagosPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegistroPage } from './pages/RegistroPage';
@@ -135,6 +136,7 @@ export default function App() {
                   <Route index element={<IndexRedirect />} />
                   {/* Catálogo público: ver canchas y disponibilidad no exige sesión (SCRUM-91) */}
                   <Route path="canchas" element={<CanchasPage />} />
+                  <Route path="reserva-invitado/:codigo" element={<CheckoutInvitadoPage />} />
 
                   {/* Clases: la agenda exige sesión de SOCIO, RECEPCIONISTA o GERENTE (M3) */}
                   <Route element={<RoleMiddleware prestacionRequerida="CLASES_VER" />}>

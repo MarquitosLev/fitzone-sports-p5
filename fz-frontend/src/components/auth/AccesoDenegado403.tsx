@@ -40,12 +40,20 @@ export function AccesoDenegado403({ mensaje }: AccesoDenegado403Props) {
         </div>
 
         <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/70 text-left text-xs space-y-1">
-          <div className="text-slate-400 font-bold uppercase text-[10px]">Sesión activa</div>
+          <div className="text-slate-400 font-bold uppercase text-[10px]">
+            {usuario ? 'Sesión activa' : 'Sin sesión'}
+          </div>
           <div className="font-extrabold text-fitzone-navy">
-            {usuario ? `${usuario.nombre} ${usuario.apellido}` : 'Invitado anónimo'}
+            {usuario ? `${usuario.nombre} ${usuario.apellido}` : 'Cliente externo'}
           </div>
           <div className="text-slate-500 text-[11px]">
-            Rol asignado: <strong className="text-fitzone-coral">{usuario?.tipoUsuario || 'Sin rol'}</strong>
+            {usuario ? (
+              <>
+                Rol asignado: <strong className="text-fitzone-coral">{usuario.tipoUsuario}</strong>
+              </>
+            ) : (
+              'Iniciá sesión para ingresar a este módulo.'
+            )}
           </div>
         </div>
 

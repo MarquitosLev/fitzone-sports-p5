@@ -17,6 +17,7 @@ import java.util.UUID;
 /**
  * Resuelve el usuario logueado a partir del claim 'sub' del JWT, para que los servicios
  * no dependan de un id que venga en el request (SCRUM-91).
+ * La vinculacion de auth_id la gestiona JwtAuthConverter en el momento de autenticar.
  */
 @Component
 @RequiredArgsConstructor
@@ -33,7 +34,6 @@ public class UsuarioActual {
         }
         UUID authId = authIdDe(jwt);
         return usuarioRepository.findByAuthId(authId)
-                .or(() -> resolverPorEmail(jwt, authId))
                 .orElseThrow(() -> new AccesoNoAutorizadoException(USUARIO_NO_REGISTRADO));
     }
 
@@ -48,25 +48,10 @@ public class UsuarioActual {
         }
         try {
             UUID authId = UUID.fromString(jwt.getSubject());
-            return usuarioRepository.findByAuthId(authId)
-                    .or(() -> resolverPorEmail(jwt, authId));
+            return usuarioRepository.findByAuthId(authId);
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }
-    }
-
-    private Optional<Usuario> resolverPorEmail(Jwt jwt, UUID authId) {
-        String email = jwt.getClaimAsString("email");
-        if (email == null || email.isBlank()) {
-            return Optional.empty();
-        }
-        return usuarioRepository.findByEmailIgnoreCase(email.trim()).map(usuario -> {
-            if (!authId.equals(usuario.getAuthId())) {
-                usuario.setAuthId(authId);
-                return usuarioRepository.save(usuario);
-            }
-            return usuario;
-        });
     }
 
     public void validarSede(Long idSede) {

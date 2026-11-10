@@ -8,6 +8,8 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface ReservaCanchaRepository extends JpaRepository<ReservaCancha, Long> {
@@ -33,4 +35,13 @@ public interface ReservaCanchaRepository extends JpaRepository<ReservaCancha, Lo
     boolean existsSolapamiento(@Param("idCancha") Long idCancha,
                               @Param("inicio") LocalDateTime inicio,
                               @Param("fin") LocalDateTime fin);
+
+    @Query("SELECT r FROM ReservaCancha r JOIN FETCH r.cancha c JOIN FETCH c.sede JOIN FETCH r.usuario " +
+           "WHERE r.codigoReserva = :codigo")
+    Optional<ReservaCancha> findConDetalleByCodigoReserva(@Param("codigo") UUID codigo);
+
+    @Query("SELECT COUNT(r) FROM ReservaCancha r WHERE r.usuario.idUsuario = :idUsuario " +
+           "AND r.fechaHoraInicio > :ahora AND NOT EXISTS (SELECT t.idTransaccion FROM Transaccion t " +
+           "WHERE t.reservaCancha = r AND t.estadoPago = com.fitzone.core.domain.enums.EstadoPago.CONFIRMADO)")
+    long contarPendientesDePago(@Param("idUsuario") Long idUsuario, @Param("ahora") LocalDateTime ahora);
 }

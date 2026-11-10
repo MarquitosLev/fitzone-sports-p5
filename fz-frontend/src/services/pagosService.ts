@@ -685,3 +685,40 @@ export function descargarBlobEnNavegador(blob: Blob, nombreArchivo: string): voi
     URL.revokeObjectURL(url);
   }, 1500);
 }
+
+interface PagoInvitadoApi {
+  aprobado: boolean;
+  transaccion: TransaccionApi;
+  idComprobante: number | null;
+  numeroFactura: string | null;
+}
+
+const rutaInvitado = (codigo: string) => `/v1/invitados/reservas/${encodeURIComponent(codigo)}`;
+
+/** Paga la reserva del invitado con su código: sin sesión y siempre sin descuento. */
+export async function pagarReservaInvitado(codigo: string): Promise<ResultadoPagoDTO> {
+  const api = await httpClient.post<PagoInvitadoApi>(`${rutaInvitado(codigo)}/pago`, {
+    body: JSON.stringify({}),
+  });
+  const transaccion = mapearTransaccion(api.transaccion);
+  return {
+    transaccion,
+    comprobante:
+      api.idComprobante && api.numeroFactura
+        ? { idComprobante: api.idComprobante, numeroFactura: api.numeroFactura, transaccion }
+        : null,
+    aprobado: api.aprobado,
+    mensaje: api.aprobado ? '¡Pago acreditado exitosamente!' : transaccion.motivoRechazo ?? 'Pago rechazado',
+  };
+}
+
+export async function descargarComprobanteInvitado(codigo: string): Promise<Blob> {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api';
+  const response = await fetch(`${baseUrl}${rutaInvitado(codigo)}/comprobante/pdf`, {
+    headers: { Accept: 'application/pdf' },
+  });
+  if (!response.ok) {
+    throw new AppError(`Error ${response.status}: no se pudo descargar el comprobante en PDF`, response.status);
+  }
+  return response.blob();
+}

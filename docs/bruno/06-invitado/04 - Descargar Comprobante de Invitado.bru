@@ -1,0 +1,11 @@
+meta {
+  name: 04 - Descargar Comprobante de Invitado
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/v1/invitados/reservas/{{codigoReserva}}/comprobante/pdf
+  body: none
+  auth: none
+}

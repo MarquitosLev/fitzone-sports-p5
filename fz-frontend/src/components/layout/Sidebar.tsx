@@ -22,6 +22,7 @@ export interface SidebarProps {
 export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
+  const esPersonal = usuario?.tipoUsuario === 'RECEPCIONISTA' || usuario?.tipoUsuario === 'GERENTE';
   const { sedeActiva } = useSede();
   const misPrestaciones = usePrestacionesUsuario();
 
@@ -124,7 +125,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
           </button>
         )}
         <div className="text-[11px] text-slate-400 px-3 text-center">
-          FitZone Sports · Portal de Gestión
+          {esPersonal ? 'FitZone Sports · Portal de Gestión' : 'FitZone Sports'}
         </div>
       </div>
     </div>

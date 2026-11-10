@@ -27,7 +27,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Semilla automática para entorno local
@@ -79,7 +78,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .telefono("+5491100000000")
                                         .tipoUsuario(TipoUsuario.GERENTE)
                                         .idSede(idSedeCentral)
-                                        .authId(UUID.randomUUID())
+                                        .authId(null)
                                         .build();
                         usuarioRepository.save(gerente);
                         log.info("[DEV SEED] Creado Gerente inicial (gerente@fitzone.com)");
@@ -94,7 +93,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .telefono("+5491100000001")
                                         .tipoUsuario(TipoUsuario.RECEPCIONISTA)
                                         .idSede(idSedeCentral)
-                                        .authId(UUID.randomUUID())
+                                        .authId(null)
                                         .build();
                         usuarioRepository.save(recepcionista);
                         log.info("[DEV SEED] Creada Recepcionista inicial (recepcionista@fitzone.com)");
@@ -109,7 +108,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .telefono("+5491100000002")
                                         .tipoUsuario(TipoUsuario.SOCIO)
                                         .idSede(null)
-                                        .authId(UUID.randomUUID())
+                                        .authId(null)
                                         .build();
                         usuarioRepository.save(socio);
                         log.info("[DEV SEED] Creado Socio activo inicial (socio@fitzone.com)");
@@ -124,7 +123,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .telefono("+5491100000004")
                                         .tipoUsuario(TipoUsuario.SOCIO)
                                         .idSede(null)
-                                        .authId(UUID.randomUUID())
+                                        .authId(null)
                                         .build();
                         usuarioRepository.save(socioVencido);
                         log.info("[DEV SEED] Creado Socio con cuota vencida (socio.vencido@fitzone.com)");

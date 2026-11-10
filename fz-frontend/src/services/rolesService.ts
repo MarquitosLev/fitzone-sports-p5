@@ -83,14 +83,10 @@ export const ROLES_BASE_SISTEMA: RolDTO[] = [
   },
   {
     codigo: 'EXTERNO',
-    nombre: 'Cliente Externo / Invitado',
-    descripcion: 'Usuario no socio: consulta pública y checkout de canchas.',
+    nombre: 'Cliente externo (sin cuenta)',
+    descripcion: 'Cliente sin cuenta: reserva y paga canchas con sus datos y un código. No inicia sesión.',
     esSistema: true,
-    // Sin clases: la agenda de M3 no admite EXTERNO. Pagos y comprobantes sí (SCRUM-91)
-    prestaciones: [
-      PRESTACIONES.CANCHAS_VER,
-      PRESTACIONES.PAGOS_VER_HISTORIAL,
-    ],
+    prestaciones: [PRESTACIONES.CANCHAS_VER],
   },
 ];
 
