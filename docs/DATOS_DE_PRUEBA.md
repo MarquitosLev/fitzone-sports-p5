@@ -74,7 +74,7 @@ Si en un entorno local previo persiste un usuario desactualizado u obsoleto como
 
 ```bash
 docker compose down -v
-docker compose up -d
+docker compose up -d postgres
 ```
 
 ---
@@ -84,7 +84,7 @@ docker compose up -d
 ### Opción A: Automático con Spring Boot (Recomendado en Local)
 1. Iniciar la base de datos con Docker:
    ```bash
-   docker compose up -d
+   docker compose up -d postgres
    ```
 2. Iniciar el backend:
    ```bash

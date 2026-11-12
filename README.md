@@ -8,7 +8,7 @@ Plataforma integral de gestión deportiva y administrativa para cadenas de gimna
 
 ```text
 Integrador/
-├── docker-compose.yml             # PostgreSQL 16 local para desarrollo
+├── docker-compose.yml             # PostgreSQL 16, backend y frontend en contenedores
 ├── .github/workflows/ci.yml       # Pipeline de CI: tests, build y cobertura en cada PR
 ├── docker/initdb/                 # Scripts SQL de inicialización local
 ├── fz-frontend/                   # Aplicación Web en React 19 + TypeScript + Vite
@@ -17,12 +17,30 @@ Integrador/
 
 ---
 
+## 🐳 Todo el sistema con Docker
+
+En la raíz del proyecto (`Integrador/`):
+```bash
+docker compose up --build
+```
+* **Frontend:** `http://localhost:5173`
+* **API:** `http://localhost:8080/api` (Swagger en `/api/swagger-ui`)
+* **Base de datos:** `localhost:5432`, con los datos de prueba de [docs/DATOS_DE_PRUEBA.md](docs/DATOS_DE_PRUEBA.md)
+
+El login usa Supabase Auth y necesita la clave de servicio. Se carga en un archivo `.env` en la raíz (ignorado por git), que `docker compose` lee solo:
+```bash
+SUPABASE_SERVICE_ROLE_KEY=<clave de servicio del proyecto fitzone-db-dev>
+```
+Sin la clave, el sistema levanta y las pantallas públicas funcionan, pero no se puede iniciar sesión.
+
+---
+
 ## 🚀 Guía Rápida para Desarrolladores
 
 ### 1. Levantar Base de Datos Local (Docker)
-En la raíz del proyecto (`Integrador/`):
+En la raíz del proyecto (`Integrador/`), solo el servicio de la base (el backend y el front se corren aparte):
 ```bash
-docker compose up -d
+docker compose up -d postgres
 ```
 * **Host:** `localhost`
 * **Puerto:** `5432`
