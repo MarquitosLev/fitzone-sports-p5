@@ -1,0 +1,127 @@
+---
+title: DER físico — FitZone Sports (v1.0, 2026-11-10, Leiva)
+---
+%% DER físico — FitZone Sports (esquema generado por Hibernate, ver ADR-016)
+%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-10 · Versión: 1.0
+%% Todas las tablas suman las columnas de auditoría de BaseEntity:
+%% created_at, updated_at, created_by, updated_by, is_deleted, deleted_at.
+erDiagram
+  fz_sedes {
+    bigint id_sede PK "IDENTITY"
+    varchar nombre "NOT NULL"
+    int aforo_maximo "NOT NULL"
+  }
+  fz_usr_usuarios {
+    bigint id_usuario PK "IDENTITY"
+    uuid auth_id UK "Supabase Auth; NULL en cliente externo"
+    varchar dni UK "NOT NULL, len 20"
+    varchar nombre "NOT NULL"
+    varchar apellido "NOT NULL"
+    varchar email "NOT NULL"
+    varchar telefono
+    varchar foto_url
+    varchar tipo_usuario "NOT NULL; SOCIO, EXTERNO, RECEPCIONISTA, GERENTE (CHECK)"
+    bigint id_sede FK "sede asignada; NULL = gerente global"
+  }
+  fz_pag_planes {
+    int id_plan PK "IDENTITY"
+    varchar nombre "NOT NULL"
+    numeric precio_base "NOT NULL"
+    int duracion_meses "NOT NULL"
+  }
+  fz_pag_membresias {
+    bigint id_membresia PK "IDENTITY"
+    bigint id_usuario FK "NOT NULL"
+    int id_plan FK "NOT NULL"
+    date fecha_inicio "NOT NULL"
+    date fecha_vencimiento "NOT NULL"
+    date fecha_cancelacion
+    varchar estado "NOT NULL; ACTIVO, VENCIDO, CANCELADO, SUSPENDIDO (CHECK)"
+  }
+  fz_gym_accesos {
+    bigint id_acceso PK "IDENTITY"
+    bigint id_usuario FK "NOT NULL"
+    bigint id_sede FK "NOT NULL"
+    bigint id_reserva_clase FK "NULL"
+    bigint id_reserva_cancha FK "NULL; ck_gym_accesos_una_reserva: a lo sumo una de las dos"
+    timestamp fecha_hora_ingreso "NOT NULL"
+    timestamp fecha_hora_egreso "NULL = ingreso abierto (RN-01, validado en servicio)"
+    varchar token_qr "len 500; QR de un solo uso"
+  }
+  fz_cls_clases_grupales {
+    bigint id_clase PK "IDENTITY"
+    bigint id_sede FK "NOT NULL"
+    varchar nombre_actividad "NOT NULL"
+    timestamp fecha_hora_inicio "NOT NULL"
+    int duracion_minutos "NOT NULL"
+    int cupo_maximo "NOT NULL"
+    int cupo_disponible "NOT NULL"
+  }
+  fz_cls_reservas {
+    bigint id_reserva_clase PK "IDENTITY"
+    bigint id_clase FK "NOT NULL"
+    bigint id_usuario FK "NOT NULL"
+    varchar estado "NOT NULL; CONFIRMADA, CANCELADA, ASISTIO, NO_ASISTIO (CHECK)"
+  }
+  fz_cls_lista_espera {
+    bigint id_espera PK "IDENTITY"
+    bigint id_clase FK "NOT NULL"
+    bigint id_usuario FK "NOT NULL"
+    int orden_posicion "NOT NULL"
+  }
+  fz_cch_canchas {
+    bigint id_cancha PK "IDENTITY"
+    bigint id_sede FK "NOT NULL"
+    varchar nombre "NOT NULL"
+    varchar tipo "texto libre: tipos configurables (RF-09)"
+    numeric precio_base_hora "NOT NULL"
+    boolean en_mantenimiento "NOT NULL (RF-12)"
+  }
+  fz_cch_reservas {
+    bigint id_reserva_cancha PK "IDENTITY"
+    bigint id_cancha FK "NOT NULL"
+    bigint id_usuario FK "NOT NULL"
+    timestamp fecha_hora_inicio "NOT NULL"
+    timestamp fecha_hora_fin "NOT NULL; no solapamiento: SELECT FOR UPDATE + existsSolapamiento (ADR-004); EXCLUDE gist pendiente"
+    numeric precio_final "NOT NULL, (10,2)"
+    uuid codigo_reserva UK "consulta pública del invitado"
+  }
+  fz_pag_transacciones {
+    bigint id_transaccion PK "IDENTITY"
+    bigint id_usuario FK "NOT NULL"
+    bigint id_sede FK "NOT NULL"
+    bigint id_membresia FK "NULL"
+    bigint id_reserva_cancha FK "NULL; ck_pag_transacciones_origen: destino según concepto"
+    varchar concepto "NOT NULL; MEMBRESIA, RESERVA_CANCHA, RESERVA_SOCIO, RESERVA_EXTERNO (CHECK)"
+    numeric monto "NOT NULL, (10,2)"
+    varchar estado_pago "NOT NULL; PENDIENTE, CONFIRMADO, RECHAZADO, REEMBOLSADO (CHECK)"
+    varchar token_transaccion_pasarela "sin datos de tarjeta (RNF-02)"
+    timestamp fecha_hora_creacion "NOT NULL"
+    timestamp fecha_hora_confirmacion
+  }
+  fz_pag_comprobantes {
+    bigint id_comprobante PK "IDENTITY"
+    bigint id_transaccion FK "NOT NULL"
+    varchar numero_factura "NOT NULL"
+  }
+
+  fz_sedes ||--o{ fz_usr_usuarios : "personal asignado"
+  fz_usr_usuarios ||--o{ fz_pag_membresias : "fk_pag_membresias_usuarios"
+  fz_pag_planes ||--o{ fz_pag_membresias : "fk_pag_membresias_planes"
+  fz_usr_usuarios ||--o{ fz_gym_accesos : "fk_gym_accesos_usuarios"
+  fz_sedes ||--o{ fz_gym_accesos : "fk_gym_accesos_sedes"
+  fz_cls_reservas |o--o{ fz_gym_accesos : "fk_gym_accesos_reservas_clase"
+  fz_cch_reservas |o--o{ fz_gym_accesos : "fk_gym_accesos_reservas_cancha"
+  fz_sedes ||--o{ fz_cls_clases_grupales : "fk_cls_clases_sedes"
+  fz_cls_clases_grupales ||--o{ fz_cls_reservas : "fk_cls_reservas_clases"
+  fz_usr_usuarios ||--o{ fz_cls_reservas : "fk_cls_reservas_usuarios"
+  fz_cls_clases_grupales ||--o{ fz_cls_lista_espera : "fk_cls_lista_espera_clases"
+  fz_usr_usuarios ||--o{ fz_cls_lista_espera : "fk_cls_lista_espera_usuarios"
+  fz_sedes ||--o{ fz_cch_canchas : "fk_cch_canchas_sedes"
+  fz_cch_canchas ||--o{ fz_cch_reservas : "fk_cch_reservas_canchas"
+  fz_usr_usuarios ||--o{ fz_cch_reservas : "fk_cch_reservas_usuarios"
+  fz_usr_usuarios ||--o{ fz_pag_transacciones : "fk_pag_transacciones_usuarios"
+  fz_sedes ||--o{ fz_pag_transacciones : "fk_pag_transacciones_sedes"
+  fz_pag_membresias |o--o{ fz_pag_transacciones : "fk_pag_transacciones_membresias"
+  fz_cch_reservas |o--o{ fz_pag_transacciones : "fk_pag_transacciones_reservas_cancha"
+  fz_pag_transacciones ||--o{ fz_pag_comprobantes : "fk_pag_comprobantes_transacciones"
