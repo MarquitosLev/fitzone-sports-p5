@@ -12,6 +12,45 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/initdb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fitzone_user -d fitzone_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - fitzone-net
+
+  backend:
+    build: ./fz-backend
+    container_name: fitzone_backend_local
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: postgres
+      # Se leen del .env de la raíz (ignorado por git). Sin la service role key no funciona el login
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      QR_SECRET: ${QR_SECRET:-fitzone-sports-qr-secret-key-32bytes-secure!}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fitzone-net
+
+  frontend:
+    build:
+      context: ./fz-frontend
+      args:
+        # La usa el navegador del usuario, no el contenedor: por eso es localhost y no "backend"
+        VITE_API_BASE_URL: http://localhost:8080/api
+        VITE_USE_MOCK: "false"
+    container_name: fitzone_frontend_local
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
     networks:
       - fitzone-net
 
