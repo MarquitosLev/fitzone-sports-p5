@@ -30,8 +30,16 @@ services:
       # Se leen del .env de la raíz (ignorado por git). Sin la service role key no funciona el login
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
       QR_SECRET: ${QR_SECRET:-fitzone-sports-qr-secret-key-32bytes-secure!}
+    # Solo localhost: el perfil local usa claves conocidas (root key, QR), no exponer a la red
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+    # Healthy recién cuando Spring responde: el front no arranca contra una API a medio iniciar
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/ping || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,9 +56,10 @@ services:
     container_name: fitzone_frontend_local
     restart: unless-stopped
     ports:
-      - "5173:80"
+      - "127.0.0.1:5173:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - fitzone-net
 
