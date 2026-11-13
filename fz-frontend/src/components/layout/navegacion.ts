@@ -46,7 +46,7 @@ export const INICIO_POR_ROL: Record<TipoUsuario, string> = {
  *   Mi Pase QR             → SOCIO
  *   Clases Grupales        → SOCIO, RECEPCIONISTA, GERENTE (M3 no admite EXTERNO ni visitantes)
  *   Canchas                → todos, incluso visitantes (ver canchas y disponibilidad es público)
- *   Pagos                  → SOCIO, EXTERNO, RECEPCIONISTA, GERENTE
+ *   Pagos                  → SOCIO, RECEPCIONISTA, GERENTE (el invitado paga en /reserva-invitado/:codigo)
  *   Roles y Accesos        → GERENTE
  */
 export const NAV_ITEMS: ReadonlyArray<NavItem> = [

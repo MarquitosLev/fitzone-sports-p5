@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
@@ -47,27 +48,33 @@ function renderEnRuta(ruta: string, usuario: UsuarioDTO | null, isLoading = fals
     isLoading,
     login: async () => ({ token: 'x', usuario: usuario! }),
     register: async () => ({ token: 'x', usuario: usuario! }),
+    reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
     logout: () => {},
   };
 
   return render(
-    <MemoryRouter initialEntries={[ruta]}>
-      <ToastProvider>
-        <AuthContext.Provider value={auth}>
-          <ListaToasts />
-          <Routes>
-            <Route path="/" element={<MostrarUbicacion />} />
-            <Route path="/login" element={<MostrarUbicacion />} />
-            <Route element={<RoleMiddleware prestacionRequerida="USUARIOS_ADMIN" />}>
-              <Route path="/usuarios" element={<div>Pantalla Usuarios</div>} />
-            </Route>
-            <Route element={<RoleMiddleware allowedRoles={['GERENTE']} />}>
-              <Route path="/admin/roles" element={<div>Panel Gerente</div>} />
-            </Route>
-          </Routes>
-        </AuthContext.Provider>
-      </ToastProvider>
-    </MemoryRouter>
+    <StrictMode>
+      <MemoryRouter initialEntries={[ruta]}>
+        <ToastProvider>
+          <AuthContext.Provider value={auth}>
+            <ListaToasts />
+            <Routes>
+              <Route path="/" element={<MostrarUbicacion />} />
+              <Route path="/login" element={<MostrarUbicacion />} />
+              <Route element={<RoleMiddleware prestacionRequerida="USUARIOS_ADMIN" />}>
+                <Route path="/usuarios" element={<div>Pantalla Usuarios</div>} />
+              </Route>
+              <Route element={<RoleMiddleware allowedRoles={['GERENTE']} />}>
+                <Route path="/admin/roles" element={<div>Panel Gerente</div>} />
+              </Route>
+              <Route element={<RoleMiddleware prestacionRequerida="CLASES_VER" invitarAsociarse />}>
+                <Route path="/clases" element={<div>Agenda de clases</div>} />
+              </Route>
+            </Routes>
+          </AuthContext.Provider>
+        </ToastProvider>
+      </MemoryRouter>
+    </StrictMode>
   );
 }
 
@@ -86,7 +93,7 @@ describe('SCRUM-92: RoleMiddleware (RutaProtegida)', () => {
     renderEnRuta('/usuarios', crearUsuario('SOCIO'));
     expect(screen.queryByText('Pantalla Usuarios')).toBeNull();
     expect(screen.getByTestId('ubicacion')).toHaveTextContent(/^\/$/);
-    expect(await screen.findByText(MENSAJE_RUTA_SIN_PERMISO)).toBeInTheDocument();
+    expect(await screen.findAllByText(MENSAJE_RUTA_SIN_PERMISO)).toHaveLength(1);
   });
 
   it('un recepcionista que entra por URL al panel del gerente vuelve a su inicio', () => {
@@ -99,6 +106,21 @@ describe('SCRUM-92: RoleMiddleware (RutaProtegida)', () => {
     renderEnRuta('/usuarios', crearUsuario('GERENTE'), true);
     expect(screen.getByRole('status', { name: 'Verificando sesión...' })).toBeInTheDocument();
     expect(screen.queryByText('Pantalla Usuarios')).toBeNull();
+  });
+
+  it('sin sesión y con invitarAsociarse muestra la invitación a asociarse en vez de redirigir al login', () => {
+    renderEnRuta('/clases', null);
+
+    expect(screen.getByText('Esto es para socios')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Hacete socio' })).toHaveAttribute('href', '/registro');
+    expect(screen.getByRole('link', { name: 'Ya soy socio' })).toHaveAttribute('href', '/login?returnTo=%2Fclases');
+    expect(screen.queryByText('Agenda de clases')).not.toBeInTheDocument();
+  });
+
+  it('con invitarAsociarse, un socio con sesión entra a la pantalla', () => {
+    renderEnRuta('/clases', crearUsuario('SOCIO'));
+
+    expect(screen.getByText('Agenda de clases')).toBeInTheDocument();
   });
 });
 

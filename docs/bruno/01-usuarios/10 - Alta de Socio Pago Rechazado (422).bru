@@ -1,0 +1,33 @@
+meta {
+  name: 10 - Alta de Socio Pago Rechazado (422)
+  type: http
+  seq: 10
+}
+
+docs {
+  Solo funciona con el perfil local: forzarRechazo se ignora si fitzone.pagos.rechazo-forzado-habilitado es false (dev y prod).
+}
+
+post {
+  url: {{baseUrl}}/v1/auth/alta-socio
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "nombre": "Rocío",
+    "apellido": "Rechazo",
+    "dni": "40333444",
+    "email": "rocio.rechazo@mail.com",
+    "telefono": "+5491166660000",
+    "password": "password123",
+    "idPlan": 1,
+    "idSede": 1,
+    "forzarRechazo": true
+  }
+}
+
+assert {
+  res.status: eq 422
+}

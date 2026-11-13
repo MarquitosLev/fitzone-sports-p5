@@ -20,6 +20,8 @@ const {
   crearReserva,
   listarMisReservas,
   cancelarReserva,
+  reservarComoInvitado,
+  obtenerReservaInvitado,
   mapearCotizacion,
   CANCELACION_DISPONIBLE,
 } = await import('../canchasService');
@@ -58,6 +60,14 @@ describe('canchasService con la API real', () => {
     expect(coti.porcentajeRecargoPico).toBe(20);
     expect(coti.esSocio).toBe(false);
     expect(coti.total).toBe(24000);
+  });
+
+  it('calcula el porcentaje de descuento de socio sobre la tarifa base aunque haya recargo pico', () => {
+    const coti = mapearCotizacion({ precioBase: 20000, descuento: 3000, recargo: 4000, precioFinal: 21000 }, true);
+
+    expect(coti.porcentajeDescuentoSocio).toBe(15);
+    expect(coti.descuentoSocio).toBe(3000);
+    expect(coti.total).toBe(21000);
   });
 
   it('convierte la grilla del backend (LocalDateTime) en franjas de la pantalla', async () => {
@@ -111,5 +121,52 @@ describe('canchasService con la API real', () => {
   it('no ofrece la cancelación porque el backend no la expone', async () => {
     expect(CANCELACION_DISPONIBLE).toBe(false);
     await expect(cancelarReserva(1)).rejects.toThrow('no está disponible');
+  });
+
+  describe('checkout de invitado', () => {
+    const reservaApi = {
+      codigoReserva: 'abc',
+      idReservaCancha: 5,
+      idCancha: 1,
+      cancha: 'Pádel 1',
+      tipoCancha: 'PADEL',
+      idSede: 1,
+      sede: 'Palermo',
+      fechaHoraInicio: '2026-12-10T19:00:00',
+      fechaHoraFin: '2026-12-10T20:00:00',
+      precioFinal: '12000.00',
+      cotizacion: { precioBase: 10000, descuento: 0, recargo: 2000, precioFinal: 12000 },
+      pagada: false,
+    };
+
+    it('reservarComoInvitado envía el turno y los datos a /v1/invitados/reservas', async () => {
+      post.mockResolvedValue(reservaApi);
+      const datos = { nombre: 'Ana', apellido: 'Pérez', dni: '30111222', email: 'ana@mail.com', telefono: '1155550000' };
+
+      const r = await reservarComoInvitado({ idCancha: 1, fecha: '2026-12-10', horaInicio: '19:00', horaFin: '20:00' }, datos);
+
+      expect(post).toHaveBeenCalledWith('/v1/invitados/reservas', {
+        body: JSON.stringify({
+          idCancha: 1,
+          fechaHoraInicio: '2026-12-10T19:00:00',
+          fechaHoraFin: '2026-12-10T20:00:00',
+          ...datos,
+        }),
+      });
+      expect(r.codigoReserva).toBe('abc');
+      expect(r.precioFinal).toBe(12000);
+      expect(r.cotizacion?.esPico).toBe(true);
+      expect(r.cotizacion?.recargoPico).toBe(2000);
+    });
+
+    it('obtenerReservaInvitado deja la cotización en null si el backend no la manda', async () => {
+      get.mockResolvedValue({ ...reservaApi, cotizacion: null, pagada: true });
+
+      const r = await obtenerReservaInvitado('abc');
+
+      expect(get).toHaveBeenCalledWith('/v1/invitados/reservas/abc');
+      expect(r.cotizacion).toBeNull();
+      expect(r.pagada).toBe(true);
+    });
   });
 });

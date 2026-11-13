@@ -85,8 +85,15 @@ export function ClasesPage() {
   const puedeGestionarClases = puedeVerAgendaAdmin && usuario?.tipoUsuario === 'GERENTE';
   const esSocio = usuario?.tipoUsuario === 'SOCIO';
   const [activeTab, setActiveTab] = useState<TabClases>(
-    puedeVerAgendaAdmin ? 'agenda-admin' : 'disponibles'
+    !esSocio && puedeVerAgendaAdmin ? 'agenda-admin' : 'disponibles'
   );
+
+  // El personal de sede solo opera la agenda administrativa
+  useEffect(() => {
+    if (!esSocio && puedeVerAgendaAdmin && activeTab !== 'agenda-admin') {
+      setActiveTab('agenda-admin');
+    }
+  }, [esSocio, puedeVerAgendaAdmin, activeTab]);
 
   // ── Data: clases, reservas del socio y lista de espera ───────────────────
   const [clases, setClases] = useState<ClaseGrupalDTO[]>([]);
@@ -315,49 +322,38 @@ export function ClasesPage() {
         )}
       </div>
 
-      {/* ── Tab selector ───────────────────────────────────────────────────── */}
-      <div className="flex bg-slate-100 p-1 rounded-2xl w-fit gap-1">
-        <button
-          id="tab-clases-disponibles"
-          onClick={() => setActiveTab('disponibles')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'disponibles' ? 'bg-white text-fitzone-navy shadow-sm' : 'text-slate-600 hover:text-fitzone-navy'
-          }`}
-        >
-          <CalendarDays className="w-3.5 h-3.5" />
-          Clases Disponibles
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${activeTab === 'disponibles' ? 'bg-fitzone-navy text-white' : 'bg-slate-200 text-slate-600'}`}>
-            {clases.length}
-          </span>
-        </button>
+      {/* ── Tab selector (solo disponible para el socio) ────────────────────── */}
+      {esSocio && (
+        <div className="flex bg-slate-100 p-1 rounded-2xl w-fit gap-1">
+          <button
+            id="tab-clases-disponibles"
+            onClick={() => setActiveTab('disponibles')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'disponibles' ? 'bg-white text-fitzone-navy shadow-sm' : 'text-slate-600 hover:text-fitzone-navy'
+            }`}
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+            Clases Disponibles
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${activeTab === 'disponibles' ? 'bg-fitzone-navy text-white' : 'bg-slate-200 text-slate-600'}`}>
+              {clases.length}
+            </span>
+          </button>
 
-        <button
-          id="tab-mis-reservas"
-          onClick={() => setActiveTab('mis-reservas')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'mis-reservas' ? 'bg-white text-fitzone-navy shadow-sm' : 'text-slate-600 hover:text-fitzone-navy'
-          }`}
-        >
-          <ClipboardList className="w-3.5 h-3.5" />
-          Mis Reservas
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${activeTab === 'mis-reservas' ? 'bg-fitzone-navy text-white' : 'bg-slate-200 text-slate-600'}`}>
-            {reservasSocio.filter((r) => r.estado === 'CONFIRMADA').length}
-          </span>
-        </button>
-
-        {puedeVerAgendaAdmin && (
-        <button
-          id="tab-agenda-admin"
-          onClick={() => setActiveTab('agenda-admin')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'agenda-admin' ? 'bg-white text-fitzone-navy shadow-sm' : 'text-slate-600 hover:text-fitzone-navy'
-          }`}
-        >
-          <Dumbbell className="w-3.5 h-3.5" />
-          Agenda (Admin)
-        </button>
-        )}
-      </div>
+          <button
+            id="tab-mis-reservas"
+            onClick={() => setActiveTab('mis-reservas')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'mis-reservas' ? 'bg-white text-fitzone-navy shadow-sm' : 'text-slate-600 hover:text-fitzone-navy'
+            }`}
+          >
+            <ClipboardList className="w-3.5 h-3.5" />
+            Mis Reservas
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${activeTab === 'mis-reservas' ? 'bg-fitzone-navy text-white' : 'bg-slate-200 text-slate-600'}`}>
+              {reservasSocio.filter((r) => r.estado === 'CONFIRMADA').length}
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* ── Error banner ───────────────────────────────────────────────────── */}
       {error && <Alert type="error" title="Error al cargar" message={error} />}
@@ -373,7 +369,7 @@ export function ClasesPage() {
           TAB 1: CLASES DISPONIBLES (SOCIO)
           El estado de cada tarjeta viene de la agenda (yaReservada, posicionEspera).
       ──────────────────────────────────────────────────────────────────── */}
-      {!loading && activeTab === 'disponibles' && (
+      {!loading && esSocio && activeTab === 'disponibles' && (
         <>
           {motivoBloqueo && (
             <Alert
@@ -421,15 +417,9 @@ export function ClasesPage() {
           TAB 2: MIS RESERVAS (SOCIO)
           Todas las reservas (incluye CANCELADA, ASISTIO, NO_ASISTIO) como historial.
       ──────────────────────────────────────────────────────────────────── */}
-      {!loading && activeTab === 'mis-reservas' && (
+      {!loading && esSocio && activeTab === 'mis-reservas' && (
         <>
-          {!esSocio ? (
-            <EmptyState
-              icon={ClipboardList}
-              title="Iniciá sesión como socio"
-              description="Necesitás una cuenta de socio activa para ver y gestionar tus reservas de clases."
-            />
-          ) : reservasSocio.length === 0 ? (
+          {reservasSocio.length === 0 ? (
             <EmptyState
               icon={ClipboardList}
               title="Sin reservas aún"
@@ -457,7 +447,7 @@ export function ClasesPage() {
           TAB 3: AGENDA ADMIN
           GERENTE edita y elimina; GERENTE y RECEPCIONISTA ven inscriptos y espera.
       ──────────────────────────────────────────────────────────────────── */}
-      {!loading && activeTab === 'agenda-admin' && (
+      {!loading && puedeVerAgendaAdmin && (activeTab === 'agenda-admin' || !esSocio) && (
         <AgendaSemanal
           clases={clases}
           onEdit={puedeGestionarClases ? handleOpenEdit : undefined}

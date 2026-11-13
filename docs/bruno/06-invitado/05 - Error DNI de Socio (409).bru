@@ -1,0 +1,29 @@
+meta {
+  name: 05 - Error DNI de Socio (409)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/v1/invitados/reservas
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idCancha": 1,
+    "fechaHoraInicio": "2026-12-11T10:00:00",
+    "fechaHoraFin": "2026-12-11T11:00:00",
+    "nombre": "Martín",
+    "apellido": "Socio",
+    "dni": "00000003",
+    "email": "otro.mail@mail.com",
+    "telefono": "+5491155550000"
+  }
+}
+
+assert {
+  res.status: eq 409
+  res.body.codigo: eq REQUIERE_INICIO_SESION
+}

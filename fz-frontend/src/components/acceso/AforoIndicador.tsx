@@ -158,7 +158,7 @@ export function AforoIndicador({
           <div className="text-xs">
             <h4 className="font-extrabold text-fitzone-red">Capacidad crítica de la sede</h4>
             <p className="text-slate-600 mt-0.5 leading-relaxed">
-              Quedan únicamente {lugaresDisponibles} vacantes. Controlá el ingreso antes de autorizar nuevos accesos (RF-05).
+              Quedan únicamente {lugaresDisponibles} vacantes. Controlá el ingreso antes de autorizar nuevos accesos.
             </p>
           </div>
         </div>

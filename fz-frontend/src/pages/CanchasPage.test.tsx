@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { CanchasPage } from './CanchasPage';
@@ -99,6 +99,7 @@ const sesionSocio: AuthContextType = {
   isLoading: false,
   login: async () => ({ token: 'token', usuario: socio }),
   register: async () => ({ token: 'token', usuario: socio }),
+  reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
   logout: () => {},
 };
 
@@ -119,6 +120,16 @@ function renderWithProviders(ui: React.ReactElement, conSesionSocio = false) {
 }
 
 describe('CanchasPage (Integración)', () => {
+  // Los datos usan el 2026-10-25: fijamos "hoy" antes para que la grilla no marque esos turnos como pasados.
+  // Solo se falsea Date; los timers siguen reales para que waitFor funcione.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-20T10:00:00'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(canchasService, 'listarCanchas').mockResolvedValue([...initialCanchas]);

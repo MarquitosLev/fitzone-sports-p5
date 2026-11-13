@@ -1,0 +1,50 @@
+---
+title: C4-3 Componentes — Acceso (v1.0, 2026-11-10, Leiva)
+---
+%% C4-3 Componentes — Módulo Gimnasio y Acceso (M2)
+%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-10 · Versión: 1.0
+%% Notación C4 sobre flowchart: azul = contenedor, celeste = componente, rojo punteado = no implementado.
+flowchart TB
+  socioApp["<b>Aplicación web — Mi Pase QR</b><br/>[Contenedor: React, qrcode.react]<br/>Muestra el QR del socio y lo renueva cada 60 s"]
+  recepApp["<b>Aplicación web — Recepción</b><br/>[Contenedor: React]<br/>Lee el QR, registra ingreso y egreso, muestra aforo"]
+
+  subgraph api["API backend — módulo gimnasio [Contenedor: Spring Boot]"]
+    uctrl["<b>UsuarioController</b><br/>[Componente: GET /v1/usuarios/me/qr]<br/>Token QR del socio autenticado"]
+    actrl["<b>AccesoController</b><br/>[Componente: /v1/accesos]<br/>POST /ingreso · POST /{id}/egreso · GET"]
+    qr["<b>QrTokenService</b><br/>[Componente: HMAC-SHA256 con QR_SECRET]<br/>idUsuario : ventana 60 s : nonce : firma<br/>Genera y valida (vencido, alterado)"]
+    asvc["<b>AccesoService</b><br/>[Componente: @Service, @Transactional]<br/>QR de un solo uso · membresía ACTIVA ·<br/>RN-01 un ingreso abierto · aforo (RF-05) ·<br/>cualquier sede (RF-03)"]
+    mrepo["<b>MembresiaRepository</b><br/>[Componente: JPA, @Lock PESSIMISTIC_WRITE]<br/>Gestor de bloqueos de RN-01:<br/>bloquea la membresía del socio"]
+    srepo["<b>SedeRepository</b><br/>[Componente: JPA, @Lock PESSIMISTIC_WRITE]<br/>Bloquea la sede para calcular aforo"]
+    arepo["<b>AccesoRepository</b><br/>[Componente: Spring Data JPA]<br/>QR ya usado, ingreso abierto,<br/>ocupación actual de la sede"]
+  end
+
+  db[("<b>Base de datos</b><br/>[Contenedor: PostgreSQL 16]<br/>fz_gym_accesos · fz_sedes · fz_pag_membresias")]
+
+  subgraph offline["Camino offline del QR — NO IMPLEMENTADO (ADR-003)"]
+    o1["Pase firmado guardado<br/>en el dispositivo del socio"]
+    o2["Validación en la terminal de sede<br/>sin conexión (clave pública)"]
+    o3["Cola local de ingresos<br/>con sincronización diferida<br/>y revalidación de RN-01"]
+  end
+
+  socioApp -- "GET /me/qr [HTTPS, JWT]" --> uctrl
+  uctrl -- "generarToken(idUsuario)" --> qr
+  recepApp -- "POST /ingreso {tokenQr, idSede}<br/>[HTTPS, JSON]" --> actrl
+  actrl -- "Delega" --> asvc
+  asvc -- "validarYObtenerUsuario(token)" --> qr
+  asvc -- "① Bloquea la membresía activa" --> mrepo
+  asvc -- "② ¿Ingreso abierto? ④ Registra acceso" --> arepo
+  asvc -- "③ Bloquea la sede y controla aforo" --> srepo
+  mrepo -- "SELECT … FOR UPDATE" --> db
+  srepo -- "SELECT … FOR UPDATE" --> db
+  arepo -- "SELECT / INSERT / UPDATE" --> db
+  o1 -.-> o2 -.-> o3
+  recepApp -. "sin conexión: no hay alternativa hoy" .-> o2
+
+  classDef contenedor fill:#438dd5,stroke:#2e6295,color:#fff
+  classDef componente fill:#85bbf0,stroke:#5d82a8,color:#000
+  classDef ausente fill:#f5f5f5,stroke:#c0392b,color:#7a7a7a,stroke-dasharray:4 4
+  class socioApp,recepApp,db contenedor
+  class uctrl,actrl,qr,asvc,mrepo,srepo,arepo componente
+  class o1,o2,o3 ausente
+  style api fill:none,stroke:#2e6295,stroke-dasharray:5 5
+  style offline fill:#fdecea,stroke:#c0392b,stroke-dasharray:4 4,color:#7b241c

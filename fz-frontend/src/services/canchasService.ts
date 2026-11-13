@@ -7,7 +7,9 @@ import type {
   CotizacionReservaDTO,
   ReservaCanchaDTO,
   CrearReservaPayload,
+  DatosInvitado,
   EstadoTurno,
+  ReservaInvitadoDTO,
 } from '../types';
 import { USE_MOCK } from '../config';
 
@@ -397,7 +399,7 @@ export function mapearCotizacion(api: CotizacionApi, esPico: boolean): Cotizacio
     porcentajeRecargoPico: hayRecargo ? Math.round((api.recargo / api.precioBase) * 100) : 0,
     descuentoSocio: api.descuento,
     porcentajeDescuentoSocio: hayDescuento
-      ? Math.round((api.descuento / (api.precioBase + api.recargo)) * 100)
+      ? Math.round((api.descuento / api.precioBase) * 100)
       : 0,
     esSocio: hayDescuento,
     total: api.precioFinal,
@@ -719,3 +721,37 @@ export async function cancelarReserva(
   });
 }
 
+interface ReservaInvitadoApi extends Omit<ReservaInvitadoDTO, 'cotizacion'> {
+  cotizacion: CotizacionApi | null;
+}
+
+function mapearReservaInvitado(api: ReservaInvitadoApi): ReservaInvitadoDTO {
+  return {
+    ...api,
+    precioFinal: Number(api.precioFinal),
+    cotizacion: api.cotizacion
+      ? mapearCotizacion(api.cotizacion, esHorarioPico(horaDe(api.fechaHoraInicio)))
+      : null,
+  };
+}
+
+/** Reserva un turno sin cuenta (POST /v1/invitados/reservas). Devuelve el código para pagarlo. */
+export async function reservarComoInvitado(
+  payload: CrearReservaPayload,
+  datos: DatosInvitado
+): Promise<ReservaInvitadoDTO> {
+  const api = await httpClient.post<ReservaInvitadoApi>('/v1/invitados/reservas', {
+    body: JSON.stringify({
+      idCancha: payload.idCancha,
+      fechaHoraInicio: `${payload.fecha}T${payload.horaInicio}:00`,
+      fechaHoraFin: `${payload.fecha}T${payload.horaFin}:00`,
+      ...datos,
+    }),
+  });
+  return mapearReservaInvitado(api);
+}
+
+export async function obtenerReservaInvitado(codigo: string): Promise<ReservaInvitadoDTO> {
+  const api = await httpClient.get<ReservaInvitadoApi>(`/v1/invitados/reservas/${encodeURIComponent(codigo)}`);
+  return mapearReservaInvitado(api);
+}

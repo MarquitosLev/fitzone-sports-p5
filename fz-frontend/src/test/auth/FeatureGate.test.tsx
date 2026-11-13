@@ -15,6 +15,7 @@ function renderConAuth(ui: React.ReactNode, usuario: UsuarioDTO | null) {
     isLoading: false,
     login: async () => ({ token: 'mock', usuario: usuario! }),
     register: async () => ({ token: 'mock', usuario: usuario! }),
+    reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
     logout: () => {},
   };
 
@@ -88,5 +89,14 @@ describe('SCRUM-106: AccesoDenegado403 Component', () => {
     expect(screen.getByText(/Error 403 · Acceso No Autorizado/i)).toBeInTheDocument();
     expect(screen.getByText(/Sección Restringida/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Ir al Inicio de Sesión/i })).toBeInTheDocument();
+  });
+
+  it('un visitante no figura con una sesión activa: se muestra como cliente externo', () => {
+    renderConAuth(<AccesoDenegado403 />, null);
+
+    expect(screen.getByText('Sin sesión')).toBeInTheDocument();
+    expect(screen.getByText('Cliente externo')).toBeInTheDocument();
+    expect(screen.queryByText('Sesión activa')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Invitado anónimo/i)).not.toBeInTheDocument();
   });
 });

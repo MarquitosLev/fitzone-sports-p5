@@ -1,0 +1,47 @@
+---
+title: Despliegue — FitZone Sports (v1.0, 2026-11-10, Leiva)
+---
+%% Diagrama de despliegue — FitZone Sports
+%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-10 · Versión: 1.0
+flowchart LR
+  subgraph sede["Sede (x 25+)"]
+    terminal["Terminal de recepción<br/>navegador web"]
+  end
+  subgraph cliente["Dispositivo del usuario"]
+    navegador["Navegador / celular<br/>socio, externo, gerente"]
+  end
+
+  internet(("Internet<br/>conexión principal"))
+
+  subgraph nube["Nube — entorno dev (sigue develop)"]
+    subgraph vercel["Vercel — proyecto fitzone-sports-p5"]
+      spa["SPA React<br/>build estático de Vite<br/>preview por rama"]
+    end
+    subgraph render["Render — fitzone-backend-dev (plan free)"]
+      api["Contenedor Docker<br/>eclipse-temurin:21-jre<br/>API Spring Boot :8080 /api"]
+    end
+    subgraph supabase["Supabase — fitzone-db-dev"]
+      pg[("PostgreSQL 16<br/>esquema fz_*")]
+      auth["Supabase Auth<br/>JWT + JWKS"]
+    end
+  end
+
+  subgraph local["Máquina de desarrollo — docker compose levanta solo PostgreSQL"]
+    pgl[("postgres:16-alpine<br/>fitzone_postgres_local :5432<br/>docker/initdb")]
+    apil["API (mvnw spring-boot:run<br/>perfil local) :8080"]
+    spal["Vite dev server :5173"]
+  end
+
+  terminal -- HTTPS --> internet
+  navegador -- HTTPS --> internet
+  internet -- HTTPS --> spa
+  internet -- "HTTPS / JSON + Bearer JWT" --> api
+  api -- "JDBC / TLS" --> pg
+  api -- "HTTPS (login, alta de cuentas, JWKS)" --> auth
+  spal --> apil --> pgl
+
+  caida["Caída de la conexión principal:<br/>la terminal de sede no llega a la API,<br/>no se pueden validar QR ni registrar ingresos.<br/>No hay modo offline (ADR-003)."]
+  terminal -. sin conexión .-> caida
+
+  classDef falla fill:#fdecea,stroke:#c0392b,color:#7b241c
+  class caida falla

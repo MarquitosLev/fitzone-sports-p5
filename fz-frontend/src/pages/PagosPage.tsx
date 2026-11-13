@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   CreditCard,
   FileText,
@@ -33,7 +33,7 @@ import {
   descargarComprobantePdf,
   descargarBlobEnNavegador,
 } from '../services/pagosService';
-import { listarMisReservas } from '../services/canchasService';
+import { cotizarTurno, listarMisReservas } from '../services/canchasService';
 import { obtenerMembresiaPorUsuario } from '../services/membresiasService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
@@ -43,22 +43,47 @@ import { AppError } from '../services/httpClient';
 import type {
   TransaccionDTO,
   ComprobanteDTO,
+  CotizacionReservaDTO,
   DetalleItemPago,
   ProcesarPagoPayload,
+  ReservaCanchaDTO,
   ResultadoPagoDTO,
   UsuarioDTO,
 } from '../types';
-import { formatearFechaHora, formatearMonto, toLocalISOString } from '../utils/formatters';
+import { formatearFecha, formatearFechaHora, formatearMonto, toLocalISOString } from '../utils/formatters';
+import { calcularVencimientoTrasPago } from '../utils/membresias';
 
 interface ItemCobro {
   id: string;
   detalle: DetalleItemPago;
   monto: number;
-  concepto: 'RESERVA_SOCIO' | 'RESERVA_EXTERNO' | 'MEMBRESIA_SOCIO';
+  concepto: 'RESERVA_SOCIO' | 'MEMBRESIA_SOCIO';
   idReservaCancha?: number;
   idMembresia?: number;
   /** Sede donde se registra el cobro (la de la cancha en una reserva) */
   idSede?: number;
+}
+
+/**
+ * Desglose del turno según el backend. Solo se usa si coincide con el precio congelado de la reserva:
+ * si la tarifa o la membresía cambiaron desde que se reservó, no explicaría el monto que se cobra.
+ */
+async function cotizacionDeReserva(
+  reserva: ReservaCanchaDTO,
+  esSocio: boolean
+): Promise<CotizacionReservaDTO | undefined> {
+  try {
+    const cotizacion = await cotizarTurno(
+      reserva.cancha.idCancha,
+      reserva.fechaHoraInicio.slice(11, 16),
+      esSocio,
+      reserva.fechaHoraInicio.slice(0, 10),
+      reserva.fechaHoraFin.slice(11, 16)
+    );
+    return Math.abs(cotizacion.total - Number(reserva.precioFinal)) < 0.01 ? cotizacion : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -72,30 +97,41 @@ async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobro[]> 
   );
   // El backend guarda LocalDateTime en hora local: se compara contra la hora local, no UTC
   const ahora = toLocalISOString(new Date());
-  const concepto = usuario.tipoUsuario === 'EXTERNO' ? 'RESERVA_EXTERNO' : 'RESERVA_SOCIO';
+  const concepto = 'RESERVA_SOCIO';
 
-  const items: ItemCobro[] = reservas
-    .filter((r) => !pagadas.has(r.idReservaCancha) && r.fechaHoraInicio > ahora)
-    .map((r) => ({
-      id: `reserva-${r.idReservaCancha}`,
-      monto: Number(r.precioFinal),
-      concepto,
-      idReservaCancha: r.idReservaCancha,
-      idSede: r.cancha.sede?.idSede,
-      detalle: {
-        tipo: 'CANCHA',
-        titulo: `Turno · ${r.cancha.nombre}`,
-        subtitulo: r.cancha.sede?.nombre,
-        canchaNombre: r.cancha.nombre,
-        deporte: r.cancha.tipo,
-        fecha: r.fechaHoraInicio.slice(0, 10),
-        horario: `${r.fechaHoraInicio.slice(11, 16)} a ${r.fechaHoraFin.slice(11, 16)} hs`,
-      },
-    }));
+  const pendientes = reservas.filter(
+    (r) => !pagadas.has(r.idReservaCancha) && r.fechaHoraInicio > ahora
+  );
+  const cotizaciones = await Promise.all(
+    pendientes.map((r) => cotizacionDeReserva(r, usuario.tipoUsuario === 'SOCIO'))
+  );
+
+  const items: ItemCobro[] = pendientes.map((r, i) => ({
+    id: `reserva-${r.idReservaCancha}`,
+    monto: Number(r.precioFinal),
+    concepto,
+    idReservaCancha: r.idReservaCancha,
+    idSede: r.cancha.sede?.idSede,
+    detalle: {
+      tipo: 'CANCHA',
+      titulo: `Turno · ${r.cancha.nombre}`,
+      subtitulo: r.cancha.sede?.nombre,
+      canchaNombre: r.cancha.nombre,
+      deporte: r.cancha.tipo,
+      fecha: r.fechaHoraInicio.slice(0, 10),
+      horario: `${r.fechaHoraInicio.slice(11, 16)} a ${r.fechaHoraFin.slice(11, 16)} hs`,
+      cotizacion: cotizaciones[i],
+    },
+  }));
 
   if (usuario.tipoUsuario === 'SOCIO') {
     const membresia = await obtenerMembresiaPorUsuario(usuario.idUsuario);
-    if (membresia) {
+    // Una membresía cancelada no se puede renovar: el backend responde 422
+    if (membresia && membresia.estado !== 'CANCELADO') {
+      const tienePagoConfirmado = pagos.some(
+        (p) => p.estadoPago === 'CONFIRMADO' && p.membresiaId === membresia.idMembresia
+      );
+      const vigenteHasta = calcularVencimientoTrasPago(membresia, tienePagoConfirmado);
       items.push({
         id: `membresia-${membresia.idMembresia}`,
         monto: Number(membresia.plan.precioBase),
@@ -104,11 +140,13 @@ async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobro[]> 
         detalle: {
           tipo: 'MEMBRESIA',
           titulo: `Renovación Membresía · ${membresia.plan.nombre}`,
-          subtitulo: `Vence el ${membresia.fechaVencimiento}`,
+          subtitulo: vigenteHasta
+            ? `Queda vigente hasta el ${formatearFecha(vigenteHasta)}`
+            : membresia.plan.nombre,
           planNombre: membresia.plan.nombre,
           duracionMeses: membresia.plan.duracionMeses,
           fechaInicio: membresia.fechaInicio,
-          fechaVencimiento: membresia.fechaVencimiento,
+          fechaVencimiento: vigenteHasta ? formatearFecha(vigenteHasta) : undefined,
         },
       });
     }
@@ -122,9 +160,10 @@ export function PagosPage() {
   const { usuario } = useAuth();
   const [searchParams] = useSearchParams();
   const idReservaPedida = Number(searchParams.get('reserva')) || null;
+  const pideMembresia = searchParams.get('item') === 'membresia';
 
-  // Con la API real solo pagan socios y externos lo propio; el cobro en mostrador es otra historia
-  const puedePagar = usuario?.tipoUsuario === 'SOCIO' || usuario?.tipoUsuario === 'EXTERNO';
+  // Con sesión paga solo el socio lo propio; el invitado paga en /reserva-invitado/:codigo
+  const puedePagar = usuario?.tipoUsuario === 'SOCIO';
 
   // Control de pestañas principales: 'checkout' o 'historial'
   const [activeTab, setActiveTab] = useState<'checkout' | 'historial'>('checkout');
@@ -147,7 +186,9 @@ export function PagosPage() {
       .then((items) => {
         if (cancelado) return;
         setItemsCobro(items);
-        const pedido = items.find((i) => i.idReservaCancha === idReservaPedida);
+        const pedido = pideMembresia
+          ? items.find((i) => i.idMembresia !== undefined)
+          : items.find((i) => i.idReservaCancha === idReservaPedida);
         setItemSeleccionado(pedido ?? items[0] ?? null);
       })
       .catch(() => {
@@ -159,7 +200,7 @@ export function PagosPage() {
     return () => {
       cancelado = true;
     };
-  }, [usuario, puedePagar, idReservaPedida]);
+  }, [usuario, puedePagar, idReservaPedida, pideMembresia]);
   const [checkoutStep, setCheckoutStep] = useState<'formulario' | 'resultado'>('formulario');
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultadoPago, setResultadoPago] = useState<ResultadoPagoDTO | null>(null);
@@ -355,11 +396,51 @@ export function PagosPage() {
   const metricas = useMemo(() => {
     const confirmadas = transacciones.filter((t) => t.estadoPago === 'CONFIRMADO');
     const totalAbonado = confirmadas.reduce((acc, curr) => acc + curr.monto, 0);
-    const rechazadas = transacciones.filter((t) => t.estadoPago === 'RECHAZADO').length;
+    const reservasConf = new Set(
+      confirmadas.map((t) => t.reservaCanchaId).filter((id): id is number => id != null)
+    );
+    const membresiasConf = new Set(
+      confirmadas.map((t) => t.membresiaId).filter((id): id is number => id != null)
+    );
+    const rechazadas = transacciones.filter((t) => {
+      if (t.estadoPago !== 'RECHAZADO') return false;
+      if (t.reservaCanchaId != null && reservasConf.has(t.reservaCanchaId)) return false;
+      if (t.membresiaId != null && membresiasConf.has(t.membresiaId)) return false;
+      return true;
+    }).length;
     const comprobantesEmitidos = Object.keys(comprobantesMap).length || confirmadas.length;
 
     return { totalAbonado, rechazadas, comprobantesEmitidos };
   }, [transacciones, comprobantesMap]);
+
+  const reservasConfirmadas = useMemo(
+    () =>
+      new Set(
+        transacciones
+          .filter((t) => t.estadoPago === 'CONFIRMADO' && t.reservaCanchaId != null)
+          .map((t) => t.reservaCanchaId!)
+      ),
+    [transacciones]
+  );
+  const membresiasConfirmadas = useMemo(
+    () =>
+      new Set(
+        transacciones
+          .filter((t) => t.estadoPago === 'CONFIRMADO' && t.membresiaId != null)
+          .map((t) => t.membresiaId!)
+      ),
+    [transacciones]
+  );
+
+  const puedeReintentarTransaccion = useCallback(
+    (t: TransaccionDTO) => {
+      if (t.estadoPago !== 'RECHAZADO') return false;
+      if (t.reservaCanchaId != null && reservasConfirmadas.has(t.reservaCanchaId)) return false;
+      if (t.membresiaId != null && membresiasConfirmadas.has(t.membresiaId)) return false;
+      return true;
+    },
+    [reservasConfirmadas, membresiasConfirmadas]
+  );
 
   // Transacciones filtradas para el historial
   const transaccionesFiltradas = useMemo(() => {
@@ -413,7 +494,7 @@ export function PagosPage() {
               onDescargar={() => handleDescargarPdf(row)}
             />
           )}
-          {row.estadoPago === 'RECHAZADO' && (
+          {puedeReintentarTransaccion(row) && (
             <Button
               size="xs"
               variant="coral"
@@ -434,7 +515,7 @@ export function PagosPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-black uppercase text-fitzone-coral tracking-widest block">
-            Módulo de Pagos & Facturación (RF-13, RF-14)
+            Módulo de Pagos & Facturación
           </span>
           <h1 className="text-2xl sm:text-3xl font-black text-fitzone-navy font-outfit mt-0.5 flex items-center gap-2.5">
             <DollarSign className="w-7 h-7 text-fitzone-coral" />
@@ -481,10 +562,10 @@ export function PagosPage() {
           {!puedePagar ? (
             <Alert
               type="info"
-              title={usuario ? 'El checkout es para socios y clientes' : 'Iniciá sesión para pagar'}
+              title={usuario ? 'El checkout es para socios' : 'Iniciá sesión para pagar'}
               message={
                 usuario
-                  ? 'Cada socio o cliente paga sus propias reservas y membresías. El cobro en mostrador todavía no está disponible.'
+                  ? 'Cada socio paga sus propias reservas y membresías. El cobro en mostrador todavía no está disponible.'
                   : 'Ingresá con tu cuenta para ver tus reservas y membresía pendientes de pago.'
               }
             />
@@ -702,7 +783,11 @@ export function PagosPage() {
                       key={transaccion.idTransaccion}
                       transaccion={transaccion}
                       comprobante={comprobantesMap[transaccion.idTransaccion]}
-                      onReintentar={() => void handleReintentarPago(transaccion.idTransaccion)}
+                      onReintentar={
+                        puedeReintentarTransaccion(transaccion)
+                          ? () => void handleReintentarPago(transaccion.idTransaccion)
+                          : undefined
+                      }
                       onDescargarPdf={() => handleDescargarPdf(transaccion)}
                     />
                   ))}

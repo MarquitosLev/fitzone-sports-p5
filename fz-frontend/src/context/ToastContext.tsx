@@ -24,7 +24,7 @@ interface ToastContextValue {
 }
 
 // El contexto arranca como null: si intentás usarlo fuera del Provider, te avisa.
-const ToastContext = createContext<ToastContextValue | null>(null);
+export const ToastContext = createContext<ToastContextValue | null>(null);
 
 /**
  * Hook para usar el contexto desde cualquier componente hijo.

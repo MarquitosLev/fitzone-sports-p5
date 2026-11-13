@@ -119,4 +119,21 @@ describe('ResumenPago Component', () => {
     fireEvent.click(botonPagar);
     expect(handlePagar).not.toHaveBeenCalled();
   });
+
+  it('una cancha sin cotización muestra el resumen del turno, no el de membresía (SCRUM-120)', () => {
+    const canchaSinCotizacion: DetalleItemPago = { ...detalleCancha, cotizacion: undefined };
+    render(<ResumenPago detalle={canchaSinCotizacion} montoTotal={6800} onConfirmarPago={vi.fn()} />);
+
+    expect(screen.getByText(/resumen del turno/i)).toBeInTheDocument();
+    expect(screen.getByText('Turno de cancha (Pádel Cristal)')).toBeInTheDocument();
+    expect(screen.queryByText(/cuota membresía/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/acceso total/i)).not.toBeInTheDocument();
+  });
+
+  it('el texto de cuota de membresía aparece solo para membresías', () => {
+    render(<ResumenPago detalle={detalleMembresia} montoTotal={38000} onConfirmarPago={vi.fn()} />);
+
+    expect(screen.getByText('Cuota membresía (Plan Trimestral FitZone)')).toBeInTheDocument();
+    expect(screen.queryByText(/resumen del turno/i)).not.toBeInTheDocument();
+  });
 });

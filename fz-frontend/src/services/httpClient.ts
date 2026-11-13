@@ -135,12 +135,23 @@ export function getAuthToken(): string | null {
 }
 
 /**
+ * Opciones extendidas de petición HTTP en FitZone Sports.
+ */
+export interface HttpRequestOptions extends RequestInit {
+  /**
+   * Si es true, no notifica al handler global de errores (_onError).
+   * Útil cuando el llamador espera ciertos códigos de error (ej. 404) como estado normal de negocio.
+   */
+  silent?: boolean;
+}
+
+/**
  * Función principal que realiza la petición HTTP.
  * Es genérica: `httpRequest<UsuarioDTO[]>('/v1/usuarios')` devuelve `Promise<UsuarioDTO[]>`.
  */
 async function httpRequest<T>(
   path: string,
-  options: RequestInit = {}
+  options: HttpRequestOptions = {}
 ): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
 
@@ -168,7 +179,7 @@ async function httpRequest<T>(
   // Si el token expiró o es inválido (401) en una ruta autenticada, cerramos sesión y redirigimos a /login
   if (response.status === 401 && _authToken && !path.startsWith('/v1/auth/login')) {
     _authToken = null;
-    localStorage.removeItem('fitzone_auth_session');
+    sessionStorage.removeItem('fitzone_auth_session');
     if (window.location.pathname !== '/login') {
       window.location.href = '/login';
     }
@@ -195,8 +206,9 @@ async function httpRequest<T>(
       : `Error ${response.status}: ${response.statusText}`;
   }
 
-  // Disparamos el toast de error si hay un handler registrado
-  if (_onError) {
+  // Disparamos el toast de error si hay un handler registrado, no es 404 y la petición no es silenciosa.
+  // Un 404 representa recurso no encontrado y debe ser gestionado por la lógica del servicio o llamador.
+  if (_onError && response.status !== 404 && !options.silent) {
     _onError(userMessage, response.status);
   }
 
@@ -210,18 +222,18 @@ async function httpRequest<T>(
  *   const nuevo = await httpClient.post<UsuarioDTO>('/v1/usuarios', { body: JSON.stringify(data) });
  */
 export const httpClient = {
-  get: <T>(path: string, options?: RequestInit) =>
+  get: <T>(path: string, options?: HttpRequestOptions) =>
     httpRequest<T>(path, { method: 'GET', ...options }),
 
-  post: <T>(path: string, options?: RequestInit) =>
+  post: <T>(path: string, options?: HttpRequestOptions) =>
     httpRequest<T>(path, { method: 'POST', ...options }),
 
-  put: <T>(path: string, options?: RequestInit) =>
+  put: <T>(path: string, options?: HttpRequestOptions) =>
     httpRequest<T>(path, { method: 'PUT', ...options }),
 
-  delete: <T>(path: string, options?: RequestInit) =>
+  delete: <T>(path: string, options?: HttpRequestOptions) =>
     httpRequest<T>(path, { method: 'DELETE', ...options }),
 
-  patch: <T>(path: string, options?: RequestInit) =>
+  patch: <T>(path: string, options?: HttpRequestOptions) =>
     httpRequest<T>(path, { method: 'PATCH', ...options }),
 };

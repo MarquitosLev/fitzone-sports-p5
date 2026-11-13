@@ -14,18 +14,34 @@ export interface MembresiaEstadoCardProps {
 }
 
 /**
- * Calcula la diferencia en días entre la fecha de vencimiento y la fecha actual.
+ * Calcula la diferencia en días calendario entre la fecha de vencimiento y la fecha actual.
+ * Compara ambas fechas normalizadas a medianoche (inicio de día).
+ * Retorna:
+ *  - Un valor estrictamente negativo (< 0) si la membresía ya expiró (vencida).
+ *  - 0 si la fecha de vencimiento es el día de hoy ("Vence hoy").
+ *  - Un valor estrictamente positivo (> 0) si la membresía sigue vigente.
+ *
+ * Nunca aplica Math.abs: el signo indica si la membresía sigue activa o ya expiró.
  */
 export function calcularDiasRestantes(fechaVencimientoIso: string): number {
   if (!fechaVencimientoIso) return 0;
   try {
     const [year, month, day] = fechaVencimientoIso.split('-').map(Number);
-    const fechaVto = new Date(year, month - 1, day, 23, 59, 59);
+    if (!year || !month || !day) return 0;
+
     const hoy = new Date();
-    // Normalizar hoy a inicio del día para cálculo exacto de días calendario
-    const hoyInicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
+    // Normalizar AMBAS fechas a 00:00:00.000 (inicio de día local) para que la diferencia
+    // sea siempre un número entero exacto de días calendario, sin ambigüedad de horas ni DST.
+    // Con ambas marcas de tiempo en medianoche la división es exacta (sin fracción residual)
+    // y nunca hace falta Math.round ni Math.ceil.
+    // SCRUM-124: si la fecha de vencimiento fue ayer, el resultado es estrictamente -1 (< 0).
+    const fechaVto = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const hoyInicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0, 0);
     const diffMs = fechaVto.getTime() - hoyInicio.getTime();
-    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    // División exacta: ambas marcas son múltiplos de 86 400 000 ms → resultado siempre entero
+    // SCRUM-124: NO aplicar Math.abs — el valor estrictamente negativo (< 0) indica membresía vencida
+    return diffMs / (1000 * 60 * 60 * 24);
   } catch {
     return 0;
   }
@@ -76,6 +92,7 @@ export function MembresiaEstadoCard({
               onClick={onRenovarClick}
               leftIcon={RefreshCw}
               className="shrink-0"
+              data-testid="btn-asociar-membresia"
             >
               Asociar Membresía
             </Button>
@@ -121,7 +138,7 @@ export function MembresiaEstadoCard({
             <Clock className="w-5 h-5 text-fitzone-coral shrink-0" />
             <div>
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                {estaVencido ? 'Días vencida' : 'Días restantes'}
+                {estaVencido ? 'Membresía vencida' : 'Días restantes'}
               </div>
               <div
                 className={`text-lg font-black font-outfit tracking-tight ${
@@ -132,8 +149,9 @@ export function MembresiaEstadoCard({
                     : 'text-white'
                 }`}
               >
+                {/* SCRUM-124: membresía vencida muestra 0, nunca un positivo engañoso */}
                 {estaVencido
-                  ? `${Math.abs(diasRestantes)} ${Math.abs(diasRestantes) === 1 ? 'día' : 'días'}`
+                  ? '0 días'
                   : diasRestantes === 0
                   ? 'Vence hoy'
                   : `${diasRestantes} ${diasRestantes === 1 ? 'día' : 'días'}`}

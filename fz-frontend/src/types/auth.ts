@@ -1,4 +1,4 @@
-import type { TipoUsuario, UsuarioDTO } from './usuario';
+import type { UsuarioDTO } from './usuario';
 
 /**
  * Credenciales para el inicio de sesión.
@@ -9,8 +9,8 @@ export interface LoginCredentialsDTO {
 }
 
 /**
- * Datos requeridos para el registro público de un nuevo usuario.
- * Por defecto en el frontend se asigna tipoUsuario = 'EXTERNO' e idSede = null.
+ * Datos personales y contraseña del alta de socio online. El alta siempre es de SOCIO:
+ * el cliente sin cuenta reserva como invitado.
  */
 export interface RegistroUsuarioDTO {
   nombre: string;
@@ -19,8 +19,38 @@ export interface RegistroUsuarioDTO {
   email: string;
   telefono: string;
   password: string;
-  tipoUsuario: TipoUsuario;
-  idSede?: number | null;
+}
+
+/** Body de POST /v1/auth/alta-socio: los datos, el plan elegido y la sede donde se registra el cobro. */
+export interface AltaSocioDTO extends RegistroUsuarioDTO {
+  idPlan: number;
+  idSede: number;
+  forzarRechazo?: boolean;
+}
+
+/**
+ * Resultado del alta. `token` null: hay que iniciar sesión a mano, o la cuenta quedó pendiente
+ * (`cuentaPendiente`) y se reintenta con `codigoReintento`, que solo viaja en ese caso. Los campos del alta son opcionales para
+ * que `AuthResponseDTO` siga siendo asignable.
+ */
+export interface AltaSocioResultadoDTO {
+  token: string | null;
+  usuario: UsuarioDTO;
+  cuentaPendiente?: boolean;
+  mensaje?: string;
+  idMembresia?: number | null;
+  fechaVencimiento?: string | null;
+  idComprobante?: number | null;
+  numeroFactura?: string | null;
+  codigoReintento?: string | null;
+}
+
+/** Body de POST /v1/auth/alta-socio/reintentar-cuenta. */
+export interface ReintentoCuentaDTO {
+  dni: string;
+  email: string;
+  password: string;
+  codigoReintento: string;
 }
 
 /**

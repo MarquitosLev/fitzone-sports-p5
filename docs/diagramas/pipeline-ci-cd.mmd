@@ -1,0 +1,32 @@
+---
+title: Pipeline CI/CD — FitZone Sports (v1.0, 2026-11-10, Leiva)
+---
+%% Arquitectura del pipeline CI/CD — FitZone Sports
+%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-10 · Versión: 1.0
+flowchart LR
+  dev["Rama SCRUM-NNN<br/>commit con referencia al ticket"] --> pr["Pull Request<br/>hacia develop"]
+
+  subgraph gha["GitHub Actions — .github/workflows/ci.yml"]
+    direction TB
+    subgraph jb["Job backend"]
+      b1["checkout + setup-java 21<br/>(caché Maven)"] --> b2["./mvnw -B verify<br/>JUnit 5 + JaCoCo + jar"] --> b3[("artefacto<br/>cobertura-backend")]
+    end
+    subgraph jf["Job frontend"]
+      f1["checkout + setup-node 22<br/>(caché npm)"] --> f2["npm ci"] --> f3["npm run coverage<br/>Vitest + V8"] --> f4["npm run build<br/>tsc + vite"] --> f5[("artefacto<br/>cobertura-frontend")]
+    end
+  end
+
+  pr --> gha
+  pr --> prev["Vercel: preview<br/>del frontend por PR"]
+  pr --> rev["Revisión de un compañero<br/>+ Sourcery"]
+
+  gha -- "checks en verde" --> merge{"Merge a develop"}
+  rev --> merge
+  merge --> gha2["CI otra vez sobre develop (push)"]
+  merge --> rdep["Render: build de la imagen Docker<br/>y despliegue de fitzone-backend-dev"]
+  merge --> vdep["Vercel: despliegue del frontend"]
+  rdep --> dev_env["Entorno de pruebas (dev)"]
+  vdep --> dev_env
+
+  rollback["Reversión: git revert del merge<br/>o redeploy de un despliegue anterior en Render/Vercel"]
+  dev_env -. si falla .-> rollback

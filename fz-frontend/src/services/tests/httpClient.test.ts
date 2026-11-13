@@ -21,7 +21,7 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
   beforeEach(() => {
     handler.mockReset();
     registerHttpErrorHandler(handler);
-    localStorage.clear();
+    sessionStorage.clear();
     setAuthToken(null);
   });
 
@@ -48,7 +48,7 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
       vi.fn().mockResolvedValue(respuestaJson(403, { codigo: 'ACCESO_DENEGADO', mensaje, timestamp: '' }))
     );
     setAuthToken('token-socio');
-    localStorage.setItem('fitzone_auth_session', '{"token":"token-socio"}');
+    sessionStorage.setItem('fitzone_auth_session', '{"token":"token-socio"}');
 
     const error = await httpClient.post('/v1/pagos', { body: '{}' }).catch((e: unknown) => e);
 
@@ -57,7 +57,7 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
     expect((error as AppError).message).toBe(mensaje);
     expect(handler).toHaveBeenCalledWith(mensaje, 403);
     expect(getAuthToken()).toBe('token-socio');
-    expect(localStorage.getItem('fitzone_auth_session')).not.toBeNull();
+    expect(sessionStorage.getItem('fitzone_auth_session')).not.toBeNull();
   });
 
   it('ante un 403 sin cuerpo usa el mensaje genérico de sin permiso', async () => {
@@ -78,12 +78,12 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
       vi.fn().mockResolvedValue(respuestaJson(401, { codigo: 401, mensaje: 'Token vencido', timestamp: '' }))
     );
     setAuthToken('token-vencido');
-    localStorage.setItem('fitzone_auth_session', '{"token":"token-vencido"}');
+    sessionStorage.setItem('fitzone_auth_session', '{"token":"token-vencido"}');
 
     await expect(httpClient.get('/v1/usuarios/me')).rejects.toBeInstanceOf(AppError);
 
     expect(getAuthToken()).toBeNull();
-    expect(localStorage.getItem('fitzone_auth_session')).toBeNull();
+    expect(sessionStorage.getItem('fitzone_auth_session')).toBeNull();
     expect(handler).toHaveBeenCalledWith('Token vencido', 401);
   });
 
@@ -95,5 +95,44 @@ describe('SCRUM-92: httpClient — sesión y permisos', () => {
 
     await expect(httpClient.post('/v1/reservas', { body: '{}' })).rejects.toBeInstanceOf(AppError);
     expect(handler).toHaveBeenCalledWith('Turno ocupado', 409);
+  });
+
+  it('SCRUM-125: ante un error 404 lanza AppError pero no invoca al handler global de errores', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        respuestaJson(404, {
+          codigo: 404,
+          mensaje: 'El usuario no posee una membresía activa o suspendida',
+          timestamp: '',
+        })
+      )
+    );
+
+    const error = await httpClient.get('/v1/usuarios/11222333/membresia').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(AppError);
+    expect((error as AppError).status).toBe(404);
+    // El handler NO debe ser invocado ante un 404 para evitar toasts globales de error de servidor
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('SCRUM-125: si la petición tiene silent: true no invoca al handler global incluso ante errores 500', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        respuestaJson(500, {
+          codigo: 500,
+          mensaje: 'Error interno del servidor',
+          timestamp: '',
+        })
+      )
+    );
+
+    await expect(
+      httpClient.get('/v1/usuarios/11222333/membresia', { silent: true })
+    ).rejects.toBeInstanceOf(AppError);
+
+    expect(handler).not.toHaveBeenCalled();
   });
 });

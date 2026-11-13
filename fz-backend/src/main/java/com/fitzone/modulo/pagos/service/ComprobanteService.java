@@ -94,7 +94,11 @@ public class ComprobanteService {
 
     @Transactional(readOnly = true)
     public byte[] generarPdf(Long idComprobante) {
-        Comprobante comprobante = obtenerPorId(idComprobante);
+        return generarPdf(obtenerPorId(idComprobante));
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] generarPdf(Comprobante comprobante) {
         Transaccion transaccion = comprobante.getTransaccion();
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -178,7 +182,7 @@ public class ComprobanteService {
             document.close();
             return out.toByteArray();
         } catch (Exception e) {
-            log.error("Error al generar PDF del comprobante id={}: {}", idComprobante, e.getMessage(), e);
+            log.error("Error al generar PDF del comprobante id={}: {}", comprobante.getIdComprobante(), e.getMessage(), e);
             throw new ReglaNegocioException("Error al generar el documento PDF del comprobante: " + e.getMessage());
         }
     }

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { CanchaCard } from './CanchaCard';
+import { etiquetaTipo } from './tiposCancha';
 import type { CanchaDTO } from '../../types';
 
 describe('CanchaCard', () => {
@@ -21,6 +22,15 @@ describe('CanchaCard', () => {
     expect(screen.getByText(/disponible/i)).toBeInTheDocument();
     // Precio formateado
     expect(screen.getByText(/8\.000/)).toBeInTheDocument();
+  });
+
+  it('formatea el valor PADDLE del backend como Pádel y todos los valores del enum con etiquetaTipo', () => {
+    render(<CanchaCard cancha={{ ...mockCancha, tipo: 'PADDLE' }} />);
+
+    expect(screen.getByText('Pádel')).toBeInTheDocument();
+    expect(etiquetaTipo('PADDLE')).toBe('Pádel');
+    expect(etiquetaTipo('FUTBOL_5')).toBe('Fútbol 5');
+    expect(etiquetaTipo('TENIS')).toBe('Tenis');
   });
 
   it('renderiza correctamente el estado de mantenimiento', () => {

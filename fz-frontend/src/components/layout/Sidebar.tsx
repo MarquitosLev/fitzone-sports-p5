@@ -22,6 +22,7 @@ export interface SidebarProps {
 export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
+  const esPersonal = usuario?.tipoUsuario === 'RECEPCIONISTA' || usuario?.tipoUsuario === 'GERENTE';
   const { sedeActiva } = useSede();
   const misPrestaciones = usePrestacionesUsuario();
 
@@ -124,7 +125,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
           </button>
         )}
         <div className="text-[11px] text-slate-400 px-3 text-center">
-          FitZone Sports · Portal de Gestión
+          {esPersonal ? 'FitZone Sports · Portal de Gestión' : 'FitZone Sports'}
         </div>
       </div>
     </div>
@@ -133,7 +134,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   return (
     <>
       {/* ── Desktop Sidebar (fijo a la izquierda en pantallas >= lg) ── */}
-      <aside className="hidden lg:block w-64 bg-white border-r border-slate-200/80 min-h-[calc(100vh-64px)] p-4 shrink-0">
+      <aside className="hidden lg:block w-64 bg-white border-r border-slate-200/80 h-full overflow-y-auto p-4 shrink-0">
         {renderNavContent()}
       </aside>
 
@@ -148,7 +149,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
           />
           {/* Drawer lateral */}
           <aside
-            className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white shadow-2xl p-4 flex flex-col justify-between z-10 animate-slide-up"
+            className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white shadow-2xl p-4 flex flex-col justify-between z-10 animate-slide-up overflow-y-auto"
             aria-label="Menú móvil"
           >
             {renderNavContent()}

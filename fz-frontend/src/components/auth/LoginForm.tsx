@@ -135,13 +135,13 @@ export function LoginForm({
       {onNavigateToRegister && (
         <div className="text-center pt-2 border-t border-slate-100">
           <p className="text-xs sm:text-sm text-slate-600">
-            ¿No tenés una cuenta todavía?{' '}
+            ¿Todavía no sos socio?{' '}
             <button
               type="button"
               onClick={onNavigateToRegister}
               className="font-bold text-fitzone-coral hover:underline cursor-pointer"
             >
-              Registrate acá
+              Hacete socio
             </button>
           </p>
         </div>

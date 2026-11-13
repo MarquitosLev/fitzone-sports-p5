@@ -72,14 +72,14 @@ public class UsuarioController {
     }
 
     @GetMapping("/me/reservas-cancha")
-    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
+    @PreAuthorize("hasRole('SOCIO')")
     @Operation(summary = "Obtiene las reservas de cancha del usuario logueado, con la cancha y su sede")
     public List<ReservaCancha> obtenerMisReservasCancha() {
         return canchaService.listarMias();
     }
 
     @GetMapping("/me/pagos")
-    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
+    @PreAuthorize("hasRole('SOCIO')")
     @Operation(summary = "Historial de pagos del usuario logueado, con el plan o la cancha de cada uno")
     public List<Transaccion> obtenerMisPagos() {
         return pagoService.listarMios();

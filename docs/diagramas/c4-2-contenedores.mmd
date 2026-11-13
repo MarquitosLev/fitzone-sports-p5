@@ -1,0 +1,31 @@
+---
+title: C4-2 Contenedores — FitZone Sports (v1.0, 2026-11-10, Leiva)
+---
+%% C4-2 Contenedores — FitZone Sports
+%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-10 · Versión: 1.0
+%% Notación C4 sobre flowchart: azul = contenedor del sistema, gris = sistema externo.
+flowchart TB
+  usuarios["<b>Usuarios</b><br/>[Personas]<br/>Socio, cliente externo,<br/>recepcionista y gerente"]
+
+  subgraph fz["FitZone Sports [Sistema de software]"]
+    spa["<b>Aplicación web</b><br/>[Contenedor: React 19, TypeScript, Vite, Tailwind]<br/>SPA mobile-first: pantallas por rol, Mi Pase QR,<br/>grilla de canchas, checkout."]
+    api["<b>API backend</b><br/>[Contenedor: Java 21, Spring Boot 3.4, Spring Security, JPA]<br/>Monolito modular: usuarios, gimnasio, clases, canchas, pagos.<br/>REST bajo /api/v1 · Swagger en /api/swagger-ui"]
+    db[("<b>Base de datos</b><br/>[Contenedor: PostgreSQL 16]<br/>Esquema fz_*")]
+  end
+
+  auth["<b>Supabase Auth</b><br/>[Sistema externo]<br/>Cuentas y emisión de JWT"]
+  pasarela["<b>Pasarela de pagos</b><br/>[Sistema externo]<br/>Simulada por PasarelaMock<br/>dentro de la API"]
+
+  usuarios -- "Usa<br/>[HTTPS, navegador]" --> spa
+  spa -- "Llama a la API<br/>[HTTPS, JSON, Authorization: Bearer JWT]" --> api
+  api -- "Lee y escribe; SELECT … FOR UPDATE<br/>en reservas, cupos y accesos<br/>[JDBC, TCP 5432]" --> db
+  api -- "Proxy de login, alta de cuentas,<br/>descarga de JWKS<br/>[HTTPS, JSON]" --> auth
+  api -- "Cobra y recibe aprobación o rechazo<br/>[interfaz PasarelaPago]" --> pasarela
+
+  classDef persona fill:#08427b,stroke:#052e56,color:#fff
+  classDef contenedor fill:#438dd5,stroke:#2e6295,color:#fff
+  classDef externo fill:#999999,stroke:#6b6b6b,color:#fff
+  class usuarios persona
+  class spa,api,db contenedor
+  class auth,pasarela externo
+  style fz fill:none,stroke:#0b4884,stroke-dasharray:5 5

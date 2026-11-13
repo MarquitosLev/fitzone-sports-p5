@@ -135,7 +135,8 @@ public class CanchaService {
         return cotizarPara(idCancha, usuarioActual.obtenerOpcional().orElse(null), inicio, fin);
     }
 
-    private CotizacionDTO cotizarPara(Long idCancha, Usuario usuario, LocalDateTime inicio, LocalDateTime fin) {
+    @Transactional(readOnly = true)
+    public CotizacionDTO cotizarPara(Long idCancha, Usuario usuario, LocalDateTime inicio, LocalDateTime fin) {
         if (inicio == null || fin == null || !inicio.isBefore(fin)) {
             throw new ReglaNegocioException("La fecha y hora de inicio debe ser anterior a la de fin");
         }
@@ -194,6 +195,24 @@ public class CanchaService {
 
     @Transactional
     public ReservaCancha reservar(Long idCancha, ReservaCancha reserva) {
+        validarTurno(reserva);
+        Usuario usuario = usuarioActual.obtener();
+        if (usuario.getTipoUsuario() != TipoUsuario.SOCIO) {
+            throw new ReglaNegocioException("Con sesión reservan solo los socios. Sin cuenta, reservá como invitado");
+        }
+        return guardarReserva(idCancha, usuario, reserva);
+    }
+
+    @Transactional
+    public ReservaCancha reservarComoInvitado(Long idCancha, Usuario invitado, ReservaCancha reserva) {
+        validarTurno(reserva);
+        if (invitado.getTipoUsuario() != TipoUsuario.EXTERNO) {
+            throw new ReglaNegocioException("El checkout de invitado es solo para usuarios sin cuenta");
+        }
+        return guardarReserva(idCancha, invitado, reserva);
+    }
+
+    private void validarTurno(ReservaCancha reserva) {
         if (reserva == null) {
             throw new ReglaNegocioException("Los datos de la reserva son obligatorios");
         }
@@ -214,12 +233,11 @@ public class CanchaService {
         if (inicio.getHour() < HORA_APERTURA || fin.getHour() > HORA_CIERRE || !inicio.toLocalDate().equals(fin.toLocalDate())) {
             throw new ReglaNegocioException("El turno debe estar dentro del horario de atención (08:00 a 23:00)");
         }
+    }
 
-        // La reserva queda siempre a nombre del logueado: se ignora cualquier idUsuario del body
-        Usuario usuario = usuarioActual.obtener();
-        if (usuario.getTipoUsuario() != TipoUsuario.SOCIO && usuario.getTipoUsuario() != TipoUsuario.EXTERNO) {
-            throw new ReglaNegocioException("Solo usuarios SOCIO y EXTERNO pueden reservar canchas");
-        }
+    private ReservaCancha guardarReserva(Long idCancha, Usuario usuario, ReservaCancha reserva) {
+        LocalDateTime inicio = reserva.getFechaHoraInicio();
+        LocalDateTime fin = reserva.getFechaHoraFin();
 
         // Bloqueo pesimista sobre la cancha para garantizar concurrencia segura
         Cancha cancha = canchaRepository.findByIdForUpdate(idCancha)
@@ -238,6 +256,7 @@ public class CanchaService {
         reserva.setCancha(cancha);
         reserva.setUsuario(usuario);
         reserva.setIdReservaCancha(null);
+        reserva.setCodigoReserva(null);
 
         return reservaCanchaRepository.save(reserva);
     }

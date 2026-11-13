@@ -1,0 +1,76 @@
+# Pipeline de integración continua (Unidad V, SCRUM-111).
+# Corre tests y build de backend y frontend en cada PR hacia develop y en cada push a develop,
+# y publica los reportes de cobertura como artefactos descargables desde la pestaña Actions.
+name: CI
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+
+# Si se empuja otro commit al mismo PR, se cancela la corrida anterior
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (tests + cobertura JaCoCo)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fz-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # verify compila, corre los tests, genera el reporte de JaCoCo y empaqueta el jar
+      - name: Tests y build
+        run: ./mvnw -B verify
+
+      - name: Publicar cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-backend
+          path: fz-backend/target/site/jacoco/
+          if-no-files-found: warn
+
+  frontend:
+    name: Frontend (tests + cobertura + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fz-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: fz-frontend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Tests con cobertura
+        run: npm run coverage
+
+      # tsc + vite build: es el chequeo de tipos del proyecto
+      - name: Build
+        run: npm run build
+
+      - name: Publicar cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-frontend
+          path: fz-frontend/coverage/
+          if-no-files-found: warn

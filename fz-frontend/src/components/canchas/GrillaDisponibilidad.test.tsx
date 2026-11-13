@@ -1,9 +1,18 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GrillaDisponibilidad } from './GrillaDisponibilidad';
 import type { FranjaHorariaDTO, CanchaDTO } from '../../types';
 
 describe('GrillaDisponibilidad Component', () => {
+  // Los tests usan el 2026-10-25: fijamos "hoy" antes para que esos turnos no figuren como pasados.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-20T10:00:00'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   const mockCancha: CanchaDTO = {
     idCancha: 1,
     sede: { idSede: 1, nombre: 'FitZone Palermo', aforoMaximo: 80 },
