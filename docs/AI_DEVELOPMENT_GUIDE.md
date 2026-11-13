@@ -182,7 +182,7 @@ Todo el backend vive en el mismo repositorio (`fz-backend`), organizado en 5 mó
 * **Levantar Base de Datos Local (Docker):**
   ```bash
   cd Integrador
-  docker compose up -d
+  docker compose up -d postgres
   ```
 * **Compilar y Correr Tests Backend:**
   ```bash

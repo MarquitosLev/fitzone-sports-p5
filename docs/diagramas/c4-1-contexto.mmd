@@ -1,0 +1,33 @@
+---
+title: C4-1 Contexto — FitZone Sports (v1.0, 2026-11-10, Leiva)
+---
+%% C4-1 Contexto — FitZone Sports
+%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-10 · Versión: 1.0
+%% Notación C4 sobre flowchart: azul oscuro = persona, azul = el sistema, gris = sistema externo.
+flowchart TB
+  socio["<b>Socio activo</b><br/>[Persona]<br/>Membresía vigente. Ingresa con QR,<br/>reserva clases y canchas con 15 % de descuento."]
+  externo["<b>Cliente externo</b><br/>[Persona]<br/>Sin membresía ni cuenta.<br/>Alquila canchas como invitado."]
+  recepcion["<b>Recepcionista / Admin. de sede</b><br/>[Persona]<br/>Valida ingresos, controla aforo,<br/>administra canchas y clases de su sede."]
+  gerente["<b>Gerente central</b><br/>[Persona]<br/>Administra sedes, planes y precios;<br/>ve reportes de todas las sedes."]
+
+  fitzone["<b>FitZone Sports</b><br/>[Sistema de software]<br/>Membresías, acceso multisede, clases grupales,<br/>alquiler de canchas y pagos para más de 25 sedes."]
+
+  auth["<b>Supabase Auth</b><br/>[Sistema externo]<br/>Cuentas, login y emisión de JWT."]
+  pasarela["<b>Pasarela de pagos</b><br/>[Sistema externo]<br/>Mercado Pago / MODO.<br/>En esta entrega, simulada (PasarelaMock)."]
+  notif["<b>Servicio de notificaciones</b><br/>[Sistema externo, previsto]<br/>Aviso de cupo liberado.<br/>Hoy solo se registra en el log."]
+
+  socio -- "Ingresa con QR, reserva,<br/>renueva su plan<br/>[HTTPS]" --> fitzone
+  externo -- "Reserva y paga una cancha<br/>[HTTPS]" --> fitzone
+  recepcion -- "Registra ingresos y egresos,<br/>gestiona su sede<br/>[HTTPS]" --> fitzone
+  gerente -- "Administra y consulta reportes<br/>[HTTPS]" --> fitzone
+
+  fitzone -- "Autentica y valida tokens<br/>[HTTPS / JWKS]" --> auth
+  fitzone -- "Cobra reservas y membresías<br/>[HTTPS / JSON]" --> pasarela
+  fitzone -. "Notifica cupos liberados<br/>[asincrónico]" .-> notif
+
+  classDef persona fill:#08427b,stroke:#052e56,color:#fff
+  classDef sistema fill:#1168bd,stroke:#0b4884,color:#fff
+  classDef externo fill:#999999,stroke:#6b6b6b,color:#fff
+  class socio,externo,recepcion,gerente persona
+  class fitzone sistema
+  class auth,pasarela,notif externo
