@@ -8,7 +8,7 @@
 Primera reunión de análisis general. Quedé asignado como referente técnico de frontend para acompañar y guiar al equipo en la arquitectura de componentes, modularización y custom hooks en React.
 
 **Decisión**
-Frontend en React con Vite y TypeScript, priorizando componentes funcionales limpios, desacoplamiento de capas y Tailwind CSS para el diseño.
+Frontend en React con Vite y TypeScript, priorizando componentes funcionales limpios, desacoplamiento de capas y Tailwind CSS para el diseño (ver ADR-006 para la justificación formal de la arquitectura, la desestimación de librerías externas pesadas y la gestión de estado).
 
 **Commits**
 Sin commits: todavía no existía el repositorio.
@@ -123,6 +123,7 @@ El test de `ClaseForm` fallaba en las corridas automáticas porque utilizaba una
 
 **Actividad**
 Jornada intensiva de corrección de defectos detectados durante las pruebas de integración end-to-end:
+
 1. En la rama `SCRUM-126`, corregí el flujo de lista de espera y cupos en clases (PR #80).
 2. En la rama `SCRUM-127`, aseguré el control de acceso y visibilidad de pestañas por rol (PR #81).
 3. En la rama `Scrum-124`, colaboré resolviendo el cálculo de vigencia de membresías (PR #75).
