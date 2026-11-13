@@ -98,7 +98,7 @@ El rol se valida con `@PreAuthorize` en el controlador. Que un recurso sea propi
 | 401 | Sin token, token vencido o firma inválida | `RespuestaError` con `ACCESO_DENEGADO` |
 | 403 | Token válido pero el rol no alcanza (o el usuario no existe en `fz_usr_usuarios`) | `RespuestaError` con `ACCESO_DENEGADO` |
 
-Rutas públicas: `/ping`, `/health`, Swagger, `/v1/auth/**` (login y logout), `GET /v1/planes`, `GET /v1/sedes` y `/v1/sedes/{id}`, `GET /v1/canchas`, `/v1/canchas/{id}`, `/disponibilidad` y `/cotizacion`, `/v1/invitados/**` (checkout de invitado: el código de la reserva da el acceso), `/v1/prueba/**` (no existe en `prod`) y `/admin/database/**` (protegido por Root Key).
+Rutas públicas: `/ping`, `/health`, Swagger, `/v1/auth/**` (login, alta de socio con pago y logout), `GET /v1/planes`, `GET /v1/sedes` y `/v1/sedes/{id}`, `GET /v1/canchas`, `/v1/canchas/{id}`, `/disponibilidad` y `/cotizacion`, `/v1/invitados/**` (checkout de invitado: el código de la reserva da el acceso), `/v1/prueba/**` (no existe en `prod`) y `/admin/database/**` (protegido por Root Key).
 
 En Swagger: hacé `POST /v1/auth/login`, copiá el `token` y cargalo en **Authorize**.
 

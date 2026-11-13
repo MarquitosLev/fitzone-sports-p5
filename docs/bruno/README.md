@@ -25,7 +25,9 @@ docs/bruno/
 │   ├── 05 - Buscar Usuarios con Filtros.bru
 │   ├── 06 - Editar Usuario.bru
 │   ├── 07 - Error DNI Duplicado (409).bru
-│   └── 08 - Error Socio con Sede (422).bru
+│   ├── 08 - Error Socio con Sede (422).bru
+│   ├── 09 - Alta de Socio con Pago.bru
+│   └── 10 - Alta de Socio Pago Rechazado (422).bru
 ├── 02-canchas/                     # Módulo 2: Reservas y Canchas (a incorporar)
 ├── 03-clases/                      # Módulo 3: Clases Grupales y Cupos (a incorporar)
 ├── 04-gimnasio/                    # Módulo 4: Accesos y Aforo (a incorporar)

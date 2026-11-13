@@ -5,6 +5,7 @@ import { useToastOpcional } from '../../context/ToastContext';
 import { Spinner } from '../ui';
 import { usePrestacionesUsuario } from '../../hooks/usePrestaciones';
 import { evaluarAccesoRuta } from './accesoRuta';
+import { InvitacionSocio } from './InvitacionSocio';
 import type { TipoUsuario, Prestacion } from '../../types';
 
 /** Mensaje del aviso que se muestra al redirigir a alguien que entró por URL a una ruta de otro rol. */
@@ -15,6 +16,8 @@ export interface RoleMiddlewareProps {
   allowedRoles?: TipoUsuario[];
   /** Prestación específica requerida para acceder al subárbol de rutas (SCRUM-106 / SCRUM-107). */
   prestacionRequerida?: Prestacion;
+  /** Pantallas de socio: sin sesión muestra la invitación a asociarse en vez de redirigir al login. */
+  invitarAsociarse?: boolean;
 }
 
 /**
@@ -49,7 +52,7 @@ function RedireccionSinPermiso() {
  *     <Route path="admin/roles" element={<RolesPage />} />
  *   </Route>
  */
-export function RoleMiddleware({ allowedRoles, prestacionRequerida }: RoleMiddlewareProps) {
+export function RoleMiddleware({ allowedRoles, prestacionRequerida, invitarAsociarse = false }: RoleMiddlewareProps) {
   const { usuario, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
   const prestacionesUsuario = usePrestacionesUsuario();
@@ -71,6 +74,9 @@ export function RoleMiddleware({ allowedRoles, prestacionRequerida }: RoleMiddle
 
   if (resultado === 'REQUIERE_LOGIN') {
     const returnUrl = encodeURIComponent(location.pathname + location.search);
+    if (invitarAsociarse) {
+      return <InvitacionSocio returnTo={returnUrl} />;
+    }
     return <Navigate to={`/login?returnTo=${returnUrl}`} state={{ from: location }} replace />;
   }
 

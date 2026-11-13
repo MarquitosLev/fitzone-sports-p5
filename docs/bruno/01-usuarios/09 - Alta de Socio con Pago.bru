@@ -1,0 +1,28 @@
+meta {
+  name: 09 - Alta de Socio con Pago
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/v1/auth/alta-socio
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "nombre": "Sofía",
+    "apellido": "Nueva",
+    "dni": "40111222",
+    "email": "sofia.nueva@mail.com",
+    "telefono": "+5491166660000",
+    "password": "password123",
+    "idPlan": 1,
+    "idSede": 1
+  }
+}
+
+assert {
+  res.status: eq 201
+}

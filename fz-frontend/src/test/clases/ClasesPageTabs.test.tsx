@@ -48,6 +48,7 @@ function crearSesion(tipoUsuario: TipoUsuario): AuthContextType {
     isLoading: false,
     login: async () => ({ token: 'jwt-token-valido', usuario }),
     register: async () => ({ token: 'jwt-token-valido', usuario }),
+    reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
     logout: () => {},
   };
 }

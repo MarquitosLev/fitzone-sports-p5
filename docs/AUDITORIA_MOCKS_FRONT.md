@@ -60,7 +60,7 @@ Impacto en tests: de 53 archivos de test, 13 prueban servicios o páginas contra
 
 ## 4. Fuera del front, relacionado
 
-- `PagoRequest.forzarRechazo` (backend): es un interruptor de prueba expuesto en la API pública. Lo correcto es que la pasarela simulada decida el rechazo por una regla propia (por ejemplo, un monto o un token de tarjeta de prueba) o que el campo solo se acepte con un perfil `dev`.
+- `forzarRechazo` (backend, en `PagoRequest`, `PagoInvitadoRequest` y `AltaSocioRequest`): es un interruptor de prueba expuesto en la API pública. Desde SCRUM-135 la pasarela simulada solo lo respeta con `fitzone.pagos.rechazo-forzado-habilitado=true`, que está activo únicamente en el perfil `local`; en `dev` y `prod` el campo se ignora. Queda pendiente que el rechazo lo decida una regla propia de la pasarela (por ejemplo, un monto o un token de tarjeta de prueba).
 - Hacen falta los endpoints que el front hoy suple con datos propios: tipos de cancha y horario de la sede (A9), y la matriz de permisos (A5, si se quiere que la defina el backend).
 
 ## 5. Qué se hizo en SCRUM-117

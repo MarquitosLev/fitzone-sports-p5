@@ -50,6 +50,9 @@ export type {
 export type {
   LoginCredentialsDTO,
   RegistroUsuarioDTO,
+  AltaSocioDTO,
+  AltaSocioResultadoDTO,
+  ReintentoCuentaDTO,
   AuthResponseDTO,
   AuthState,
 } from './auth';

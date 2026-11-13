@@ -15,6 +15,7 @@ function renderConAuth(ui: React.ReactNode, usuario: UsuarioDTO | null) {
     isLoading: false,
     login: async () => ({ token: 'mock', usuario: usuario! }),
     register: async () => ({ token: 'mock', usuario: usuario! }),
+    reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
     logout: () => {},
   };
 

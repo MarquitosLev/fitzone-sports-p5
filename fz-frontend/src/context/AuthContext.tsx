@@ -2,12 +2,15 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import type {
   UsuarioDTO,
   LoginCredentialsDTO,
-  RegistroUsuarioDTO,
+  AltaSocioDTO,
+  AltaSocioResultadoDTO,
+  ReintentoCuentaDTO,
   AuthResponseDTO,
 } from '../types';
 import {
   iniciarSesion,
-  registrarUsuario,
+  darAltaSocio,
+  reintentarCuentaSocio,
   cerrarSesion,
   obtenerSesionActual,
   obtenerUsuarioActual,
@@ -21,7 +24,10 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginCredentialsDTO) => Promise<AuthResponseDTO>;
-  register: (datos: RegistroUsuarioDTO) => Promise<AuthResponseDTO>;
+  /** Alta de socio con el pago de la suscripción. Con token en el resultado, la sesión queda iniciada. */
+  register: (datos: AltaSocioDTO) => Promise<AltaSocioResultadoDTO>;
+  /** Crea la cuenta de un alta ya pagada que quedó pendiente. Con token en el resultado, la sesión queda iniciada. */
+  reintentarCuenta: (datos: ReintentoCuentaDTO) => Promise<AltaSocioResultadoDTO>;
   logout: () => void;
 }
 
@@ -99,13 +105,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  const register = useCallback(async (datos: RegistroUsuarioDTO): Promise<AuthResponseDTO> => {
+  const register = useCallback(async (datos: AltaSocioDTO): Promise<AltaSocioResultadoDTO> => {
     setIsLoading(true);
     try {
-      const sesion = await registrarUsuario(datos);
-      setUsuario(sesion.usuario);
-      setToken(sesion.token);
-      return sesion;
+      const resultado = await darAltaSocio(datos);
+      if (resultado.token) {
+        setUsuario(resultado.usuario);
+        setToken(resultado.token);
+      }
+      return resultado;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const reintentarCuenta = useCallback(async (datos: ReintentoCuentaDTO): Promise<AltaSocioResultadoDTO> => {
+    setIsLoading(true);
+    try {
+      const resultado = await reintentarCuentaSocio(datos);
+      if (resultado.token) {
+        setUsuario(resultado.usuario);
+        setToken(resultado.token);
+      }
+      return resultado;
     } finally {
       setIsLoading(false);
     }
@@ -124,6 +146,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     login,
     register,
+    reintentarCuenta,
     logout,
   };
 
@@ -140,6 +163,7 @@ const FALLBACK_AUTH: AuthContextType = {
   isLoading: false,
   login: async () => { throw new Error('Fuera de AuthProvider'); },
   register: async () => { throw new Error('Fuera de AuthProvider'); },
+  reintentarCuenta: async () => { throw new Error('Fuera de AuthProvider'); },
   logout: () => {},
 };
 

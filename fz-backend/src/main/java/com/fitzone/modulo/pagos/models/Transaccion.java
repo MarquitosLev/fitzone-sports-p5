@@ -1,5 +1,6 @@
 package com.fitzone.modulo.pagos.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fitzone.core.domain.common.BaseEntity;
 import com.fitzone.core.domain.enums.EstadoPago;
@@ -29,6 +30,7 @@ import org.hibernate.annotations.Check;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "fz_pag_transacciones")
@@ -89,4 +91,9 @@ public class Transaccion extends BaseEntity {
 
     @Column(name = "fecha_hora_confirmacion")
     private LocalDateTime fechaHoraConfirmacion;
+
+    /** Solo las altas de socio lo tienen: es la prueba de quien pagó para reintentar la cuenta. No se expone en la API. */
+    @JsonIgnore
+    @Column(name = "codigo_reintento", unique = true)
+    private UUID codigoReintento;
 }

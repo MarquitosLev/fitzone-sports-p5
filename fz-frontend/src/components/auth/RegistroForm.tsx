@@ -12,6 +12,8 @@ export interface RegistroFormProps {
   errorMessage?: string | null;
   /** Callback para regresar hacia la vista de inicio de sesión */
   onNavigateToLogin?: () => void;
+  /** Datos ya cargados, para no perderlos si el usuario vuelve atrás desde el pago */
+  valoresIniciales?: RegistroUsuarioDTO | null;
 }
 
 interface FormState {
@@ -27,24 +29,24 @@ interface FormState {
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
 /**
- * Formulario reutilizable de registro público (SCRUM-89).
- * Regla de negocio estricta: No contiene selectores de rol; asigna fijamente
- * tipoUsuario = 'EXTERNO' e idSede = null.
+ * Datos personales y contraseña del alta de socio. El plan y el pago se eligen en RegistroPage.
+ * No tiene selector de rol: el alta es siempre de socio.
  */
 export function RegistroForm({
   onSubmit,
   isLoading = false,
   errorMessage = null,
   onNavigateToLogin,
+  valoresIniciales = null,
 }: RegistroFormProps) {
   const [formData, setFormData] = useState<FormState>({
-    nombre: '',
-    apellido: '',
-    dni: '',
-    email: '',
-    telefono: '',
-    password: '',
-    confirmarPassword: '',
+    nombre: valoresIniciales?.nombre ?? '',
+    apellido: valoresIniciales?.apellido ?? '',
+    dni: valoresIniciales?.dni ?? '',
+    email: valoresIniciales?.email ?? '',
+    telefono: valoresIniciales?.telefono ?? '',
+    password: valoresIniciales?.password ?? '',
+    confirmarPassword: valoresIniciales?.password ?? '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -118,8 +120,6 @@ export function RegistroForm({
       email: formData.email.trim().toLowerCase(),
       telefono: formData.telefono.trim(),
       password: formData.password,
-      tipoUsuario: 'EXTERNO',
-      idSede: null,
     });
   };
 
@@ -240,7 +240,7 @@ export function RegistroForm({
         disabled={isLoading}
         className="h-12 text-sm sm:text-base font-bold shadow-md mt-2"
       >
-        {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+        {isLoading ? 'Procesando...' : 'Continuar al pago'}
       </Button>
 
       {/* Enlace para volver a Iniciar Sesión */}

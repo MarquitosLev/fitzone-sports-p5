@@ -1,6 +1,7 @@
 package com.fitzone.modulo.pagos.pasarela;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -13,8 +14,18 @@ import java.util.UUID;
 @Component
 public class PasarelaMock implements PasarelaPago {
 
+    private final boolean rechazoForzadoHabilitado;
+
+    public PasarelaMock(@Value("${fitzone.pagos.rechazo-forzado-habilitado:false}") boolean rechazoForzadoHabilitado) {
+        this.rechazoForzadoHabilitado = rechazoForzadoHabilitado;
+    }
+
     @Override
-    public RespuestaPasarela cobrar(BigDecimal monto, String conceptoDescripcion, boolean forzarRechazo) {
+    public RespuestaPasarela cobrar(BigDecimal monto, String conceptoDescripcion, boolean forzarRechazoSolicitado) {
+        boolean forzarRechazo = forzarRechazoSolicitado && rechazoForzadoHabilitado;
+        if (forzarRechazoSolicitado && !rechazoForzadoHabilitado) {
+            log.warn("[PASARELA-MOCK] Se pidió forzar un rechazo pero fitzone.pagos.rechazo-forzado-habilitado está desactivado: se ignora");
+        }
         log.info("[PASARELA-MOCK] Procesando cobro de ${} - Concepto: {} - Forzar rechazo: {}",
                 monto, conceptoDescripcion, forzarRechazo);
 

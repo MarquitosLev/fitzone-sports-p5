@@ -13,14 +13,14 @@ describe('SCRUM-89: RegistroForm Component', () => {
     expect(screen.getByLabelText(/^correo electrónico/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^contraseña/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^confirmar contraseña/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /crear cuenta/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continuar al pago/i })).toBeInTheDocument();
   });
 
   it('muestra errores ante campos obligatorios vacíos', async () => {
     const handleSubmit = vi.fn();
     render(<RegistroForm onSubmit={handleSubmit} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continuar al pago/i }));
 
     expect(await screen.findByText(/el nombre es obligatorio/i)).toBeInTheDocument();
     expect(await screen.findByText(/el apellido es obligatorio/i)).toBeInTheDocument();
@@ -35,7 +35,7 @@ describe('SCRUM-89: RegistroForm Component', () => {
     render(<RegistroForm onSubmit={handleSubmit} />);
 
     fireEvent.change(screen.getByLabelText(/^dni/i), { target: { value: '1234' } });
-    fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continuar al pago/i }));
 
     expect(await screen.findByText(/el dni debe tener 7 u 8 dígitos numéricos/i)).toBeInTheDocument();
     expect(handleSubmit).not.toHaveBeenCalled();
@@ -47,13 +47,13 @@ describe('SCRUM-89: RegistroForm Component', () => {
 
     fireEvent.change(screen.getByLabelText(/^contraseña/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/^confirmar contraseña/i), { target: { value: 'otraClave' } });
-    fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continuar al pago/i }));
 
     expect(await screen.findByText(/las contraseñas no coinciden/i)).toBeInTheDocument();
     expect(handleSubmit).not.toHaveBeenCalled();
   });
 
-  it('asigna por defecto tipoUsuario: EXTERNO e idSede: null al enviar datos válidos', async () => {
+  it('envía los datos personales sin tipo de usuario: el alta es siempre de socio', async () => {
     const handleSubmit = vi.fn().mockResolvedValue(undefined);
     render(<RegistroForm onSubmit={handleSubmit} />);
 
@@ -65,7 +65,7 @@ describe('SCRUM-89: RegistroForm Component', () => {
     fireEvent.change(screen.getByLabelText(/^contraseña/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/^confirmar contraseña/i), { target: { value: 'password123' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continuar al pago/i }));
 
     await waitFor(() => {
       expect(handleSubmit).toHaveBeenCalledWith({
@@ -75,10 +75,29 @@ describe('SCRUM-89: RegistroForm Component', () => {
         telefono: '1144556677',
         email: 'martin@fitzone.com',
         password: 'password123',
-        tipoUsuario: 'EXTERNO',
-        idSede: null,
       });
     });
+  });
+
+  it('muestra los datos ya cargados cuando se vuelve atrás desde el pago', () => {
+    render(
+      <RegistroForm
+        onSubmit={vi.fn()}
+        valoresIniciales={{
+          nombre: 'Martín',
+          apellido: 'García',
+          dni: '35123456',
+          telefono: '1144556677',
+          email: 'martin@fitzone.com',
+          password: 'password123',
+        }}
+      />
+    );
+
+    expect(screen.getByLabelText(/^nombre/i)).toHaveValue('Martín');
+    expect(screen.getByLabelText(/^dni/i)).toHaveValue('35123456');
+    expect(screen.getByLabelText(/^correo electrónico/i)).toHaveValue('martin@fitzone.com');
+    expect(screen.getByLabelText(/^confirmar contraseña/i)).toHaveValue('password123');
   });
 
   it('dispara el callback onNavigateToLogin al pulsar el enlace', () => {

@@ -29,6 +29,7 @@ function renderSidebar(tipoUsuario: TipoUsuario | null): string[] {
     isLoading: false,
     login: async () => ({ token: 'x', usuario: usuario! }),
     register: async () => ({ token: 'x', usuario: usuario! }),
+    reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
     logout: () => {},
   };
 
