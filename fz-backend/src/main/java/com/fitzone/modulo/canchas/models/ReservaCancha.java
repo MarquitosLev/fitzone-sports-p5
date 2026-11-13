@@ -14,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,6 +24,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "fz_cch_reservas")
@@ -58,6 +60,17 @@ public class ReservaCancha extends BaseEntity {
 
     @Column(name = "precio_final", nullable = false, precision = 10, scale = 2)
     private BigDecimal precioFinal;
+
+    @Column(name = "codigo_reserva", unique = true, updatable = false)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private UUID codigoReserva;
+
+    @PrePersist
+    void asignarCodigoReserva() {
+        if (codigoReserva == null) {
+            codigoReserva = UUID.randomUUID();
+        }
+    }
 
     @JsonProperty("idCancha")
     public void setIdCancha(Long idCancha) {

@@ -1,0 +1,30 @@
+meta {
+  name: 01 - Reservar como Invitado
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/invitados/reservas
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idCancha": 1,
+    "fechaHoraInicio": "2026-12-10T10:00:00",
+    "fechaHoraFin": "2026-12-10T11:00:00",
+    "nombre": "Ana",
+    "apellido": "Pérez",
+    "dni": "30111222",
+    "email": "ana.invitada@mail.com",
+    "telefono": "+5491155550000"
+  }
+}
+
+script:post-response {
+  if (res.body.codigoReserva) {
+    bru.setVar("codigoReserva", res.body.codigoReserva);
+  }
+}

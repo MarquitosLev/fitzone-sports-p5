@@ -50,13 +50,14 @@ import type {
   ResultadoPagoDTO,
   UsuarioDTO,
 } from '../types';
-import { formatearFechaHora, formatearMonto, toLocalISOString } from '../utils/formatters';
+import { formatearFecha, formatearFechaHora, formatearMonto, toLocalISOString } from '../utils/formatters';
+import { calcularVencimientoTrasPago } from '../utils/membresias';
 
 interface ItemCobro {
   id: string;
   detalle: DetalleItemPago;
   monto: number;
-  concepto: 'RESERVA_SOCIO' | 'RESERVA_EXTERNO' | 'MEMBRESIA_SOCIO';
+  concepto: 'RESERVA_SOCIO' | 'MEMBRESIA_SOCIO';
   idReservaCancha?: number;
   idMembresia?: number;
   /** Sede donde se registra el cobro (la de la cancha en una reserva) */
@@ -96,7 +97,7 @@ async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobro[]> 
   );
   // El backend guarda LocalDateTime en hora local: se compara contra la hora local, no UTC
   const ahora = toLocalISOString(new Date());
-  const concepto = usuario.tipoUsuario === 'EXTERNO' ? 'RESERVA_EXTERNO' : 'RESERVA_SOCIO';
+  const concepto = 'RESERVA_SOCIO';
 
   const pendientes = reservas.filter(
     (r) => !pagadas.has(r.idReservaCancha) && r.fechaHoraInicio > ahora
@@ -125,7 +126,12 @@ async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobro[]> 
 
   if (usuario.tipoUsuario === 'SOCIO') {
     const membresia = await obtenerMembresiaPorUsuario(usuario.idUsuario);
-    if (membresia) {
+    // Una membresía cancelada no se puede renovar: el backend responde 422
+    if (membresia && membresia.estado !== 'CANCELADO') {
+      const tienePagoConfirmado = pagos.some(
+        (p) => p.estadoPago === 'CONFIRMADO' && p.membresiaId === membresia.idMembresia
+      );
+      const vigenteHasta = calcularVencimientoTrasPago(membresia, tienePagoConfirmado);
       items.push({
         id: `membresia-${membresia.idMembresia}`,
         monto: Number(membresia.plan.precioBase),
@@ -134,11 +140,13 @@ async function cargarItemsPendientes(usuario: UsuarioDTO): Promise<ItemCobro[]> 
         detalle: {
           tipo: 'MEMBRESIA',
           titulo: `Renovación Membresía · ${membresia.plan.nombre}`,
-          subtitulo: `Vence el ${membresia.fechaVencimiento}`,
+          subtitulo: vigenteHasta
+            ? `Queda vigente hasta el ${formatearFecha(vigenteHasta)}`
+            : membresia.plan.nombre,
           planNombre: membresia.plan.nombre,
           duracionMeses: membresia.plan.duracionMeses,
           fechaInicio: membresia.fechaInicio,
-          fechaVencimiento: membresia.fechaVencimiento,
+          fechaVencimiento: vigenteHasta ? formatearFecha(vigenteHasta) : undefined,
         },
       });
     }
@@ -154,8 +162,8 @@ export function PagosPage() {
   const idReservaPedida = Number(searchParams.get('reserva')) || null;
   const pideMembresia = searchParams.get('item') === 'membresia';
 
-  // Con la API real solo pagan socios y externos lo propio; el cobro en mostrador es otra historia
-  const puedePagar = usuario?.tipoUsuario === 'SOCIO' || usuario?.tipoUsuario === 'EXTERNO';
+  // Con sesión paga solo el socio lo propio; el invitado paga en /reserva-invitado/:codigo
+  const puedePagar = usuario?.tipoUsuario === 'SOCIO';
 
   // Control de pestañas principales: 'checkout' o 'historial'
   const [activeTab, setActiveTab] = useState<'checkout' | 'historial'>('checkout');
@@ -554,10 +562,10 @@ export function PagosPage() {
           {!puedePagar ? (
             <Alert
               type="info"
-              title={usuario ? 'El checkout es para socios y clientes' : 'Iniciá sesión para pagar'}
+              title={usuario ? 'El checkout es para socios' : 'Iniciá sesión para pagar'}
               message={
                 usuario
-                  ? 'Cada socio o cliente paga sus propias reservas y membresías. El cobro en mostrador todavía no está disponible.'
+                  ? 'Cada socio paga sus propias reservas y membresías. El cobro en mostrador todavía no está disponible.'
                   : 'Ingresá con tu cuenta para ver tus reservas y membresía pendientes de pago.'
               }
             />

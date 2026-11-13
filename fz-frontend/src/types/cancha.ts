@@ -77,3 +77,27 @@ export interface CrearReservaPayload {
   nombreInvitado?: string;
   emailInvitado?: string;
 }
+
+export interface DatosInvitado {
+  nombre: string;
+  apellido: string;
+  dni: string;
+  email: string;
+  telefono: string;
+}
+
+/** Reserva de invitado: `codigoReserva` permite pagarla y descargar el comprobante; `cotizacion` es null si ya no explica el precio. */
+export interface ReservaInvitadoDTO {
+  codigoReserva: string;
+  idReservaCancha: number;
+  idCancha: number;
+  cancha: string;
+  tipoCancha: string | null;
+  idSede: number;
+  sede: string;
+  fechaHoraInicio: string;
+  fechaHoraFin: string;
+  precioFinal: number;
+  cotizacion: CotizacionReservaDTO | null;
+  pagada: boolean;
+}

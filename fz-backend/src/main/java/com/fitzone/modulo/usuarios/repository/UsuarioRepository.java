@@ -20,7 +20,14 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     @Query("SELECT u FROM Usuario u WHERE u.idUsuario = :id")
     Optional<Usuario> findByIdForUpdate(@Param("id") Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM Usuario u WHERE u.dni = :dni")
+    Optional<Usuario> findByDniForUpdate(@Param("dni") String dni);
+
     boolean existsByDni(String dni);
+
+    @Query(value = "SELECT EXISTS (SELECT 1 FROM fz_usr_usuarios WHERE dni = :dni)", nativeQuery = true)
+    boolean existsByDniIncluidosBajas(@Param("dni") String dni);
 
     Optional<Usuario> findByDni(String dni);
 
@@ -28,7 +35,13 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     Optional<Usuario> findByEmail(String email);
 
+    Optional<Usuario> findByEmailIgnoreCase(String email);
+
     boolean existsByEmail(String email);
+
+    boolean existsByEmailIgnoreCase(String email);
+
+    boolean existsByEmailIgnoreCaseAndTipoUsuarioNot(String email, TipoUsuario tipoUsuario);
 
     List<Usuario> findByTipoUsuario(TipoUsuario tipoUsuario);
 

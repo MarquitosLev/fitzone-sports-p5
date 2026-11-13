@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface TransaccionRepository extends JpaRepository<Transaccion, Long> {
@@ -29,8 +30,12 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
     // Buscar transaccion por token de la pasarela de pagos
     Optional<Transaccion> findByTokenTransaccionPasarela(String tokenTransaccionPasarela);
 
+    Optional<Transaccion> findByCodigoReintento(UUID codigoReintento);
+
     // Verificar si una reserva de cancha ya fue pagada con éxito
     boolean existsByReservaCancha_IdReservaCanchaAndEstadoPago(Long idReservaCancha, EstadoPago estadoPago);
+
+    Optional<Transaccion> findFirstByReservaCancha_IdReservaCanchaAndEstadoPago(Long idReservaCancha, EstadoPago estadoPago);
 
     // Verificar si una membresía ya registra un pago confirmado previo
     boolean existsByMembresia_IdMembresiaAndEstadoPago(Long idMembresia, EstadoPago estadoPago);

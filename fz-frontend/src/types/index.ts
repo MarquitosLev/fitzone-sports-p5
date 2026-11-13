@@ -33,6 +33,8 @@ export type {
   CotizacionReservaDTO,
   EstadoReservaCancha,
   CrearReservaPayload,
+  DatosInvitado,
+  ReservaInvitadoDTO,
 } from './cancha';
 export type {
   EstadoPago,
@@ -48,6 +50,9 @@ export type {
 export type {
   LoginCredentialsDTO,
   RegistroUsuarioDTO,
+  AltaSocioDTO,
+  AltaSocioResultadoDTO,
+  ReintentoCuentaDTO,
   AuthResponseDTO,
   AuthState,
 } from './auth';

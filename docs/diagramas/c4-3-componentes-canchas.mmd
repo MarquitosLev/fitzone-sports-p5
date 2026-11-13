@@ -1,0 +1,50 @@
+---
+title: C4-3 Componentes — Canchas (v1.0, 2026-11-10, Leiva)
+---
+%% C4-3 Componentes — Módulo Canchas (M4)
+%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-10 · Versión: 1.0
+%% Notación C4 sobre flowchart: azul = contenedor, celeste = componente.
+flowchart TB
+  spa["<b>Aplicación web</b><br/>[Contenedor: React]<br/>Grilla de disponibilidad, cotización,<br/>reserva y checkout de invitado"]
+
+  subgraph api["API backend — módulo canchas [Contenedor: Spring Boot]"]
+    ctrl["<b>CanchaController</b><br/>[Componente: Spring MVC, /v1/canchas]<br/>ABM, mantenimiento, disponibilidad,<br/>cotización y reserva"]
+    checkout["<b>CheckoutInvitadoService</b><br/>[Componente: @Service, módulo pagos]<br/>Reserva y pago de cancha sin cuenta"]
+    svc["<b>CanchaService</b><br/>[Componente: @Service, @Transactional]<br/>Horario 08–23 h en horas enteras,<br/>bloqueo y verificación de solapamiento (RN-02)"]
+    ua["<b>UsuarioActual</b><br/>[Componente: core.security]<br/>Usuario autenticado desde el JWT"]
+    memb["<b>MembresiaRepository</b><br/>[Componente: Spring Data JPA]<br/>¿Membresía ACTIVA? (RN-03)"]
+
+    subgraph precio["Estrategia de precios — patrón Strategy (RF-11)"]
+      calc["<b>CalculadorPrecioCancha</b><br/>[Componente: contexto Strategy]<br/>Aplica List&lt;EstrategiaPrecio&gt; según @Order<br/>final = base − descuento + recargo"]
+      e1["<b>PrecioBaseEstrategia</b><br/>precio_base_hora × horas"]
+      e2["<b>DescuentoSocioEstrategia</b><br/>−15 % del precio base al socio activo;<br/>en mora paga tarifa externa"]
+      e3["<b>RecargoHorarioPicoEstrategia</b><br/>+20 % de la tarifa por hora pico<br/>(19 a 21 h)<br/>(configurable)"]
+    end
+
+    lock["<b>CanchaRepository.findByIdForUpdate</b><br/>[Componente: Spring Data JPA, @Lock PESSIMISTIC_WRITE]<br/>Gestor de bloqueos: SELECT … FOR UPDATE sobre la cancha"]
+    repo["<b>ReservaCanchaRepository</b><br/>[Componente: Spring Data JPA]<br/>existsSolapamiento(inicio, fin), reservas por usuario y código"]
+  end
+
+  db[("<b>Base de datos</b><br/>[Contenedor: PostgreSQL 16]<br/>fz_cch_canchas · fz_cch_reservas")]
+
+  spa -- "GET disponibilidad y cotización,<br/>POST reservas [HTTPS, JSON]" --> ctrl
+  spa -- "POST reserva de invitado [HTTPS, JSON]" --> checkout
+  ctrl -- "Delega" --> svc
+  checkout -- "Reserva el turno" --> svc
+  svc -- "Obtiene el usuario" --> ua
+  svc -- "¿Socio activo?" --> memb
+  svc -- "Cotiza" --> calc
+  calc -- "1 (@Order 1)" --> e1
+  calc -- "3 (@Order 3)" --> e2
+  calc -- "2 (@Order 2)" --> e3
+  svc -- "① Bloquea la cancha" --> lock
+  svc -- "② Verifica solapamiento y guarda" --> repo
+  lock -- "SELECT … FOR UPDATE [JDBC]" --> db
+  repo -- "SELECT / INSERT [JDBC]" --> db
+
+  classDef contenedor fill:#438dd5,stroke:#2e6295,color:#fff
+  classDef componente fill:#85bbf0,stroke:#5d82a8,color:#000
+  class spa,db contenedor
+  class ctrl,checkout,svc,ua,memb,calc,e1,e2,e3,lock,repo componente
+  style api fill:none,stroke:#2e6295,stroke-dasharray:5 5
+  style precio fill:#eef5fc,stroke:#5d82a8

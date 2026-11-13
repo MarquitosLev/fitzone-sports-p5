@@ -241,7 +241,7 @@ export function UsuariosPage() {
             Gestión de Usuarios
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Administración de socios, invitados y personal —{' '}
+            Administración de socios, clientes externos y personal —{' '}
             <span className="font-bold text-fitzone-navy">{sedeActiva?.nombre ?? 'FitZone Sports'}</span>
           </p>
         </div>

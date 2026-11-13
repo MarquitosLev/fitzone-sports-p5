@@ -133,6 +133,7 @@ const sesionSocio: AuthContextType = {
   isLoading: false,
   login: async () => ({ token: 'token', usuario: socio }),
   register: async () => ({ token: 'token', usuario: socio }),
+  reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
   logout: () => {},
 };
 
@@ -313,6 +314,35 @@ describe('PagosPage (Integración RF-13, RF-14, SCRUM-86)', () => {
       expect(reintentarSpy).toHaveBeenCalledWith(2);
       expect(screen.getByText('¡Pago Confirmado!')).toBeInTheDocument();
     });
+  });
+
+  it('una membresía vencida muestra hasta cuándo queda vigente después de pagar (SCRUM-122)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 6, 10, 0, 0));
+    vi.spyOn(membresiasService, 'obtenerMembresiaPorUsuario').mockResolvedValue({
+      ...membresiaSocio,
+      plan: { ...membresiaSocio.plan, duracionMeses: 1 },
+      fechaVencimiento: '2026-10-22',
+      estado: 'VENCIDO',
+    });
+
+    renderWithProviders(<PagosPage />);
+    fireEvent.click(await screen.findByText(/Renovación Membresía · Plan Trimestral/i));
+
+    expect(screen.getAllByText(/06\/12\/2026/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/2026-10-22/)).not.toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('no ofrece pagar una membresía cancelada', async () => {
+    vi.spyOn(membresiasService, 'obtenerMembresiaPorUsuario').mockResolvedValue({
+      ...membresiaSocio,
+      estado: 'CANCELADO',
+    });
+
+    renderWithProviders(<PagosPage />);
+    expect((await screen.findAllByText(/Turno · Pádel · Cancha 1/i)).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Renovación Membresía/i)).not.toBeInTheDocument();
   });
 
   it('SCRUM-121: un pago rechazado no ofrece reintentar ni cuenta en métricas si ya existe una transacción confirmada para esa reserva', async () => {

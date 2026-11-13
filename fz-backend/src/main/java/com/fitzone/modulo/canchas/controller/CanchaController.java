@@ -95,8 +95,8 @@ public class CanchaController {
 
     @PostMapping("/{id}/reservas")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('SOCIO', 'EXTERNO')")
-    @Operation(summary = "Reserva de un turno en una cancha a nombre del usuario logueado")
+    @PreAuthorize("hasRole('SOCIO')")
+    @Operation(summary = "Reserva de un turno a nombre del socio logueado (sin cuenta: /invitados/reservas)")
     public ReservaCancha reservar(
             @PathVariable @Positive Long id,
             @Valid @RequestBody ReservaCancha reserva) {
