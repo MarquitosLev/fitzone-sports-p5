@@ -13,17 +13,18 @@ import type { UsuarioDTO } from '../types';
 
 const plan = { idPlan: 1, nombre: 'Plan Mensual', precioBase: 15000, duracionMeses: 1 };
 const sede = { idSede: 1, nombre: 'Palermo', aforoMaximo: 80 };
-const socio = { idUsuario: 50, tipoUsuario: 'SOCIO' } as UsuarioDTO;
+const socio = { idUsuario: 50, tipoUsuario: 'SOCIO', dni: '40111999', email: 'sofia@mail.com' } as UsuarioDTO;
 
-function renderPagina(register: AuthContextType['register'], login: AuthContextType['login'] = vi.fn()) {
+function renderPagina(register: AuthContextType['register'], reintentarCuenta: AuthContextType['reintentarCuenta'] = vi.fn()) {
   const auth = {
     usuario: null,
     token: null,
     isAuthenticated: false,
     isLoading: false,
-    login,
+    login: vi.fn(),
     logout: vi.fn(),
     register,
+    reintentarCuenta,
   } as AuthContextType;
 
   return render(
@@ -58,6 +59,7 @@ async function completarDatosYContinuar() {
 describe('RegistroPage: Hacete socio', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    sessionStorage.clear();
     vi.spyOn(membresiasService, 'listarPlanes').mockResolvedValue([plan]);
   });
 
@@ -110,25 +112,24 @@ describe('RegistroPage: Hacete socio', () => {
     expect(await screen.findByText(/no hay planes disponibles/i)).toBeInTheDocument();
   });
 
-  it('si la cuenta quedó pendiente muestra el comprobante y permite reintentar', async () => {
-    const register = vi.fn().mockResolvedValue({
-      token: null,
-      usuario: socio,
-      cuentaPendiente: true,
-      mensaje: 'Tu pago quedó registrado',
-      numeroFactura: '0001-00000003',
-    });
-    const login = vi.fn().mockResolvedValue({ token: 'jwt', usuario: socio });
-    const reintentar = vi.spyOn(authService, 'reintentarCuentaSocio').mockResolvedValue({
-      token: null,
-      usuario: socio,
-      cuentaPendiente: false,
-    });
-    renderPagina(register, login);
+  const pendiente = {
+    token: null,
+    usuario: socio,
+    cuentaPendiente: true,
+    mensaje: 'Tu pago quedó registrado',
+    numeroFactura: '0001-00000003',
+    codigoReintento: 'c0d1-g0',
+  };
+
+  it('si la cuenta quedó pendiente muestra el comprobante y reintenta con el código y la sesión que devuelve', async () => {
+    const register = vi.fn().mockResolvedValue(pendiente);
+    const reintentar = vi.fn().mockResolvedValue({ token: 'jwt', usuario: socio, cuentaPendiente: false });
+    renderPagina(register, reintentar);
     await completarDatosYContinuar();
     fireEvent.click(await screen.findByRole('button', { name: /Pagar ·/i }));
 
     expect(await screen.findByText('0001-00000003')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/contraseña de tu cuenta/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /reintentar crear mi acceso/i }));
 
     await waitFor(() => expect(screen.getByText('Pase QR')).toBeInTheDocument());
@@ -136,8 +137,68 @@ describe('RegistroPage: Hacete socio', () => {
       dni: '40111999',
       email: 'sofia@mail.com',
       password: 'secreta1',
-      numeroFactura: '0001-00000003',
+      codigoReintento: 'c0d1-g0',
     });
-    expect(login).toHaveBeenCalledWith({ email: 'sofia@mail.com', password: 'secreta1' });
+    expect(sessionStorage.getItem(authService.ALTA_PENDIENTE_STORAGE_KEY)).toBeNull();
+  });
+
+  it('el alta pendiente se guarda sin la contraseña', async () => {
+    renderPagina(vi.fn().mockResolvedValue(pendiente));
+    await completarDatosYContinuar();
+    fireEvent.click(await screen.findByRole('button', { name: /Pagar ·/i }));
+    await screen.findByText('0001-00000003');
+
+    const guardado = sessionStorage.getItem(authService.ALTA_PENDIENTE_STORAGE_KEY) ?? '';
+    expect(JSON.parse(guardado)).toEqual({
+      dni: '40111999',
+      email: 'sofia@mail.com',
+      numeroFactura: '0001-00000003',
+      codigoReintento: 'c0d1-g0',
+      mensaje: 'Tu pago quedó registrado',
+    });
+    expect(guardado).not.toContain('secreta1');
+  });
+
+  it('al recargar con un alta pendiente la recupera y pide la contraseña para reintentar', async () => {
+    authService.guardarAltaPendiente({
+      dni: '40111999',
+      email: 'sofia@mail.com',
+      numeroFactura: '0001-00000003',
+      codigoReintento: 'c0d1-g0',
+      mensaje: 'Tu pago quedó registrado',
+    });
+    const reintentar = vi.fn().mockResolvedValue({ token: 'jwt', usuario: socio, cuentaPendiente: false });
+    renderPagina(vi.fn(), reintentar);
+
+    expect(await screen.findByText('0001-00000003')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /reintentar crear mi acceso/i }));
+    expect(await screen.findByText(/ingresá la contraseña/i)).toBeInTheDocument();
+    expect(reintentar).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/contraseña de tu cuenta/i), { target: { value: 'secreta1' } });
+    fireEvent.click(screen.getByRole('button', { name: /reintentar crear mi acceso/i }));
+
+    await waitFor(() => expect(screen.getByText('Pase QR')).toBeInTheDocument());
+    expect(reintentar).toHaveBeenCalledWith({
+      dni: '40111999',
+      email: 'sofia@mail.com',
+      password: 'secreta1',
+      codigoReintento: 'c0d1-g0',
+    });
+  });
+
+  it('si el reintento falla muestra el motivo y conserva el alta pendiente', async () => {
+    renderPagina(
+      vi.fn().mockResolvedValue(pendiente),
+      vi.fn().mockRejectedValue(new AppError('Ese email ya tiene una cuenta con otra contraseña.', 422))
+    );
+    await completarDatosYContinuar();
+    fireEvent.click(await screen.findByRole('button', { name: /Pagar ·/i }));
+    await screen.findByText('0001-00000003');
+
+    fireEvent.click(screen.getByRole('button', { name: /reintentar crear mi acceso/i }));
+
+    expect(await screen.findByText(/otra contraseña/)).toBeInTheDocument();
+    expect(sessionStorage.getItem(authService.ALTA_PENDIENTE_STORAGE_KEY)).not.toBeNull();
   });
 });

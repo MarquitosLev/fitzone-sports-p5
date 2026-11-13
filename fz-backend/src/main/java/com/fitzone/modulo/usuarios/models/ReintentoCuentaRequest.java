@@ -2,13 +2,16 @@ package com.fitzone.modulo.usuarios.models;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** El número de comprobante prueba que quien reintenta es quien pagó el alta. */
+import java.util.UUID;
+
+/** El código de reintento (se entrega solo al pagar y no es el número de factura) prueba que quien reintenta es quien pagó el alta. */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,6 +29,6 @@ public class ReintentoCuentaRequest {
     @Size(min = 6, max = 72, message = "La contraseña debe tener entre 6 y 72 caracteres")
     private String password;
 
-    @NotBlank(message = "El número de comprobante es obligatorio")
-    private String numeroFactura;
+    @NotNull(message = "El código de reintento es obligatorio")
+    private UUID codigoReintento;
 }

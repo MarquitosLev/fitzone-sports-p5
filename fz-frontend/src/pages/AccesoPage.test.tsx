@@ -130,6 +130,7 @@ function sesionSocio(idUsuario: number): AuthContextType {
     isLoading: false,
     login: async () => ({ token: 'token', usuario }),
     register: async () => ({ token: 'token', usuario }),
+    reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
     logout: () => {},
   };
 }

@@ -20,6 +20,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     @Query("SELECT u FROM Usuario u WHERE u.idUsuario = :id")
     Optional<Usuario> findByIdForUpdate(@Param("id") Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM Usuario u WHERE u.dni = :dni")
+    Optional<Usuario> findByDniForUpdate(@Param("dni") String dni);
+
     boolean existsByDni(String dni);
 
     @Query(value = "SELECT EXISTS (SELECT 1 FROM fz_usr_usuarios WHERE dni = :dni)", nativeQuery = true)

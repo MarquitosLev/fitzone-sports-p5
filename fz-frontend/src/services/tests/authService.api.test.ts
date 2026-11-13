@@ -63,7 +63,7 @@ describe('authService: alta de socio con la API real', () => {
   });
 
   it('sin token (cuenta pendiente o sin sesión) no guarda ninguna sesión', async () => {
-    post.mockResolvedValue({ token: null, usuario, cuentaPendiente: true, numeroFactura: '0001-00000003' });
+    post.mockResolvedValue({ token: null, usuario, cuentaPendiente: true, numeroFactura: '0001-00000003', codigoReintento: 'c0d1-g0' });
 
     const res = await darAltaSocio(datos);
 
@@ -78,12 +78,20 @@ describe('authService: alta de socio con la API real', () => {
     expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
   });
 
-  it('el reintento envía el comprobante a /v1/auth/alta-socio/reintentar-cuenta', async () => {
+  it('el reintento envía el código de reintento a /v1/auth/alta-socio/reintentar-cuenta', async () => {
     post.mockResolvedValue({ token: 'jwt', usuario, cuentaPendiente: false });
-    const reintento = { dni: '40111999', email: 'sofia@mail.com', password: 'secreta1', numeroFactura: '0001-00000003' };
+    const reintento = { dni: '40111999', email: 'sofia@mail.com', password: 'secreta1', codigoReintento: 'c0d1-g0' };
 
     await reintentarCuentaSocio(reintento);
 
     expect(post).toHaveBeenCalledWith('/v1/auth/alta-socio/reintentar-cuenta', { body: JSON.stringify(reintento) });
+  });
+
+  it('el reintento con token en la respuesta deja la sesión iniciada', async () => {
+    post.mockResolvedValue({ token: 'jwt', usuario, cuentaPendiente: false });
+
+    await reintentarCuentaSocio({ dni: '40111999', email: 'sofia@mail.com', password: 'secreta1', codigoReintento: 'c0d1-g0' });
+
+    expect(obtenerSesionActual()?.token).toBe('jwt');
   });
 });

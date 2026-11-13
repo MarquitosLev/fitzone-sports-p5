@@ -30,7 +30,7 @@ export interface AltaSocioDTO extends RegistroUsuarioDTO {
 
 /**
  * Resultado del alta. `token` null: hay que iniciar sesión a mano, o la cuenta quedó pendiente
- * (`cuentaPendiente`) y se reintenta con `numeroFactura`. Los campos del alta son opcionales para
+ * (`cuentaPendiente`) y se reintenta con `codigoReintento`, que solo viaja en ese caso. Los campos del alta son opcionales para
  * que `AuthResponseDTO` siga siendo asignable.
  */
 export interface AltaSocioResultadoDTO {
@@ -42,6 +42,7 @@ export interface AltaSocioResultadoDTO {
   fechaVencimiento?: string | null;
   idComprobante?: number | null;
   numeroFactura?: string | null;
+  codigoReintento?: string | null;
 }
 
 /** Body de POST /v1/auth/alta-socio/reintentar-cuenta. */
@@ -49,7 +50,7 @@ export interface ReintentoCuentaDTO {
   dni: string;
   email: string;
   password: string;
-  numeroFactura: string;
+  codigoReintento: string;
 }
 
 /**

@@ -6,9 +6,10 @@ import { useToast } from '../context/ToastContext';
 import { RegistroForm } from '../components/auth';
 import { PlanCard } from '../components/membresias';
 import { ResumenPago } from '../components/pagos';
-import { Alert, Button, Spinner } from '../components/ui';
+import { Alert, Button, Spinner, TextField } from '../components/ui';
 import { listarPlanes } from '../services/membresiasService';
-import { reintentarCuentaSocio } from '../services/authService';
+import { guardarAltaPendiente, limpiarAltaPendiente, obtenerAltaPendiente } from '../services/authService';
+import type { AltaPendienteGuardada } from '../services/authService';
 import { INICIO_POR_ROL } from '../components/layout/navegacion';
 import type { AltaSocioResultadoDTO, PlanDTO, RegistroUsuarioDTO } from '../types';
 
@@ -20,15 +21,16 @@ type Paso = 'datos' | 'pago' | 'pendiente';
  */
 export function RegistroPage() {
   const navigate = useNavigate();
-  const { register, login, usuario, isAuthenticated } = useAuth();
+  const { register, reintentarCuenta, usuario, isAuthenticated } = useAuth();
   const { sedeActiva } = useSede();
   const { addToast } = useToast();
 
-  const [paso, setPaso] = useState<Paso>('datos');
+  const [pendiente, setPendiente] = useState<AltaPendienteGuardada | null>(() => obtenerAltaPendiente());
+  const [paso, setPaso] = useState<Paso>(() => (obtenerAltaPendiente() ? 'pendiente' : 'datos'));
   const [planes, setPlanes] = useState<PlanDTO[] | null>(null);
   const [plan, setPlan] = useState<PlanDTO | null>(null);
   const [datos, setDatos] = useState<RegistroUsuarioDTO | null>(null);
-  const [pendiente, setPendiente] = useState<AltaSocioResultadoDTO | null>(null);
+  const [passwordReintento, setPasswordReintento] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -58,12 +60,22 @@ export function RegistroPage() {
   };
 
   const terminar = (resultado: AltaSocioResultadoDTO) => {
-    if (resultado.cuentaPendiente) {
-      setPendiente(resultado);
+    if (resultado.cuentaPendiente && resultado.codigoReintento && resultado.numeroFactura) {
+      const alta: AltaPendienteGuardada = {
+        dni: resultado.usuario.dni,
+        email: resultado.usuario.email,
+        numeroFactura: resultado.numeroFactura,
+        codigoReintento: resultado.codigoReintento,
+        mensaje: resultado.mensaje ?? 'No pudimos crear tu acceso.',
+      };
+      guardarAltaPendiente(alta);
+      setPendiente(alta);
       setPaso('pendiente');
     } else if (resultado.token) {
+      limpiarAltaPendiente();
       navigate(INICIO_POR_ROL.SOCIO, { replace: true });
     } else {
+      limpiarAltaPendiente();
       addToast({ type: 'success', title: 'Cuenta creada', message: resultado.mensaje ?? 'Iniciá sesión con tu email y contraseña.' });
       navigate('/login', { replace: true });
     }
@@ -87,23 +99,20 @@ export function RegistroPage() {
   };
 
   const handleReintentarCuenta = async () => {
-    if (!datos || !pendiente?.numeroFactura) return;
+    const password = datos?.password ?? passwordReintento;
+    if (!pendiente || !password) {
+      setErrorMessage('Ingresá la contraseña que elegiste para tu cuenta');
+      return;
+    }
     setLoading(true);
     setErrorMessage(null);
     try {
-      await reintentarCuentaSocio({
-        dni: datos.dni,
-        email: datos.email,
-        password: datos.password,
-        numeroFactura: pendiente.numeroFactura,
-      });
-      try {
-        await login({ email: datos.email, password: datos.password });
-        navigate(INICIO_POR_ROL.SOCIO, { replace: true });
-      } catch {
-        addToast({ type: 'success', title: 'Cuenta creada', message: 'Iniciá sesión con tu email y contraseña.' });
-        navigate('/login', { replace: true });
-      }
+      terminar(await reintentarCuenta({
+        dni: pendiente.dni,
+        email: pendiente.email,
+        password,
+        codigoReintento: pendiente.codigoReintento,
+      }));
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : 'No se pudo crear tu acceso');
     } finally {
@@ -197,8 +206,19 @@ export function RegistroPage() {
           <div className="space-y-3">
             <Alert type="warning" title="Tu pago quedó registrado" message={pendiente.mensaje} />
             <p className="text-xs text-slate-600">
-              Comprobante: <strong>{pendiente.numeroFactura}</strong>. Guardalo: lo necesitás para reintentar.
+              Comprobante: <strong>{pendiente.numeroFactura}</strong>. Si cerrás esta pestaña antes de crear tu acceso,
+              acercate a una sede con este número.
             </p>
+            {!datos && (
+              <TextField
+                label="Contraseña de tu cuenta"
+                type="password"
+                value={passwordReintento}
+                onChange={(e) => setPasswordReintento(e.target.value)}
+                placeholder="La que elegiste al registrarte"
+                disabled={loading}
+              />
+            )}
             {errorMessage && <Alert type="error" message={errorMessage} />}
             <Button variant="coral" fullWidth isLoading={loading} onClick={() => void handleReintentarCuenta()}>
               Reintentar crear mi acceso

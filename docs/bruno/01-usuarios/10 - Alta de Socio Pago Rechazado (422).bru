@@ -4,6 +4,10 @@ meta {
   seq: 10
 }
 
+docs {
+  Solo funciona con el perfil local: forzarRechazo se ignora si fitzone.pagos.rechazo-forzado-habilitado es false (dev y prod).
+}
+
 post {
   url: {{baseUrl}}/v1/auth/alta-socio
   body: json

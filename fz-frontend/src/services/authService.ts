@@ -181,12 +181,64 @@ export async function iniciarSesion(
   return response;
 }
 
+function resultadoMockDeAlta(usuario: UsuarioDTO): AltaSocioResultadoDTO {
+  const token = `tok_mock_${usuario.tipoUsuario.toLowerCase()}_${Date.now()}`;
+  persistSession({ token, usuario });
+  return {
+    token,
+    usuario,
+    cuentaPendiente: false,
+    mensaje: '¡Bienvenido a FitZone!',
+    idMembresia: usuario.idUsuario,
+    fechaVencimiento: null,
+    idComprobante: usuario.idUsuario,
+    numeroFactura: `0001-${String(usuario.idUsuario).padStart(8, '0')}`,
+  };
+}
+
+function darAltaSocioMock(datos: AltaSocioDTO): AltaSocioResultadoDTO {
+  const email = datos.email.trim().toLowerCase();
+  const dni = datos.dni.trim();
+  const conCuenta = _mockUsers.filter((item) => item.usuario.tipoUsuario !== 'EXTERNO');
+  if (conCuenta.some((item) => item.usuario.dni === dni)) {
+    throw new AppError('Ya existe una cuenta con ese DNI. Iniciá sesión para renovar tu membresía.', 409);
+  }
+  if (conCuenta.some((item) => item.credentials.email.toLowerCase() === email)) {
+    throw new AppError('Ya existe una cuenta con ese email. Iniciá sesión.', 409);
+  }
+  if (datos.forzarRechazo) {
+    throw new AppError('El pago fue rechazado. No se creó la cuenta: podés reintentar con otro medio de pago.', 422);
+  }
+
+  const usuario: UsuarioDTO = {
+    idUsuario: 200 + _mockUsers.length,
+    authId: `mock-auth-socio-${Date.now()}`,
+    dni,
+    nombre: datos.nombre.trim(),
+    apellido: datos.apellido.trim(),
+    email,
+    telefono: datos.telefono.trim(),
+    fotoUrl: null,
+    tipoUsuario: 'SOCIO',
+    idSede: null,
+  };
+  _mockUsers = [
+    ..._mockUsers.filter((item) => item.usuario.dni !== dni && item.credentials.email.toLowerCase() !== email),
+    { credentials: { email, password: datos.password }, usuario },
+  ];
+  return resultadoMockDeAlta(usuario);
+}
+
 /**
  * Alta de socio online: paga la suscripción y, con el pago aprobado, el backend crea la cuenta.
  * Responde 422 si el pago se rechazó (no se crea nada) y 409 si el DNI o el email ya son de una cuenta.
  * Con token en la respuesta la sesión queda iniciada.
  */
 export async function darAltaSocio(datos: AltaSocioDTO): Promise<AltaSocioResultadoDTO> {
+  if (USE_MOCK) {
+    return darAltaSocioMock(datos);
+  }
+
   const response = await httpClient.post<AltaSocioResultadoDTO>(AUTH_ENDPOINTS.ALTA_SOCIO, {
     body: JSON.stringify(datos),
   });
@@ -196,11 +248,68 @@ export async function darAltaSocio(datos: AltaSocioDTO): Promise<AltaSocioResult
   return response;
 }
 
-/** Crea la cuenta de un socio que ya pagó y quedó con la cuenta pendiente; el comprobante prueba que pagó. */
+/**
+ * Crea la cuenta de un socio que ya pagó y quedó con la cuenta pendiente; el código de reintento
+ * (se entrega solo en esa respuesta) prueba que pagó. Con token en la respuesta la sesión queda iniciada.
+ */
 export async function reintentarCuentaSocio(datos: ReintentoCuentaDTO): Promise<AltaSocioResultadoDTO> {
-  return httpClient.post<AltaSocioResultadoDTO>(AUTH_ENDPOINTS.REINTENTAR_CUENTA, {
+  if (USE_MOCK) {
+    const email = datos.email.trim().toLowerCase();
+    const encontrado = _mockUsers.find(
+      (item) => item.usuario.dni === datos.dni.trim() && item.credentials.email.toLowerCase() === email
+    );
+    if (!encontrado || encontrado.credentials.password !== datos.password) {
+      throw new AppError('Los datos no coinciden con el alta', 403);
+    }
+    return resultadoMockDeAlta({ ...encontrado.usuario });
+  }
+
+  const response = await httpClient.post<AltaSocioResultadoDTO>(AUTH_ENDPOINTS.REINTENTAR_CUENTA, {
     body: JSON.stringify(datos),
   });
+  if (response.token) {
+    persistSession({ token: response.token, usuario: response.usuario });
+  }
+  return response;
+}
+
+export const ALTA_PENDIENTE_STORAGE_KEY = 'fitzone_alta_pendiente';
+
+/** Alta con el pago registrado y la cuenta sin crear. Nunca incluye la contraseña. */
+export interface AltaPendienteGuardada {
+  dni: string;
+  email: string;
+  numeroFactura: string;
+  codigoReintento: string;
+  mensaje: string;
+}
+
+/** Guarda el alta pendiente para no perder el código de reintento si se recarga la página. */
+export function guardarAltaPendiente(alta: AltaPendienteGuardada): void {
+  try {
+    sessionStorage.setItem(ALTA_PENDIENTE_STORAGE_KEY, JSON.stringify(alta));
+  } catch {
+    // Sin sessionStorage el código solo vive mientras la pantalla siga abierta
+  }
+}
+
+export function obtenerAltaPendiente(): AltaPendienteGuardada | null {
+  try {
+    const raw = sessionStorage.getItem(ALTA_PENDIENTE_STORAGE_KEY);
+    if (!raw) return null;
+    const alta = JSON.parse(raw) as AltaPendienteGuardada;
+    return alta?.codigoReintento && alta?.dni && alta?.email ? alta : null;
+  } catch {
+    return null;
+  }
+}
+
+export function limpiarAltaPendiente(): void {
+  try {
+    sessionStorage.removeItem(ALTA_PENDIENTE_STORAGE_KEY);
+  } catch {
+    // No-op
+  }
 }
 
 /**

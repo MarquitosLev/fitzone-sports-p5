@@ -99,6 +99,7 @@ const sesionSocio: AuthContextType = {
   isLoading: false,
   login: async () => ({ token: 'token', usuario: socio }),
   register: async () => ({ token: 'token', usuario: socio }),
+  reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
   logout: () => {},
 };
 

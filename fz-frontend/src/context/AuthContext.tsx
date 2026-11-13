@@ -4,11 +4,13 @@ import type {
   LoginCredentialsDTO,
   AltaSocioDTO,
   AltaSocioResultadoDTO,
+  ReintentoCuentaDTO,
   AuthResponseDTO,
 } from '../types';
 import {
   iniciarSesion,
   darAltaSocio,
+  reintentarCuentaSocio,
   cerrarSesion,
   obtenerSesionActual,
   obtenerUsuarioActual,
@@ -24,6 +26,8 @@ export interface AuthContextType {
   login: (credentials: LoginCredentialsDTO) => Promise<AuthResponseDTO>;
   /** Alta de socio con el pago de la suscripción. Con token en el resultado, la sesión queda iniciada. */
   register: (datos: AltaSocioDTO) => Promise<AltaSocioResultadoDTO>;
+  /** Crea la cuenta de un alta ya pagada que quedó pendiente. Con token en el resultado, la sesión queda iniciada. */
+  reintentarCuenta: (datos: ReintentoCuentaDTO) => Promise<AltaSocioResultadoDTO>;
   logout: () => void;
 }
 
@@ -115,6 +119,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const reintentarCuenta = useCallback(async (datos: ReintentoCuentaDTO): Promise<AltaSocioResultadoDTO> => {
+    setIsLoading(true);
+    try {
+      const resultado = await reintentarCuentaSocio(datos);
+      if (resultado.token) {
+        setUsuario(resultado.usuario);
+        setToken(resultado.token);
+      }
+      return resultado;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     cerrarSesion();
     setUsuario(null);
@@ -128,6 +146,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     login,
     register,
+    reintentarCuenta,
     logout,
   };
 
@@ -144,6 +163,7 @@ const FALLBACK_AUTH: AuthContextType = {
   isLoading: false,
   login: async () => { throw new Error('Fuera de AuthProvider'); },
   register: async () => { throw new Error('Fuera de AuthProvider'); },
+  reintentarCuenta: async () => { throw new Error('Fuera de AuthProvider'); },
   logout: () => {},
 };
 

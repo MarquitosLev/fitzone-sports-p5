@@ -48,6 +48,7 @@ function renderEnRuta(ruta: string, usuario: UsuarioDTO | null, isLoading = fals
     isLoading,
     login: async () => ({ token: 'x', usuario: usuario! }),
     register: async () => ({ token: 'x', usuario: usuario! }),
+    reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
     logout: () => {},
   };
 
