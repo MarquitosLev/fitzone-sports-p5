@@ -36,6 +36,11 @@ const DICCIONARIO_MOTIVOS: Record<MotivoRechazoAcceso, DetalleMotivo> = {
     descripcion: 'La sede ha alcanzado la capacidad máxima de personas autorizada por normativa.',
     sugerencia: 'El socio debe aguardar a que se registren egresos para habilitar su acceso.',
   },
+  SIN_DATOS_LOCALES: {
+    titulo: 'Sin conexión y sin datos locales',
+    descripcion: 'El servidor no responde y el terminal no tiene una lista de socios habilitados vigente (se descarga cada 5 minutos y vale 24 horas).',
+    sugerencia: 'Verificá la conexión. El ingreso no se puede validar hasta que vuelva el servidor.',
+  },
 };
 
 /**

@@ -60,6 +60,14 @@ public class QrTokenService {
     }
 
     public Long validarYObtenerUsuario(String tokenQr) {
+        return validarYObtenerUsuario(tokenQr, clock.instant());
+    }
+
+    /**
+     * Valida el token contra la ventana de {@code momento} en lugar de la hora actual. Lo usa la
+     * sincronización de ingresos offline: el QR se escaneó antes y hay que juzgarlo con esa hora.
+     */
+    public Long validarYObtenerUsuario(String tokenQr, Instant momento) {
         if (tokenQr == null || tokenQr.trim().isEmpty() || tokenQr.length() > MAX_TOKEN_LENGTH) {
             throw new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.QR_VENCIDO,
                     "El token QR es obligatorio y no debe superar " + MAX_TOKEN_LENGTH + " caracteres");
@@ -92,8 +100,7 @@ public class QrTokenService {
         }
 
         // Tolerancia de reloj en ambas direcciones (ventana anterior, actual y siguiente)
-        long epochSecond = clock.instant().getEpochSecond();
-        long ventanaActual = epochSecond / 60;
+        long ventanaActual = momento.getEpochSecond() / 60;
 
         if (ventanaToken < ventanaActual - 1 || ventanaToken > ventanaActual + 1) {
             throw new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.QR_VENCIDO,

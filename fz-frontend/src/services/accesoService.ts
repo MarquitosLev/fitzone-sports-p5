@@ -11,6 +11,45 @@ import type {
 } from '../types';
 import { toLocalISOString } from '../utils/formatters';
 import { USE_MOCK } from '../config';
+import {
+  circuitoAbierto,
+  esFallaDeTransporte,
+  marcarConectado,
+  marcarSinConexion,
+  probarConexion,
+  senalConTimeout,
+} from './offline/conectividad';
+import {
+  adentroLocal,
+  aforoLocal,
+  agregarAdentro,
+  quitarAdentro,
+  refrescarHabilitados,
+  validarLocal,
+} from './offline/terminalLocal';
+import { encolar, pendientes, sincronizarCola, type ResumenSincronizacion } from './offline/colaIngresos';
+
+/**
+ * Intenta el servidor y, si no responde, usa los datos locales del terminal (RNF-01).
+ * Un error que no sea de transporte (por ejemplo un 403) se propaga igual que antes.
+ */
+async function conRespaldoLocal<T>(online: () => Promise<T>, local: () => T | null): Promise<T> {
+  if (circuitoAbierto()) {
+    const datos = local();
+    if (datos !== null) return datos;
+  }
+  try {
+    const resultado = await online();
+    marcarConectado();
+    return resultado;
+  } catch (err: unknown) {
+    if (!esFallaDeTransporte(err)) throw err;
+    marcarSinConexion();
+    const datos = local();
+    if (datos === null) throw err;
+    return datos;
+  }
+}
 
 
 // ─── ENDPOINTS DEL BACKEND ──────────────────────────────────────────────────
@@ -163,7 +202,10 @@ export async function obtenerAforo(idSede: number): Promise<AforoSedeDTO> {
     };
   }
 
-  return httpClient.get<AforoSedeDTO>(ACCESO_ENDPOINTS.AFORO(idSede));
+  return conRespaldoLocal(
+    () => httpClient.get<AforoSedeDTO>(ACCESO_ENDPOINTS.AFORO(idSede), { signal: senalConTimeout() }),
+    () => aforoLocal(idSede)
+  );
 }
 
 /**
@@ -177,7 +219,10 @@ export async function listarAccesosActivos(idSede: number): Promise<AccesoDTO[]>
     );
   }
 
-  return httpClient.get<AccesoDTO[]>(ACCESO_ENDPOINTS.ACCESOS_ACTIVOS(idSede));
+  return conRespaldoLocal(
+    () => httpClient.get<AccesoDTO[]>(ACCESO_ENDPOINTS.ACCESOS_ACTIVOS(idSede), { signal: senalConTimeout() }),
+    () => adentroLocal(idSede)
+  );
 }
 
 /**
@@ -316,11 +361,17 @@ export async function validarIngreso(
       ? { tokenQr: request.token, idSede: request.idSede }
       : { tokenQr: request.token };
 
+  if (circuitoAbierto()) {
+    return validarSinConexion(request);
+  }
+
   try {
     const acceso = await httpClient.post<AccesoDTO>(
       ACCESO_ENDPOINTS.VALIDAR_INGRESO,
-      { body: JSON.stringify(payload) }
+      { body: JSON.stringify(payload), signal: senalConTimeout() }
     );
+    marcarConectado();
+    agregarAdentro(request.token, new Date(), acceso.idAcceso);
     return {
       aprobado: true,
       mensaje: 'Acceso autorizado · Molinete habilitado',
@@ -328,6 +379,10 @@ export async function validarIngreso(
       acceso,
     };
   } catch (err: unknown) {
+    if (esFallaDeTransporte(err)) {
+      marcarSinConexion();
+      return validarSinConexion(request);
+    }
     if (
       err instanceof AppError &&
       typeof err.backendResponse?.codigo === 'string' &&
@@ -338,6 +393,56 @@ export async function validarIngreso(
         motivoRechazo: err.backendResponse.codigo as MotivoRechazoAcceso,
         mensaje: err.backendResponse.mensaje,
       };
+    }
+    throw err;
+  }
+}
+
+/** El servidor no responde: valida contra la lista local y, si aprueba, deja el ingreso en la cola. */
+function validarSinConexion(request: ValidacionIngresoRequestDTO): ResultadoValidacionDTO {
+  const resultado = validarLocal(request.token, request.idSede);
+  if (resultado.aprobado) {
+    const ahora = new Date();
+    encolar({
+      tokenQr: request.token.trim(),
+      idSede: request.idSede,
+      ocurrioEn: ahora.toISOString(),
+      socio: resultado.usuario ? `${resultado.usuario.nombre} ${resultado.usuario.apellido}` : undefined,
+    });
+    agregarAdentro(request.token, ahora);
+  }
+  return resultado;
+}
+
+/**
+ * Baja la lista de habilitados para poder validar sin conexión. Se llama al abrir la recepción
+ * y cada 5 minutos. Si falla, se conserva la lista anterior mientras siga vigente.
+ */
+export async function prepararModoSinConexion(idSede?: number): Promise<boolean> {
+  if (USE_MOCK) return false;
+  try {
+    await refrescarHabilitados(idSede);
+    marcarConectado();
+    return true;
+  } catch (err: unknown) {
+    if (esFallaDeTransporte(err)) marcarSinConexion();
+    return false;
+  }
+}
+
+/**
+ * Si hay ingresos en cola y el servidor responde, los confirma. Devuelve null si no había nada
+ * que mandar o si el servidor sigue sin responder (la cola queda intacta).
+ */
+export async function sincronizarIngresosPendientes(): Promise<ResumenSincronizacion | null> {
+  if (USE_MOCK || pendientes().length === 0) return null;
+  if (!(await probarConexion())) return null;
+  try {
+    return await sincronizarCola();
+  } catch (err: unknown) {
+    if (esFallaDeTransporte(err)) {
+      marcarSinConexion();
+      return null;
     }
     throw err;
   }
@@ -359,7 +464,23 @@ export async function registrarEgreso(idAcceso: number): Promise<AccesoDTO> {
     return { ...acceso };
   }
 
-  return httpClient.post<AccesoDTO>(ACCESO_ENDPOINTS.REGISTRAR_EGRESO(idAcceso));
+  if (idAcceso < 0) {
+    throw new Error('Este ingreso todavía no se confirmó en el servidor. Registrá el egreso cuando vuelva la conexión.');
+  }
+  try {
+    const acceso = await httpClient.post<AccesoDTO>(ACCESO_ENDPOINTS.REGISTRAR_EGRESO(idAcceso), {
+      signal: senalConTimeout(),
+    });
+    marcarConectado();
+    quitarAdentro(idAcceso);
+    return acceso;
+  } catch (err: unknown) {
+    if (esFallaDeTransporte(err)) {
+      marcarSinConexion();
+      throw new Error('Sin conexión con el servidor: el egreso no se puede registrar hasta que vuelva.');
+    }
+    throw err;
+  }
 }
 
 /**
