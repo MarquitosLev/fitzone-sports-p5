@@ -14,6 +14,9 @@ export type {
   ValidacionIngresoRequestDTO,
   ResultadoValidacionDTO,
   QrTokenDTO,
+  HabilitadosDTO,
+  IngresoEnCola,
+  ResultadoSincronizacionDTO,
 } from './acceso';
 export type {
   EstadoReservaClase,

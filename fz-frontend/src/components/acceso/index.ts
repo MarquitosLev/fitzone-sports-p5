@@ -16,5 +16,8 @@ export type { PersonasAdentroListProps } from './PersonasAdentroList';
 export { CuentaRegresiva } from './CuentaRegresiva';
 export type { CuentaRegresivaProps } from './CuentaRegresiva';
 
+export { ColaOffline } from './ColaOffline';
+export type { ColaOfflineProps } from './ColaOffline';
+
 export { QrDinamico } from './QrDinamico';
 export type { QrDinamicoProps } from './QrDinamico';

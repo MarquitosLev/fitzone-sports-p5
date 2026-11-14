@@ -21,7 +21,9 @@ export type MotivoRechazoAcceso =
   | 'QR_VENCIDO'
   | 'MEMBRESIA_INACTIVA'
   | 'YA_INGRESADO'
-  | 'AFORO_COMPLETO';
+  | 'AFORO_COMPLETO'
+  /** Solo sin conexión: el terminal no tiene una lista de habilitados vigente para validar. */
+  | 'SIN_DATOS_LOCALES';
 
 /**
  * Payload para solicitar la validación de ingreso físico por molinete.
@@ -42,6 +44,52 @@ export interface ResultadoValidacionDTO {
   mensaje?: string;
   usuario?: UsuarioDTO | null;
   acceso?: AccesoDTO | null;
+  /** true si lo resolvió el terminal sin conexión: el ingreso queda pendiente de confirmar en el servidor. */
+  offline?: boolean;
+}
+
+/** Lista local que baja el terminal de sede (GET /v1/accesos/terminal/habilitados). */
+export interface HabilitadosDTO {
+  horaServidor: string;
+  validaHasta: string;
+  idSede: number;
+  aforoMaximo: number;
+  socios: Array<{
+    idUsuario: number;
+    nombre: string;
+    apellido: string;
+    dni: string;
+    /** Fecha local AAAA-MM-DD */
+    venceMembresia: string;
+  }>;
+  adentro: Array<{
+    idAcceso: number | null;
+    idUsuario: number;
+    tokenQr: string | null;
+    fechaHoraIngreso: string;
+  }>;
+}
+
+/** Ingreso aprobado sin conexión, esperando confirmación del servidor. */
+export interface IngresoEnCola {
+  tokenQr: string;
+  idSede?: number;
+  /** Instante ISO con zona (Date.toISOString) */
+  ocurrioEn: string;
+  /** Para mostrar en la tabla de la cola */
+  socio?: string;
+  estado: 'pendiente' | 'error';
+  codigo?: string;
+  mensaje?: string;
+}
+
+/** Resultado por evento de POST /v1/accesos/sincronizacion. */
+export interface ResultadoSincronizacionDTO {
+  tokenQr: string;
+  ok: boolean;
+  codigo?: string | null;
+  mensaje?: string | null;
+  idAcceso?: number | null;
 }
 
 /**
