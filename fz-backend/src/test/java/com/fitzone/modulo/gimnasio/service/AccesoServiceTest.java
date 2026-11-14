@@ -26,8 +26,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -207,6 +209,29 @@ class AccesoServiceTest {
         assertThat(acceso.getFechaHoraIngreso()).isNotNull();
         assertThat(acceso.getFechaHoraEgreso()).isNull();
         verify(accesoRepository).save(any(Acceso.class));
+    }
+
+    @Test
+    @DisplayName("registrarIngreso offline valida el token con la hora del escaneo y la guarda como hora de ingreso")
+    void registrarIngreso_offline_usaHoraDelEscaneo() {
+        Instant ocurrioEn = Instant.now().minusSeconds(600);
+        LocalDateTime horaEsperada = LocalDateTime.ofInstant(ocurrioEn, ZoneId.systemDefault());
+
+        when(qrTokenService.validarYObtenerUsuario("token-offline", ocurrioEn)).thenReturn(1L);
+        when(accesoRepository.findByTokenQr("token-offline")).thenReturn(Optional.empty());
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(socio));
+        when(membresiaRepository.findMembresiaActivaParaIngreso(1L, EstadoMembresia.ACTIVO, horaEsperada.toLocalDate()))
+                .thenReturn(Optional.of(membresiaActiva));
+        when(accesoRepository.findByUsuario_IdUsuarioAndFechaHoraEgresoIsNull(1L)).thenReturn(Optional.empty());
+        when(sedeRepository.findByIdWithLock(1L)).thenReturn(Optional.of(sedeCentral));
+        when(accesoRepository.countBySede_IdSedeAndFechaHoraEgresoIsNull(1L)).thenReturn(0L);
+        when(accesoRepository.save(any(Acceso.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Acceso acceso = accesoService.registrarIngreso("token-offline", 1L, ocurrioEn);
+
+        assertThat(acceso.getFechaHoraIngreso()).isEqualTo(horaEsperada);
+        assertThat(acceso.getTokenQr()).isEqualTo("token-offline");
+        verify(qrTokenService, never()).validarYObtenerUsuario("token-offline");
     }
 
     @Test

@@ -54,6 +54,12 @@ public interface MembresiaRepository extends JpaRepository<Membresia, Long> {
     boolean existsByUsuario_IdUsuarioAndEstadoAndFechaInicioLessThanEqualAndFechaVencimientoGreaterThanEqual(
             Long idUsuario, EstadoMembresia estado, LocalDate fechaInicioMax, LocalDate fechaVencimientoMin);
 
+    // Membresías en un estado, ya iniciadas y no vencidas a la fecha, con su socio (lista de habilitados del terminal)
+    @org.springframework.data.jpa.repository.Query("SELECT m FROM Membresia m JOIN FETCH m.usuario WHERE m.estado = :estado AND m.fechaInicio <= :fecha AND m.fechaVencimiento >= :fecha")
+    List<Membresia> findVigentesConUsuario(
+            @org.springframework.data.repository.query.Param("estado") EstadoMembresia estado,
+            @org.springframework.data.repository.query.Param("fecha") LocalDate fecha);
+
     // Búsqueda con bloqueo pesimista para coordinar cambios de estado
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("SELECT m FROM Membresia m WHERE m.idMembresia = :id")
