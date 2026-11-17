@@ -182,6 +182,25 @@ describe('accesoService sin conexión', () => {
     expect(otro.motivoRechazo).toBe('YA_INGRESADO');
   });
 
+  it.each([
+    ['atrasada', 3 * 60_000],
+    ['adelantada', -3 * 60_000],
+  ])('con la PC %s 3 minutos, encola la hora del servidor y no la del reloj local', async (_caso, desfaseMs) => {
+    const horaServidor = Date.now() + desfaseMs;
+    await bajarLista({ horaServidor: new Date(horaServidor).toISOString() });
+    const token = tokenDe(3, horaServidor);
+    post.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const res = await validarIngreso({ token });
+
+    expect(res.aprobado).toBe(true);
+    const [encolado] = cola.pendientes();
+    const ocurrioEn = Date.parse(encolado.ocurrioEn);
+    // Misma ventana que el token: así el servidor no lo rechaza como QR_VENCIDO al sincronizar
+    expect(Math.floor(ocurrioEn / VENTANA_MS)).toBe(terminal.decodificarToken(token)?.ventana);
+    expect(Math.abs(ocurrioEn - horaServidor)).toBeLessThan(2_000);
+  });
+
   it('un rechazo de negocio del servidor NO pasa a modo offline ni encola', async () => {
     await bajarLista();
     post.mockRejectedValueOnce(

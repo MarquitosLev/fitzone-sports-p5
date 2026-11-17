@@ -23,6 +23,7 @@ import {
   adentroLocal,
   aforoLocal,
   agregarAdentro,
+  ahoraServidor,
   quitarAdentro,
   refrescarHabilitados,
   validarLocal,
@@ -371,7 +372,7 @@ export async function validarIngreso(
       { body: JSON.stringify(payload), signal: senalConTimeout() }
     );
     marcarConectado();
-    agregarAdentro(request.token, new Date(), acceso.idAcceso);
+    agregarAdentro(request.token, new Date(ahoraServidor()), acceso.idAcceso);
     return {
       aprobado: true,
       mensaje: 'Acceso autorizado · Molinete habilitado',
@@ -400,9 +401,10 @@ export async function validarIngreso(
 
 /** El servidor no responde: valida contra la lista local y, si aprueba, deja el ingreso en la cola. */
 function validarSinConexion(request: ValidacionIngresoRequestDTO): ResultadoValidacionDTO {
-  const resultado = validarLocal(request.token, request.idSede);
+  // Una sola hora para validar y para encolar: la del servidor, no la del reloj de esta PC
+  const ahora = new Date(ahoraServidor());
+  const resultado = validarLocal(request.token, request.idSede, ahora.getTime());
   if (resultado.aprobado) {
-    const ahora = new Date();
     encolar({
       tokenQr: request.token.trim(),
       idSede: request.idSede,

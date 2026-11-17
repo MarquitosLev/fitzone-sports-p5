@@ -54,6 +54,15 @@ export async function refrescarHabilitados(idSede?: number): Promise<ListaLocal>
   return lista;
 }
 
+/**
+ * Hora actual según el reloj del servidor (epoch ms), corrigiendo el reloj de esta PC con el desfase
+ * medido al bajar la lista. Todo lo que el terminal valida o manda al servidor usa esta hora: si la PC
+ * está corrida, validar con una hora y encolar otra hace que el servidor rechace lo que el terminal aprobó.
+ */
+export function ahoraServidor(): number {
+  return Date.now() + (cargarLista()?.desfaseMs ?? 0);
+}
+
 /** Lee idUsuario y ventana del token sin verificar la firma. null si no tiene el formato esperado. */
 export function decodificarToken(token: string): { idUsuario: number; ventana: number } | null {
   try {
@@ -74,27 +83,27 @@ function rechazo(motivoRechazo: ResultadoValidacionDTO['motivoRechazo'], mensaje
 }
 
 /**
- * Valida un ingreso contra la lista local, en el mismo orden que el servidor.
+ * Valida un ingreso contra la lista local, en el mismo orden que el servidor, a la hora del servidor
+ * {@code ahoraServidorMs}. Quien llama debe encolar el ingreso con esa misma hora.
  * No modifica nada: si aprueba, quien llama encola el ingreso y lo suma con {@link agregarAdentro}.
  */
-export function validarLocal(token: string, idSede?: number, ahoraMs = Date.now()): ResultadoValidacionDTO {
+export function validarLocal(token: string, idSede?: number, ahoraServidorMs = ahoraServidor()): ResultadoValidacionDTO {
   const datos = decodificarToken(token);
   const lista = cargarLista();
-  const ahoraServidor = ahoraMs + (lista?.desfaseMs ?? 0);
 
   if (!datos) {
     return rechazo('QR_VENCIDO', 'El formato del código QR es inválido.');
   }
   // Misma tolerancia que el servidor: ventana anterior, actual o siguiente
-  if (Math.abs(datos.ventana - Math.floor(ahoraServidor / VENTANA_MS)) > 1) {
+  if (Math.abs(datos.ventana - Math.floor(ahoraServidorMs / VENTANA_MS)) > 1) {
     return rechazo('QR_VENCIDO', 'El código QR ha expirado. Pedile al socio que lo actualice.');
   }
-  if (!lista || ahoraServidor > Date.parse(lista.validaHasta) || (idSede !== undefined && lista.idSede !== idSede)) {
+  if (!lista || ahoraServidorMs > Date.parse(lista.validaHasta) || (idSede !== undefined && lista.idSede !== idSede)) {
     return rechazo('SIN_DATOS_LOCALES', 'Sin conexión y sin una lista de habilitados vigente para esta sede.');
   }
 
   const socio = lista.socios.find((s) => s.idUsuario === datos.idUsuario);
-  const hoy = toLocalISOString(new Date(ahoraServidor)).slice(0, 10);
+  const hoy = toLocalISOString(new Date(ahoraServidorMs)).slice(0, 10);
   if (!socio || socio.venceMembresia < hoy) {
     return rechazo('MEMBRESIA_INACTIVA', 'El socio no figura con una membresía activa y vigente.');
   }
