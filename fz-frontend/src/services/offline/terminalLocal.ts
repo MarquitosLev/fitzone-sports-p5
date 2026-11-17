@@ -7,6 +7,7 @@
  * al sincronizar la cola.
  */
 import { httpClient } from '../httpClient';
+import { senalConTimeout } from './conectividad';
 import { toLocalISOString } from '../../utils/formatters';
 import type { AccesoDTO, AforoSedeDTO, HabilitadosDTO, ResultadoValidacionDTO } from '../../types';
 
@@ -48,7 +49,7 @@ export function borrarLista(): void {
 /** Baja la lista de la sede y la guarda. Sin idSede, el servidor usa la sede del operador. */
 export async function refrescarHabilitados(idSede?: number): Promise<ListaLocal> {
   const ruta = idSede !== undefined ? `${ENDPOINT_HABILITADOS}?idSede=${idSede}` : ENDPOINT_HABILITADOS;
-  const datos = await httpClient.get<HabilitadosDTO>(ruta, { silent: true });
+  const datos = await httpClient.get<HabilitadosDTO>(ruta, { silent: true, signal: senalConTimeout() });
   const lista: ListaLocal = { ...datos, desfaseMs: Date.parse(datos.horaServidor) - Date.now() };
   guardarLista(lista);
   return lista;
@@ -63,10 +64,30 @@ export function ahoraServidor(): number {
   return Date.now() + (cargarLista()?.desfaseMs ?? 0);
 }
 
-/** Lee idUsuario y ventana del token sin verificar la firma. null si no tiene el formato esperado. */
-export function decodificarToken(token: string): { idUsuario: number; ventana: number } | null {
+export interface TokenDecodificado {
+  idUsuario: number;
+  ventana: number;
+  /** Solo en el QR firmado por el dispositivo (F2.): lo que cubre la firma y la firma misma. */
+  firmado?: { datos: string; firma: string };
+}
+
+/**
+ * Lee idUsuario y ventana del token, sin verificar nada. Entiende los 2 formatos: el QR firmado
+ * por el dispositivo del socio (F2.id.ventana.nonce.firma) y el HMAC del servidor
+ * (base64url de id:ventana:nonce:hmac). null si no tiene ninguno de los dos.
+ */
+export function decodificarToken(token: string): TokenDecodificado | null {
+  const limpio = token.trim();
+  if (limpio.startsWith('F2.')) {
+    const partes = limpio.split('.');
+    if (partes.length !== 5) return null;
+    const idUsuario = Number(partes[1]);
+    const ventana = Number(partes[2]);
+    if (!Number.isSafeInteger(idUsuario) || !Number.isSafeInteger(ventana)) return null;
+    return { idUsuario, ventana, firmado: { datos: `F2|${idUsuario}|${ventana}|${partes[3]}`, firma: partes[4] } };
+  }
   try {
-    const base64 = token.trim().replace(/-/g, '+').replace(/_/g, '/');
+    const base64 = limpio.replace(/-/g, '+').replace(/_/g, '/');
     const partes = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4)).split(':');
     if (partes.length !== 4) return null;
     const idUsuario = Number(partes[0]);
@@ -82,12 +103,45 @@ function rechazo(motivoRechazo: ResultadoValidacionDTO['motivoRechazo'], mensaje
   return { aprobado: false, motivoRechazo, mensaje, offline: true };
 }
 
+function desdeBase64(texto: string): Uint8Array<ArrayBuffer> {
+  const base64 = texto.replace(/-/g, '+').replace(/_/g, '/');
+  const binario = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4));
+  const bytes = new Uint8Array(binario.length);
+  for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+  return bytes;
+}
+
+/** Verifica la firma ECDSA P-256 del QR con la clave pública del socio. Cualquier error cuenta como inválida. */
+async function firmaValida(clavePublicaSpki: string, datos: string, firma: string): Promise<boolean> {
+  try {
+    const clave = await crypto.subtle.importKey(
+      'spki',
+      desdeBase64(clavePublicaSpki),
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      false,
+      ['verify']
+    );
+    return await crypto.subtle.verify(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      clave,
+      desdeBase64(firma),
+      new TextEncoder().encode(datos)
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Valida un ingreso contra la lista local, en el mismo orden que el servidor, a la hora del servidor
  * {@code ahoraServidorMs}. Quien llama debe encolar el ingreso con esa misma hora.
  * No modifica nada: si aprueba, quien llama encola el ingreso y lo suma con {@link agregarAdentro}.
  */
-export function validarLocal(token: string, idSede?: number, ahoraServidorMs = ahoraServidor()): ResultadoValidacionDTO {
+export async function validarLocal(
+  token: string,
+  idSede?: number,
+  ahoraServidorMs = ahoraServidor()
+): Promise<ResultadoValidacionDTO> {
   const datos = decodificarToken(token);
   const lista = cargarLista();
 
@@ -106,6 +160,16 @@ export function validarLocal(token: string, idSede?: number, ahoraServidorMs = a
   const hoy = toLocalISOString(new Date(ahoraServidorMs)).slice(0, 10);
   if (!socio || socio.venceMembresia < hoy) {
     return rechazo('MEMBRESIA_INACTIVA', 'El socio no figura con una membresía activa y vigente.');
+  }
+
+  // Firma: un QR firmado se verifica con la clave del socio. Un QR del formato anterior no se puede
+  // verificar sin el servidor, así que no se acepta de un socio que ya firma desde su dispositivo.
+  if (datos.firmado) {
+    if (!socio.clavePublica || !(await firmaValida(socio.clavePublica, datos.firmado.datos, datos.firmado.firma))) {
+      return rechazo('QR_VENCIDO', 'La firma del código QR no es válida para este socio.');
+    }
+  } else if (socio.clavePublica) {
+    return rechazo('QR_VENCIDO', 'Este socio usa el pase firmado: pedile que actualice "Mi QR".');
   }
 
   const usuario = aUsuario(socio);

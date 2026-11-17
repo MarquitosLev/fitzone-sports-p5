@@ -7,6 +7,7 @@
  * vea y los descarte: ningún conflicto se resuelve solo.
  */
 import { httpClient } from '../httpClient';
+import { senalConTimeout } from './conectividad';
 import type { IngresoEnCola, ResultadoSincronizacionDTO } from '../../types';
 
 const CLAVE_COLA = 'fitzone.acceso.cola';
@@ -78,6 +79,8 @@ export async function sincronizarCola(): Promise<ResumenSincronizacion> {
     ENDPOINT_SINCRONIZACION,
     {
       silent: true,
+      // Más margen que una lectura: son hasta 50 ingresos, cada uno en su transacción
+      signal: senalConTimeout(15_000),
       body: JSON.stringify({
         eventos: lote.map(({ tokenQr, idSede, ocurrioEn }) => ({ tokenQr, idSede, ocurrioEn })),
       }),

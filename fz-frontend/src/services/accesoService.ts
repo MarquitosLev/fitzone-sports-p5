@@ -29,6 +29,7 @@ import {
   validarLocal,
 } from './offline/terminalLocal';
 import { encolar, pendientes, sincronizarCola, type ResumenSincronizacion } from './offline/colaIngresos';
+import { asegurarClaveRegistrada, generarQrFirmado } from './offline/paseOffline';
 
 /**
  * Intenta el servidor y, si no responde, usa los datos locales del terminal (RNF-01).
@@ -400,10 +401,10 @@ export async function validarIngreso(
 }
 
 /** El servidor no responde: valida contra la lista local y, si aprueba, deja el ingreso en la cola. */
-function validarSinConexion(request: ValidacionIngresoRequestDTO): ResultadoValidacionDTO {
+async function validarSinConexion(request: ValidacionIngresoRequestDTO): Promise<ResultadoValidacionDTO> {
   // Una sola hora para validar y para encolar: la del servidor, no la del reloj de esta PC
   const ahora = new Date(ahoraServidor());
-  const resultado = validarLocal(request.token, request.idSede, ahora.getTime());
+  const resultado = await validarLocal(request.token, request.idSede, ahora.getTime());
   if (resultado.aprobado) {
     encolar({
       tokenQr: request.token.trim(),
@@ -430,6 +431,15 @@ export async function prepararModoSinConexion(idSede?: number): Promise<boolean>
     if (esFallaDeTransporte(err)) marcarSinConexion();
     return false;
   }
+}
+
+/**
+ * Prepara el pase del socio para funcionar sin servidor: crea (si hace falta) y registra la clave
+ * de este dispositivo. Devuelve true si el dispositivo puede firmar sus QR.
+ */
+export async function prepararPaseOffline(idUsuario: number): Promise<boolean> {
+  if (USE_MOCK) return false;
+  return asegurarClaveRegistrada(idUsuario);
 }
 
 /**
@@ -516,6 +526,12 @@ export async function obtenerQrSocio(idUsuario: number): Promise<QrTokenDTO> {
 export async function obtenerMiQr(idUsuarioFallback?: number): Promise<QrTokenDTO> {
   if (USE_MOCK) {
     return obtenerQrSocio(idUsuarioFallback ?? 2);
+  }
+
+  // Si este dispositivo tiene su clave registrada, el QR se firma acá y no depende del servidor
+  if (idUsuarioFallback !== undefined) {
+    const firmado = await generarQrFirmado(idUsuarioFallback);
+    if (firmado) return firmado;
   }
 
   const resp = await httpClient.get<{ tokenQr: string; segundosRestantes: number }>(

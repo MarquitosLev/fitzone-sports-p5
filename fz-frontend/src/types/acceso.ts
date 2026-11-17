@@ -61,6 +61,8 @@ export interface HabilitadosDTO {
     dni: string;
     /** Fecha local AAAA-MM-DD */
     venceMembresia: string;
+    /** Clave pública (SPKI base64) para verificar los QR firmados por su dispositivo. Null si no registró ninguno. */
+    clavePublica?: string | null;
   }>;
   adentro: Array<{
     idAcceso: number | null;
