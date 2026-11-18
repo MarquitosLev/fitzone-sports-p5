@@ -1,5 +1,6 @@
 import { httpClient, AppError, setAuthToken } from './httpClient';
 import { USE_MOCK } from '../config';
+import { senalConTimeout } from './offline/conectividad';
 import type {
   LoginCredentialsDTO,
   AltaSocioDTO,
@@ -333,7 +334,8 @@ export async function obtenerUsuarioActual(): Promise<UsuarioDTO> {
     return { ...sesion.usuario };
   }
 
-  const usuario = await httpClient.get<UsuarioDTO>(AUTH_ENDPOINTS.ME);
+  // Con timeout: si el servidor no responde, la app arranca con la sesión guardada en vez de quedar esperando
+  const usuario = await httpClient.get<UsuarioDTO>(AUTH_ENDPOINTS.ME, { signal: senalConTimeout() });
   if (sesion) {
     persistSession({ token: sesion.token, usuario });
   }

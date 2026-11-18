@@ -40,6 +40,8 @@ public class HabilitadosResponse {
         private String apellido;
         private String dni;
         private LocalDate venceMembresia;
+        /** Clave pública con la que el terminal verifica los QR firmados (F2.). Null si no registró dispositivo. */
+        private String clavePublica;
     }
 
     @Getter

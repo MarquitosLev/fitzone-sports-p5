@@ -126,6 +126,20 @@ class QrTokenServiceTest {
     }
 
     @Test
+    @DisplayName("Un QR firmado por el dispositivo (F2.) se delega al validador de firmas con la hora indicada")
+    void validarYObtenerUsuario_tokenFirmado_delegaEnQrFirmadoService() {
+        QrFirmadoService firmado = org.mockito.Mockito.mock(QrFirmadoService.class);
+        QrTokenService conFirmado = new QrTokenService(SECRET_KEY, Clock.fixed(T0, ZoneId.of("UTC")), firmado);
+        org.mockito.Mockito.when(firmado.validar("F2.4.1.n.f", T0)).thenReturn(4L);
+
+        assertThat(conFirmado.validarYObtenerUsuario(" F2.4.1.n.f ")).isEqualTo(4L);
+        // Sin validador de firmas configurado, un F2. se rechaza en lugar de tratarse como v1
+        assertThatThrownBy(() -> qrTokenService.validarYObtenerUsuario("F2.4.1.n.f"))
+                .isInstanceOf(AccesoException.class)
+                .satisfies(ex -> assertThat(((AccesoException) ex).getCodigo()).isEqualTo(CodigoError.QR_VENCIDO));
+    }
+
+    @Test
     @DisplayName("validarYObtenerUsuario rechaza token nulo o vacío con QR_VENCIDO")
     void validarYObtenerUsuario_vacio_lanzaQrVencido() {
         assertThatThrownBy(() -> qrTokenService.validarYObtenerUsuario(""))

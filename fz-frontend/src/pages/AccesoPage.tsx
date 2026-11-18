@@ -41,9 +41,16 @@ import {
   validarIngreso,
   registrarEgreso,
   prepararModoSinConexion,
+  prepararPaseOffline,
   sincronizarIngresosPendientes,
 } from '../services/accesoService';
-import { estaSinConexion, probarConexion, suscribirConectividad } from '../services/offline/conectividad';
+import {
+  esFallaDeTransporte,
+  estaSinConexion,
+  probarConexion,
+  suscribirConectividad,
+} from '../services/offline/conectividad';
+import { guardarMembresiaLocal, membresiaLocal } from '../services/offline/paseOffline';
 import { cargarCola, descartar, pendientes } from '../services/offline/colaIngresos';
 import { obtenerMembresiaPorUsuario } from '../services/membresiasService';
 import { useSede } from '../context/SedeContext';
@@ -146,6 +153,8 @@ export function AccesoPage() {
   const [qrTokenData, setQrTokenData] = useState<QrTokenDTO | null>(null);
   const [cargandoQr, setCargandoQr] = useState<boolean>(false);
   const [errorQr, setErrorQr] = useState<string | null>(null);
+  // true si el pase se muestra con la membresía guardada porque el servidor no responde
+  const [paseSinConexion, setPaseSinConexion] = useState(false);
 
   // ── Estado Vista 2: Control Operativo y Aforo (SCRUM-82) ────────────────────
   const [aforo, setAforo] = useState<AforoSedeDTO | null>(null);
@@ -207,13 +216,25 @@ export function AccesoPage() {
         const m = await obtenerMembresiaPorUsuario(socioQr.idUsuario);
         if (cancelado) return;
         setMembresia(m);
+        setPaseSinConexion(false);
+        guardarMembresiaLocal(socioQr.idUsuario, m);
 
         // REGLA DE NEGOCIO: Solo si la membresía está ACTIVA solicitamos el token QR
         if (m && m.estado === 'ACTIVO') {
-          void solicitarNuevoToken(socioQr.idUsuario);
+          // Registra la clave del dispositivo antes del primer QR, para que ya salga firmado
+          await prepararPaseOffline(socioQr.idUsuario);
+          if (!cancelado) void solicitarNuevoToken(socioQr.idUsuario);
         }
       } catch (err: unknown) {
         if (cancelado) return;
+        // Sin servidor: el pase se arma con la última membresía guardada y el QR se firma en el dispositivo
+        const guardada = esFallaDeTransporte(err) ? membresiaLocal(socioQr.idUsuario) : null;
+        if (guardada) {
+          setMembresia(guardada);
+          setPaseSinConexion(true);
+          if (guardada.estado === 'ACTIVO') void solicitarNuevoToken(socioQr.idUsuario);
+          return;
+        }
         const msg = err instanceof Error ? err.message : 'Error al consultar membresía del socio.';
         setMembresia(null);
         addToast({
@@ -600,6 +621,13 @@ export function AccesoPage() {
               <>
                 {tieneAccesoHabilitado ? (
                   <div data-testid="seccion-qr-activo" className="space-y-4">
+                    {paseSinConexion && (
+                      <Alert
+                        type="info"
+                        title="Sin conexión con el servidor"
+                        message="Tu pase se genera en este dispositivo con la membresía guardada. Mostralo en recepción como siempre."
+                      />
+                    )}
                     <QrDinamico
                       token={qrTokenData?.token || ''}
                       duracionSegundos={qrTokenData?.expiraEnSegundos || 60}

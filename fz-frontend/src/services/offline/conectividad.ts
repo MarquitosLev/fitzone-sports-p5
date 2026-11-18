@@ -29,8 +29,8 @@ export function esFallaDeTransporte(err: unknown): boolean {
 }
 
 /** Señal de corte para que una petición no quede colgada si el servidor no contesta. */
-export function senalConTimeout(): AbortSignal | undefined {
-  return typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(TIMEOUT_MS) : undefined;
+export function senalConTimeout(ms = TIMEOUT_MS): AbortSignal | undefined {
+  return typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(ms) : undefined;
 }
 
 /** true mientras el circuito está abierto: conviene no intentar el servidor. */

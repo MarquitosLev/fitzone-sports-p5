@@ -76,7 +76,7 @@ describe('decodificarToken', () => {
 describe('validarLocal', () => {
   it('aprueba a un socio vigente que no está adentro', async () => {
     await bajarLista();
-    const res = terminal.validarLocal(tokenDe(3));
+    const res = await terminal.validarLocal(tokenDe(3));
     expect(res.aprobado).toBe(true);
     expect(res.offline).toBe(true);
     expect(res.usuario?.nombre).toBe('Martín');
@@ -84,29 +84,29 @@ describe('validarLocal', () => {
 
   it('rechaza un QR de hace 5 minutos con QR_VENCIDO', async () => {
     await bajarLista();
-    expect(terminal.validarLocal(tokenDe(3, Date.now() - 5 * 60_000)).motivoRechazo).toBe('QR_VENCIDO');
+    expect((await terminal.validarLocal(tokenDe(3, Date.now() - 5 * 60_000))).motivoRechazo).toBe('QR_VENCIDO');
   });
 
   it('rechaza con SIN_DATOS_LOCALES si no hay lista, si venció o si es de otra sede', async () => {
-    expect(terminal.validarLocal(tokenDe(3)).motivoRechazo).toBe('SIN_DATOS_LOCALES');
+    expect((await terminal.validarLocal(tokenDe(3))).motivoRechazo).toBe('SIN_DATOS_LOCALES');
 
     await bajarLista({ validaHasta: new Date(Date.now() - 1000).toISOString() });
-    expect(terminal.validarLocal(tokenDe(3)).motivoRechazo).toBe('SIN_DATOS_LOCALES');
+    expect((await terminal.validarLocal(tokenDe(3))).motivoRechazo).toBe('SIN_DATOS_LOCALES');
 
     await bajarLista();
-    expect(terminal.validarLocal(tokenDe(3), 2).motivoRechazo).toBe('SIN_DATOS_LOCALES');
+    expect((await terminal.validarLocal(tokenDe(3), 2)).motivoRechazo).toBe('SIN_DATOS_LOCALES');
   });
 
   it('rechaza con MEMBRESIA_INACTIVA a quien no está en la lista o tiene la membresía vencida', async () => {
     await bajarLista();
-    expect(terminal.validarLocal(tokenDe(99)).motivoRechazo).toBe('MEMBRESIA_INACTIVA');
-    expect(terminal.validarLocal(tokenDe(5)).motivoRechazo).toBe('MEMBRESIA_INACTIVA');
+    expect((await terminal.validarLocal(tokenDe(99))).motivoRechazo).toBe('MEMBRESIA_INACTIVA');
+    expect((await terminal.validarLocal(tokenDe(5))).motivoRechazo).toBe('MEMBRESIA_INACTIVA');
   });
 
   it('rechaza con YA_INGRESADO a quien ya figura adentro (RN-01 local)', async () => {
     await bajarLista();
     terminal.agregarAdentro(tokenDe(3), new Date());
-    expect(terminal.validarLocal(tokenDe(3)).motivoRechazo).toBe('YA_INGRESADO');
+    expect((await terminal.validarLocal(tokenDe(3))).motivoRechazo).toBe('YA_INGRESADO');
   });
 
   it('rechaza con AFORO_COMPLETO cuando la sede está llena', async () => {
@@ -117,7 +117,7 @@ describe('validarLocal', () => {
       fechaHoraIngreso: '2026-11-15T10:00:00',
     }));
     await bajarLista({ adentro });
-    expect(terminal.validarLocal(tokenDe(3)).motivoRechazo).toBe('AFORO_COMPLETO');
+    expect((await terminal.validarLocal(tokenDe(3))).motivoRechazo).toBe('AFORO_COMPLETO');
     expect(terminal.aforoLocal(1)).toEqual({ aforoActual: 3, aforoMaximo: 3, porcentaje: 100 });
   });
 
@@ -125,7 +125,7 @@ describe('validarLocal', () => {
     const servidorAdelantado = Date.now() + 10 * 60_000;
     await bajarLista({ horaServidor: new Date(servidorAdelantado).toISOString() });
     // El QR se generó con la hora del servidor, 10 minutos por delante del reloj de esta PC
-    expect(terminal.validarLocal(tokenDe(3, servidorAdelantado)).aprobado).toBe(true);
+    expect((await terminal.validarLocal(tokenDe(3, servidorAdelantado))).aprobado).toBe(true);
   });
 });
 

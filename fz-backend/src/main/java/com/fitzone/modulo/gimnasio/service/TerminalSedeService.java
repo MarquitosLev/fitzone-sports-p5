@@ -178,6 +178,7 @@ public class TerminalSedeService {
                 .apellido(usuario.getApellido())
                 .dni(usuario.getDni())
                 .venceMembresia(membresia.getFechaVencimiento())
+                .clavePublica(usuario.getQrClavePublica())
                 .build();
     }
 
