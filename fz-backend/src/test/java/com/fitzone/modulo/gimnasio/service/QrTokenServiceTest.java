@@ -102,6 +102,30 @@ class QrTokenServiceTest {
     }
 
     @Test
+    @DisplayName("validarYObtenerUsuario con momento acepta un token viejo si se juzga con la hora en que se escaneó")
+    void validarYObtenerUsuario_conMomentoDelEscaneo_aceptaTokenViejo() {
+        QrTokenResponse responseT0 = qrTokenService.generarToken(15L);
+        QrTokenService servicioDiezMinutosDespues = new QrTokenService(SECRET_KEY, Clock.fixed(T0.plusSeconds(600), ZoneId.of("UTC")));
+
+        Long idUsuario = servicioDiezMinutosDespues.validarYObtenerUsuario(responseT0.getTokenQr(), T0.plusSeconds(5));
+
+        assertThat(idUsuario).isEqualTo(15L);
+        assertThatThrownBy(() -> servicioDiezMinutosDespues.validarYObtenerUsuario(responseT0.getTokenQr()))
+                .isInstanceOf(AccesoException.class)
+                .satisfies(ex -> assertThat(((AccesoException) ex).getCodigo()).isEqualTo(CodigoError.QR_VENCIDO));
+    }
+
+    @Test
+    @DisplayName("validarYObtenerUsuario con momento rechaza un token generado lejos de la hora declarada")
+    void validarYObtenerUsuario_conMomentoLejano_lanzaQrVencido() {
+        QrTokenResponse responseT0 = qrTokenService.generarToken(15L);
+
+        assertThatThrownBy(() -> qrTokenService.validarYObtenerUsuario(responseT0.getTokenQr(), T0.minusSeconds(300)))
+                .isInstanceOf(AccesoException.class)
+                .satisfies(ex -> assertThat(((AccesoException) ex).getCodigo()).isEqualTo(CodigoError.QR_VENCIDO));
+    }
+
+    @Test
     @DisplayName("validarYObtenerUsuario rechaza token nulo o vacío con QR_VENCIDO")
     void validarYObtenerUsuario_vacio_lanzaQrVencido() {
         assertThatThrownBy(() -> qrTokenService.validarYObtenerUsuario(""))

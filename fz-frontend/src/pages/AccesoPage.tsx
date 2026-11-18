@@ -31,6 +31,7 @@ import {
   ValidadorIngreso,
   ResultadoValidacion,
   PersonasAdentroList,
+  ColaOffline,
 } from '../components/acceso';
 import {
   obtenerMiQr,
@@ -39,7 +40,11 @@ import {
   listarAccesosActivos,
   validarIngreso,
   registrarEgreso,
+  prepararModoSinConexion,
+  sincronizarIngresosPendientes,
 } from '../services/accesoService';
+import { estaSinConexion, probarConexion, suscribirConectividad } from '../services/offline/conectividad';
+import { cargarCola, descartar, pendientes } from '../services/offline/colaIngresos';
 import { obtenerMembresiaPorUsuario } from '../services/membresiasService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
@@ -51,6 +56,7 @@ import type {
   QrTokenDTO,
   AforoSedeDTO,
   ResultadoValidacionDTO,
+  IngresoEnCola,
 } from '../types';
 import { formatearFechaHora } from '../utils/formatters';
 
@@ -71,6 +77,11 @@ const COLUMNAS_ACCESOS: Column<AccesoDTO>[] = [
 ];
 
 type VistaAcceso = 'mi-qr' | 'control-aforo' | 'historial';
+
+/** Cada cuánto se baja la lista de habilitados para validar sin conexión. */
+const REFRESCO_LISTA_MS = 5 * 60_000;
+/** Cada cuánto se reintenta confirmar la cola o se prueba si volvió el servidor. */
+const REINTENTO_SYNC_MS = 30_000;
 
 export function AccesoPage() {
   const navigate = useNavigate();
@@ -145,6 +156,12 @@ export function AccesoPage() {
   const [egresoLoadingId, setEgresoLoadingId] = useState<number | null>(null);
   const [errorOperativo, setErrorOperativo] = useState<string | null>(null);
   const [resultadoValidacion, setResultadoValidacion] = useState<ResultadoValidacionDTO | null>(null);
+
+  // ── Estado del terminal sin conexión (RNF-01) ───────────────────────────────
+  const [sinConexion, setSinConexion] = useState<boolean>(estaSinConexion);
+  const [cola, setCola] = useState<IngresoEnCola[]>(cargarCola);
+  const [sincronizando, setSincronizando] = useState(false);
+  const operaTerminal = puedeVerAforo && puedeEscanear;
 
   // ── Estado Vista 3: Historial de Accesos ─────────────────────────────────────
   const [accesosSede, setAccesosSede] = useState<AccesoDTO[]>([]);
@@ -255,6 +272,83 @@ export function AccesoPage() {
     }
   }, [sedeActiva, puedeVerAforo, cargarAforo, cargarAccesosActivos]);
 
+  // ── Terminal sin conexión (RNF-01) ───────────────────────────────────────────
+  useEffect(() => suscribirConectividad(setSinConexion), []);
+
+  // Al volver la conexión se refrescan aforo y personas adentro con los datos del servidor
+  useEffect(() => {
+    if (!sinConexion && operaTerminal) {
+      void Promise.all([cargarAforo(), cargarAccesosActivos()]);
+    }
+  }, [sinConexion, operaTerminal, cargarAforo, cargarAccesosActivos]);
+
+  // Con sede asignada el servidor usa la del operador; sin ella (gerente) se pide la sede elegida
+  const idSedeLista = usuarioAuth?.idSede ? undefined : sedeActiva?.idSede;
+
+  useEffect(() => {
+    if (!operaTerminal || !sedeActiva) return;
+    void prepararModoSinConexion(idSedeLista);
+    const id = window.setInterval(() => void prepararModoSinConexion(idSedeLista), REFRESCO_LISTA_MS);
+    return () => window.clearInterval(id);
+  }, [operaTerminal, sedeActiva, idSedeLista]);
+
+  const sincronizarCola = useCallback(
+    async (manual = false) => {
+      setSincronizando(true);
+      try {
+        const resumen = await sincronizarIngresosPendientes();
+        setCola(cargarCola());
+        if (resumen && resumen.confirmados + resumen.conError > 0) {
+          addToast({
+            type: resumen.conError > 0 ? 'warning' : 'success',
+            title: 'Ingresos sincronizados',
+            message: `${resumen.confirmados} confirmado(s), ${resumen.conError} con error.`,
+          });
+          void Promise.all([cargarAforo(), cargarAccesosActivos(), prepararModoSinConexion(idSedeLista)]);
+        } else if (manual && !resumen) {
+          addToast({
+            type: 'warning',
+            title: 'Sin conexión',
+            message: 'El servidor sigue sin responder. Los ingresos quedan pendientes.',
+          });
+        }
+      } catch (err: unknown) {
+        addToast({
+          type: 'error',
+          title: 'Error al sincronizar',
+          message: err instanceof Error ? err.message : 'No se pudo sincronizar la cola de ingresos.',
+        });
+      } finally {
+        setSincronizando(false);
+      }
+    },
+    [addToast, cargarAforo, cargarAccesosActivos, idSedeLista]
+  );
+
+  // Disparadores de la sincronización: evento online, volver a la pestaña y un reintento cada
+  // 30 s. El evento online solo no alcanza: si se cae el backend y la PC sigue con internet, nunca llega.
+  useEffect(() => {
+    if (!operaTerminal) return;
+    const intentar = () => {
+      if (pendientes().length > 0) void sincronizarCola();
+      else if (estaSinConexion()) void probarConexion();
+    };
+    const alVolverALaPestana = () => {
+      if (document.visibilityState === 'visible') intentar();
+    };
+    intentar();
+    window.addEventListener('online', intentar);
+    document.addEventListener('visibilitychange', alVolverALaPestana);
+    const id = window.setInterval(intentar, REINTENTO_SYNC_MS);
+    return () => {
+      window.removeEventListener('online', intentar);
+      document.removeEventListener('visibilitychange', alVolverALaPestana);
+      window.clearInterval(id);
+    };
+  }, [operaTerminal, sincronizarCola]);
+
+  const handleDescartar = (tokenQr: string) => setCola(descartar(tokenQr));
+
   // ── Lógica Recepción: Historial de accesos ────────────────────────────────────
   useEffect(() => {
     if (vistaActiva !== 'historial' || !sedeActiva || !puedeVerAforo) return;
@@ -299,11 +393,12 @@ export function AccesoPage() {
       });
 
       setResultadoValidacion(res);
+      setCola(cargarCola());
 
       if (res.aprobado) {
         addToast({
           type: 'success',
-          title: 'Acceso Permitido',
+          title: res.offline ? 'Acceso Permitido (sin conexión)' : 'Acceso Permitido',
           message: res.mensaje || 'Molinete habilitado.',
         });
         // Refrescar lista de adentro y aforo
@@ -608,6 +703,16 @@ export function AccesoPage() {
               </p>
             </div>
           </div>
+
+          {operaTerminal && (
+            <ColaOffline
+              sinConexion={sinConexion}
+              cola={cola}
+              sincronizando={sincronizando}
+              onSincronizar={() => void sincronizarCola(true)}
+              onDescartar={handleDescartar}
+            />
+          )}
 
           {/* Alerta de error operativo si existe */}
           {errorOperativo && (

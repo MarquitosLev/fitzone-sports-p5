@@ -27,11 +27,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Method;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 @Slf4j
 @Service
@@ -79,12 +82,28 @@ public class AccesoService {
 
     @Transactional
     public Acceso registrarIngreso(String tokenQr, Long idSede) {
+        return registrarIngreso(tokenQr, idSede, LocalDateTime.now(),
+                () -> qrTokenService.validarYObtenerUsuario(tokenQr));
+    }
+
+    /**
+     * Registra un ingreso que el terminal aprobó sin conexión. El token se valida contra el minuto
+     * del escaneo y el acceso queda con esa hora de ingreso.
+     */
+    @Transactional
+    public Acceso registrarIngreso(String tokenQr, Long idSede, Instant ocurrioEn) {
+        return registrarIngreso(tokenQr, idSede, LocalDateTime.ofInstant(ocurrioEn, ZoneId.systemDefault()),
+                () -> qrTokenService.validarYObtenerUsuario(tokenQr, ocurrioEn));
+    }
+
+    private Acceso registrarIngreso(String tokenQr, Long idSede, LocalDateTime fechaHoraIngreso,
+                                    Supplier<Long> validarToken) {
         Long idSedeEfectiva = resolverYValidarSedeOperador(idSede);
         if (idSedeEfectiva == null) {
             throw new PeticionInvalidaException("El idSede es obligatorio cuando el operador no tiene sede asignada en sesión");
         }
 
-        Long idUsuario = qrTokenService.validarYObtenerUsuario(tokenQr);
+        Long idUsuario = validarToken.get();
 
         // Control de un solo uso e idempotencia ante reintentos de red
         Optional<Acceso> accesoExistente = accesoRepository.findByTokenQr(tokenQr);
@@ -100,9 +119,8 @@ public class AccesoService {
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario", idUsuario));
 
-        LocalDate hoy = LocalDate.now();
         // Bloqueo pesimista sobre la membresía para coordinar con cancelaciones y sincronizar ingresos del socio
-        membresiaRepository.findMembresiaActivaParaIngreso(idUsuario, EstadoMembresia.ACTIVO, hoy)
+        membresiaRepository.findMembresiaActivaParaIngreso(idUsuario, EstadoMembresia.ACTIVO, fechaHoraIngreso.toLocalDate())
                 .orElseThrow(() -> new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.MEMBRESIA_INACTIVA,
                         "El socio no posee una membresía activa y vigente para ingresar"));
 
@@ -125,7 +143,7 @@ public class AccesoService {
                 .usuario(usuario)
                 .sede(sede)
                 .tokenQr(tokenQr)
-                .fechaHoraIngreso(LocalDateTime.now())
+                .fechaHoraIngreso(fechaHoraIngreso)
                 .fechaHoraEgreso(null)
                 .build();
 
