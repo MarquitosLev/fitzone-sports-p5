@@ -6,6 +6,7 @@ import com.fitzone.core.exception.AccesoDenegadoException;
 import com.fitzone.core.exception.ConflictoException;
 import com.fitzone.core.exception.PeticionInvalidaException;
 import com.fitzone.core.exception.RecursoNoEncontradoException;
+import com.fitzone.core.exception.ReglaNegocioException;
 import com.fitzone.core.security.UsuarioActual;
 import com.fitzone.modulo.canchas.models.Cancha;
 import com.fitzone.modulo.canchas.models.ReservaCancha;
@@ -32,6 +33,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -152,6 +154,27 @@ class PagoServiceTest {
         assertThat(resultado.getFechaHoraConfirmacion()).isNull();
         verify(transaccionRepository).save(any(Transaccion.class));
         verify(comprobanteService, never()).generarComprobante(any());
+    }
+
+    @Test
+    @DisplayName("procesarPago de una reserva sin pagar que superó los 5 minutos de retención lanza 422 sin cobrar")
+    void procesarPago_reservaCancha_vencida() {
+        PagoRequest request = PagoRequest.builder()
+                .idSede(10L)
+                .concepto(TipoOrigenTransaccion.RESERVA_CANCHA)
+                .idReservaCancha(30L)
+                .build();
+        reservaCancha.setCreatedAt(LocalDateTime.now().minusMinutes(6));
+
+        when(usuarioActual.obtener()).thenReturn(usuario);
+        when(reservaCanchaRepository.findById(30L)).thenReturn(Optional.of(reservaCancha));
+        when(transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(30L, EstadoPago.CONFIRMADO))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> pagoService.procesarPago(request))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessageContaining("venció");
+        verify(pasarelaPago, never()).cobrar(any(), any(), anyBoolean());
     }
 
     @Test

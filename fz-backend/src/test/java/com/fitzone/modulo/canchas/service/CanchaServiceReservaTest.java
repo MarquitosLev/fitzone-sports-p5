@@ -26,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -121,7 +122,7 @@ class CanchaServiceReservaTest {
 
         when(usuarioActual.obtener()).thenReturn(socio);
         when(canchaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(cancha));
-        when(reservaCanchaRepository.existsSolapamiento(1L, inicio, fin)).thenReturn(false);
+        when(reservaCanchaRepository.existsSolapamiento(eq(1L), eq(inicio), eq(fin), any(LocalDateTime.class))).thenReturn(false);
         when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
         when(membresiaRepository.existsByUsuario_IdUsuarioAndEstadoInAndFechaVencimientoGreaterThanEqual(
                 10L, List.of(EstadoMembresia.ACTIVO), LocalDate.now())).thenReturn(true);
@@ -149,7 +150,7 @@ class CanchaServiceReservaTest {
                 .build();
 
         when(canchaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(cancha));
-        when(reservaCanchaRepository.existsSolapamiento(1L, inicio, fin)).thenReturn(false);
+        when(reservaCanchaRepository.existsSolapamiento(eq(1L), eq(inicio), eq(fin), any(LocalDateTime.class))).thenReturn(false);
         when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
         when(reservaCanchaRepository.save(any(ReservaCancha.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -179,7 +180,7 @@ class CanchaServiceReservaTest {
         LocalDateTime inicio = LocalDate.now().plusDays(1).atTime(10, 0);
         ReservaCancha reserva = ReservaCancha.builder().fechaHoraInicio(inicio).fechaHoraFin(inicio.plusHours(1)).build();
         when(canchaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(cancha));
-        when(reservaCanchaRepository.existsSolapamiento(1L, inicio, inicio.plusHours(1))).thenReturn(true);
+        when(reservaCanchaRepository.existsSolapamiento(eq(1L), eq(inicio), eq(inicio.plusHours(1)), any(LocalDateTime.class))).thenReturn(true);
 
         assertThatThrownBy(() -> canchaService.reservarComoInvitado(1L, reserva))
                 .isInstanceOf(ConflictoException.class);
@@ -221,7 +222,7 @@ class CanchaServiceReservaTest {
 
         when(usuarioActual.obtener()).thenReturn(socio);
         when(canchaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(cancha));
-        when(reservaCanchaRepository.existsSolapamiento(1L, inicio, fin)).thenReturn(true);
+        when(reservaCanchaRepository.existsSolapamiento(eq(1L), eq(inicio), eq(fin), any(LocalDateTime.class))).thenReturn(true);
 
         assertThatThrownBy(() -> canchaService.reservar(1L, reserva))
                 .isInstanceOf(ConflictoException.class)
@@ -316,8 +317,8 @@ class CanchaServiceReservaTest {
                 .build();
 
         when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
-        when(reservaCanchaRepository.findByCancha_IdCanchaAndFechaHoraInicioBetween(
-                1L, fecha.atTime(8, 0), fecha.atTime(23, 0)))
+        when(reservaCanchaRepository.findQueOcupanTurno(
+                eq(1L), eq(fecha.atTime(8, 0)), eq(fecha.atTime(23, 0)), any(LocalDateTime.class)))
                 .thenReturn(List.of(reservaExistente));
 
         List<FranjaDisponibilidad> franjas = canchaService.obtenerDisponibilidad(1L, fecha);
@@ -337,14 +338,30 @@ class CanchaServiceReservaTest {
     }
 
     @Test
+    @DisplayName("Disponibilidad: consulta solo las reservas que ocupan el turno, con la retención de 5 minutos")
+    void testObtenerDisponibilidadUsaLimiteDeRetencion() {
+        LocalDate fecha = LocalDate.now().plusDays(1);
+        when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
+        when(reservaCanchaRepository.findQueOcupanTurno(eq(1L), any(), any(), any())).thenReturn(Collections.emptyList());
+        LocalDateTime antes = LocalDateTime.now().minusMinutes(5);
+
+        List<FranjaDisponibilidad> franjas = canchaService.obtenerDisponibilidad(1L, fecha);
+
+        ArgumentCaptor<LocalDateTime> limite = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(reservaCanchaRepository).findQueOcupanTurno(eq(1L), any(), any(), limite.capture());
+        assertThat(limite.getValue()).isBetween(antes, LocalDateTime.now().minusMinutes(5));
+        assertThat(franjas).allMatch(f -> f.getEstado() == EstadoFranja.LIBRE);
+    }
+
+    @Test
     @DisplayName("Disponibilidad: cancha en mantenimiento muestra franjas no ocupadas como MANTENIMIENTO")
     void testObtenerDisponibilidadEnMantenimiento() {
         cancha.setEnMantenimiento(true);
         LocalDate fecha = LocalDate.now().plusDays(1);
 
         when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
-        when(reservaCanchaRepository.findByCancha_IdCanchaAndFechaHoraInicioBetween(
-                1L, fecha.atTime(8, 0), fecha.atTime(23, 0)))
+        when(reservaCanchaRepository.findQueOcupanTurno(
+                eq(1L), eq(fecha.atTime(8, 0)), eq(fecha.atTime(23, 0)), any(LocalDateTime.class)))
                 .thenReturn(Collections.emptyList());
 
         List<FranjaDisponibilidad> franjas = canchaService.obtenerDisponibilidad(1L, fecha);
@@ -366,7 +383,7 @@ class CanchaServiceReservaTest {
 
         when(usuarioActual.obtener()).thenReturn(socio);
         when(canchaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(cancha));
-        when(reservaCanchaRepository.existsSolapamiento(1L, inicio, fin)).thenReturn(false);
+        when(reservaCanchaRepository.existsSolapamiento(eq(1L), eq(inicio), eq(fin), any(LocalDateTime.class))).thenReturn(false);
         when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
         when(reservaCanchaRepository.save(any(ReservaCancha.class))).thenAnswer(invocation -> invocation.getArgument(0));
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { CanchasPage } from './CanchasPage';
 import { SedeProvider } from '../context/SedeContext';
 import { ToastProvider } from '../context/ToastContext';
@@ -103,10 +103,95 @@ const sesionSocio: AuthContextType = {
   logout: () => {},
 };
 
+const gerente: UsuarioDTO = {
+  idUsuario: 3,
+  authId: 'auth-3',
+  dni: '20000000',
+  nombre: 'Gerente',
+  apellido: 'General',
+  email: 'gerente@fitzone.com',
+  telefono: '1199998888',
+  fotoUrl: null,
+  tipoUsuario: 'GERENTE',
+  idSede: 1,
+};
+
+const sesionGerente: AuthContextType = {
+  usuario: gerente,
+  token: 'token-gerente',
+  isAuthenticated: true,
+  isLoading: false,
+  login: async () => ({ token: 'token-gerente', usuario: gerente }),
+  register: async () => ({ token: 'token-gerente', usuario: gerente }),
+  reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
+  logout: () => {},
+};
+
+const externo: UsuarioDTO = {
+  idUsuario: 4,
+  authId: null,
+  dni: '12345678',
+  nombre: 'Cliente',
+  apellido: 'Externo',
+  email: 'externo@email.com',
+  telefono: '1155667788',
+  fotoUrl: null,
+  tipoUsuario: 'EXTERNO',
+  idSede: null,
+};
+
+const sesionExterno: AuthContextType = {
+  usuario: externo,
+  token: 'token-externo',
+  isAuthenticated: true,
+  isLoading: false,
+  login: async () => ({ token: 'token-externo', usuario: externo }),
+  register: async () => ({ token: 'token-externo', usuario: externo }),
+  reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
+  logout: () => {},
+};
+
+const recepcionista: UsuarioDTO = {
+  idUsuario: 5,
+  authId: 'auth-5',
+  dni: '11223344',
+  nombre: 'Recepcionista',
+  apellido: 'Sede',
+  email: 'recep@fitzone.com',
+  telefono: '1166778899',
+  fotoUrl: null,
+  tipoUsuario: 'RECEPCIONISTA',
+  idSede: 1,
+};
+
+const sesionRecepcionista: AuthContextType = {
+  usuario: recepcionista,
+  token: 'token-recep',
+  isAuthenticated: true,
+  isLoading: false,
+  login: async () => ({ token: 'token-recep', usuario: recepcionista }),
+  register: async () => ({ token: 'token-recep', usuario: recepcionista }),
+  reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
+  logout: () => {},
+};
+
+/** Componente espía para registrar cambios de ruta dentro del MemoryRouter */
+function LocationWatcher({ onLocationChange }: { onLocationChange: (pathname: string) => void }) {
+  const location = useLocation();
+  onLocationChange(location.pathname);
+  return null;
+}
+
 /** Reservar exige la sesión de un socio o externo: el turno queda a su nombre. */
-function renderWithProviders(ui: React.ReactElement, conSesionSocio = false) {
+function renderWithProviders(
+  ui: React.ReactElement,
+  sesion: AuthContextType | boolean = false,
+  onLocationChange?: (pathname: string) => void
+) {
+  const authValue = typeof sesion === 'boolean' ? (sesion ? sesionSocio : null) : sesion;
   const pagina = (
-    <MemoryRouter>
+    <MemoryRouter initialEntries={['/canchas']}>
+      {onLocationChange && <LocationWatcher onLocationChange={onLocationChange} />}
       <ToastProvider>
         <SedeProvider sedes={[mockSede]} sedeInicial={mockSede}>
           {ui}
@@ -115,7 +200,7 @@ function renderWithProviders(ui: React.ReactElement, conSesionSocio = false) {
     </MemoryRouter>
   );
   return render(
-    conSesionSocio ? <AuthContext.Provider value={sesionSocio}>{pagina}</AuthContext.Provider> : pagina
+    authValue ? <AuthContext.Provider value={authValue}>{pagina}</AuthContext.Provider> : pagina
   );
 }
 
@@ -152,7 +237,7 @@ describe('CanchasPage (Integración)', () => {
       expect(screen.getByText('Cancha 1 — Pádel')).toBeInTheDocument();
       expect(screen.getByText('18:00 – 19:00')).toBeInTheDocument();
       expect(screen.getByText('19:00 – 20:00')).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
 
     // Franja pico marcada visualmente
     expect(screen.getAllByText(/pico \+20%/i).length).toBeGreaterThanOrEqual(1);
@@ -284,6 +369,50 @@ describe('CanchasPage (Integración)', () => {
     });
   });
 
+  it('SCRUM-146: al tocar "Ver comprobante" en una reserva confirmada descarga el PDF oficial sin navegar a /pagos', async () => {
+    const reservaConfirmada: ReservaCanchaDTO = {
+      ...mockReservas[0],
+      idReservaCancha: 3050,
+      estado: 'CONFIRMADA',
+      fechaHoraInicio: '2099-01-10T19:00:00',
+      fechaHoraFin: '2099-01-10T20:00:00',
+    };
+    vi.spyOn(canchasService, 'listarMisReservas').mockResolvedValueOnce([reservaConfirmada]);
+    vi.spyOn(pagosService, 'listarMisPagos').mockResolvedValueOnce([
+      { idTransaccion: 88, reservaCanchaId: 3050, estadoPago: 'CONFIRMADO' } as TransaccionDTO,
+    ]);
+    const spyObtenerComp = vi.spyOn(pagosService, 'obtenerComprobantePorTransaccion').mockResolvedValueOnce({
+      idComprobante: 15,
+      numeroFactura: 'FAC-0001-00000015',
+      transaccion: { idTransaccion: 88 } as TransaccionDTO,
+    });
+    const fakeBlob = new Blob(['%PDF-1.4 mock'], { type: 'application/pdf' });
+    const spyDescargarPdf = vi.spyOn(pagosService, 'descargarComprobantePdf').mockResolvedValueOnce(fakeBlob);
+    const spyDescargarBlob = vi.spyOn(pagosService, 'descargarBlobEnNavegador').mockImplementation(() => {});
+
+    const rutasVisitadas: string[] = [];
+    renderWithProviders(<CanchasPage initialTab="mis-reservas" />, false, (path) => {
+      rutasVisitadas.push(path);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/3050/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /ver comprobante/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /ver comprobante/i }));
+
+    await waitFor(() => {
+      expect(spyObtenerComp).toHaveBeenCalledWith(88);
+      expect(spyDescargarPdf).toHaveBeenCalledWith(15);
+      expect(spyDescargarBlob).toHaveBeenCalledWith(fakeBlob, 'comprobante-FAC-0001-00000015.pdf');
+    });
+
+    // Verifica explícitamente que no se navegó a /pagos
+    expect(rutasVisitadas).not.toContain('/pagos');
+    expect(rutasVisitadas[rutasVisitadas.length - 1]).toBe('/canchas');
+  });
+
   // ── RF-09 / RF-12: Gestión de Canchas (Admin) ──────────────────────────────
   it('carga y muestra las canchas de la sede activa y sus métricas', async () => {
     renderWithProviders(<CanchasPage initialTab="admin" />);
@@ -396,5 +525,105 @@ describe('CanchasPage (Integración)', () => {
     await waitFor(() => {
       expect(spyToggle).toHaveBeenCalledWith(1, true);
     });
+  });
+
+  // ── Segregación de Vistas por Rol (SCRUM-127 / Fix Gerente) ────────────────
+  it('el GERENTE ve únicamente la vista de gestión y no las pestañas de reserva de socio', async () => {
+    renderWithProviders(<CanchasPage />, sesionGerente);
+
+    await waitFor(() => {
+      expect(screen.getByText('Cancha 1 — Pádel')).toBeInTheDocument();
+    });
+
+    // No debe existir selector de pestañas de reserva ni mis reservas
+    expect(screen.queryByRole('tab', { name: /reservar cancha/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /mis reservas/i })).not.toBeInTheDocument();
+
+    // Debe mostrar la gestión de canchas y opciones de administración
+    expect(screen.getByRole('tab', { name: /gestión de canchas/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /nueva cancha/i })).toBeInTheDocument();
+  });
+
+  it('el SOCIO ve las pestañas de reserva y mis reservas pero no la pestaña de gestión de canchas', async () => {
+    renderWithProviders(<CanchasPage />, true);
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /reservar cancha/i })).toBeInTheDocument();
+    });
+
+    // El socio ve pestañas de reserva
+    expect(screen.getByRole('tab', { name: /reservar cancha/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /mis reservas/i })).toBeInTheDocument();
+
+    // El socio no ve gestión de canchas
+    expect(screen.queryByRole('tab', { name: /gestión de canchas/i })).not.toBeInTheDocument();
+  });
+
+  // ── Nuevos casos cubiertos por la review de Sourcery ──────────────────────
+
+  it('el EXTERNO ve Reservar Cancha y Mis Reservas pero NO gestión de canchas', async () => {
+    renderWithProviders(<CanchasPage />, sesionExterno);
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /reservar cancha/i })).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('tab', { name: /mis reservas/i })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /gestión de canchas/i })).not.toBeInTheDocument();
+    // La vista de reserva está activa (título presente)
+    expect(screen.getByText(/reserva de canchas deportivas/i)).toBeInTheDocument();
+  });
+
+  it('el RECEPCIONISTA ve Reservar Cancha (consulta disponibilidad) pero NO Mis Reservas ni admin', async () => {
+    renderWithProviders(<CanchasPage />, sesionRecepcionista);
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /reservar cancha/i })).toBeInTheDocument();
+    });
+
+    // Recepcionista tiene CANCHAS_VER y ve la pestaña de reservar
+    expect(screen.getByRole('tab', { name: /reservar cancha/i })).toBeInTheDocument();
+    // No tiene CANCHAS_ADMIN ni es GERENTE, no ve gestión
+    expect(screen.queryByRole('tab', { name: /gestión de canchas/i })).not.toBeInTheDocument();
+    // No puede reservar para sí mismo: no ve Mis Reservas
+    expect(screen.queryByRole('tab', { name: /mis reservas/i })).not.toBeInTheDocument();
+  });
+
+  it('el GERENTE restaurado con isLoading=true no muestra flujo de invitado mientras carga', () => {
+    // Simula el estado de carga: auth en curso, usuario aún null
+    const sesionCargando: AuthContextType = {
+      usuario: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: true,
+      login: async () => { throw new Error('fuera de provider'); },
+      register: async () => { throw new Error('fuera de provider'); },
+      reintentarCuenta: async () => { throw new Error('fuera de provider'); },
+      logout: () => {},
+    };
+
+    renderWithProviders(<CanchasPage />, sesionCargando);
+
+    // Con isLoading=true el componente no debe considerar al usuario como invitado:
+    // ni el flujo de reserva de invitado ni las pestañas de reserva deben verse.
+    expect(screen.queryByRole('tab', { name: /reservar cancha/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /mis reservas/i })).not.toBeInTheDocument();
+    // El encabezado de reserva de invitado tampoco
+    expect(screen.queryByText(/reserva de canchas deportivas/i)).not.toBeInTheDocument();
+  });
+
+  it('el GERENTE forzado a initialTab="reservar" aterriza en gestión, no en página en blanco', async () => {
+    renderWithProviders(<CanchasPage initialTab="reservar" />, sesionGerente);
+
+    // A pesar de initialTab="reservar", el GERENTE (soloAdmin) redirige a 'admin'
+    await waitFor(() => {
+      expect(screen.getByText('Cancha 1 — Pádel')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('tab', { name: /gestión de canchas/i })).toBeInTheDocument();
+    // La vista admin está activa (h1 con el título presente)
+    expect(screen.getByRole('heading', { name: /gestión de canchas/i })).toBeInTheDocument();
+    // No hay pestañas de reserva
+    expect(screen.queryByRole('tab', { name: /reservar cancha/i })).not.toBeInTheDocument();
   });
 });

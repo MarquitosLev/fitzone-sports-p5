@@ -81,7 +81,8 @@ public class UsuarioService {
         if (usuario.getTipoUsuario() == TipoUsuario.EXTERNO) {
             throw new ReglaNegocioException("El cliente externo no se registra: reserva como invitado desde la web");
         }
-        validarOperadorParaCreacion(exigirOperador(idOperador), usuario.getTipoUsuario());
+        Usuario operador = obtenerPorId(exigirOperador(idOperador));
+        validarOperadorParaCreacion(operador, usuario.getTipoUsuario());
 
         String dniLimpio = usuario.getDni() != null ? usuario.getDni().trim() : "";
         usuario.setDni(dniLimpio);
@@ -98,7 +99,7 @@ public class UsuarioService {
         if (usuario.getTipoUsuario() == TipoUsuario.SOCIO || usuario.getTipoUsuario() == TipoUsuario.EXTERNO) {
             usuario.setIdSede(null);
         } else {
-            validarReglaSede(usuario.getTipoUsuario(), usuario.getIdSede());
+            validarReglaSede(operador, usuario.getTipoUsuario(), usuario.getIdSede());
         }
 
 
@@ -156,7 +157,7 @@ public class UsuarioService {
         if (existente.getTipoUsuario() == TipoUsuario.SOCIO || existente.getTipoUsuario() == TipoUsuario.EXTERNO) {
             existente.setIdSede(null);
         } else {
-            validarReglaSede(existente.getTipoUsuario(), datos.getIdSede());
+            validarReglaSede(operador, existente.getTipoUsuario(), datos.getIdSede());
             existente.setIdSede(datos.getIdSede());
         }
 
@@ -184,8 +185,7 @@ public class UsuarioService {
         return idOperador;
     }
 
-    private void validarOperadorParaCreacion(Long idOperador, TipoUsuario tipoNuevoUsuario) {
-        Usuario operador = obtenerPorId(idOperador);
+    private void validarOperadorParaCreacion(Usuario operador, TipoUsuario tipoNuevoUsuario) {
         if (operador.getTipoUsuario() == TipoUsuario.SOCIO || operador.getTipoUsuario() == TipoUsuario.EXTERNO) {
             throw new AccesoDenegadoException("Solo recepcionistas o gerentes pueden dar de alta usuarios");
         }
@@ -240,14 +240,25 @@ public class UsuarioService {
         existente.setTipoUsuario(tipoNuevo);
     }
 
-    private void validarReglaSede(TipoUsuario tipoUsuario, Long idSede) {
-        if (tipoUsuario == TipoUsuario.RECEPCIONISTA || tipoUsuario == TipoUsuario.GERENTE) {
-            if (idSede == null) {
-                throw new ReglaNegocioException("Los usuarios " + tipoUsuario + " deben tener una sede asignada");
+    /**
+     * El recepcionista siempre tiene sede. El gerente puede no tenerla: sin sede es el gerente central y opera
+     * en todas las sedes (ver UsuarioActual.validarSede). Solo otro gerente central puede dejarlo sin sede.
+     */
+    private void validarReglaSede(Usuario operador, TipoUsuario tipoUsuario, Long idSede) {
+        if (tipoUsuario != TipoUsuario.RECEPCIONISTA && tipoUsuario != TipoUsuario.GERENTE) {
+            return;
+        }
+        if (idSede == null) {
+            if (tipoUsuario == TipoUsuario.RECEPCIONISTA) {
+                throw new ReglaNegocioException("Los usuarios RECEPCIONISTA deben tener una sede asignada");
             }
-            if (!sedeRepository.existsById(idSede)) {
-                throw new RecursoNoEncontradoException("Sede", idSede);
+            if (operador.getIdSede() != null) {
+                throw new AccesoDenegadoException("Solo el gerente central puede asignar un gerente sin sede");
             }
+            return;
+        }
+        if (!sedeRepository.existsById(idSede)) {
+            throw new RecursoNoEncontradoException("Sede", idSede);
         }
     }
 }

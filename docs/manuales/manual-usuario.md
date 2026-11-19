@@ -110,6 +110,7 @@ Menú *Canchas* → *Reservar Cancha*:
 2. Elegir la fecha.
 3. Elegir el turno. Los turnos son de horas enteras, entre las 8 y las 23. Los ocupados o ya pasados aparecen deshabilitados.
 4. Revisar la cotización y confirmar. Si otra persona reservó el mismo turno un instante antes, el sistema avisa que ya está ocupado y hay que elegir otro.
+5. Pagar la reserva desde *Pagos* dentro de los **5 minutos**. Pasado ese plazo el turno se libera, la reserva aparece como *Vencida* en *Mis Reservas* y ya no se puede pagar: hay que volver a reservar.
 
 ![Reserva de canchas](img/socio-canchas.png)
 

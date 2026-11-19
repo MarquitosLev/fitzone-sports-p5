@@ -24,3 +24,4 @@ Los ADR-001 a ADR-009 son los obligatorios de la cátedra, con su numeración. D
 | [ADR-016](ADR-016-esquema-generado-por-jpa.md) | Esquema generado por JPA: ids `Long` y enums como texto | Aceptado |
 | [ADR-017](ADR-017-enum-nativos-postgresql.md) | ENUM nativos de PostgreSQL | Reemplazado por ADR-016 |
 | [ADR-018](ADR-018-cliente-externo-sin-registro.md) | El cliente externo no se registra: reserva y paga en un paso | Aceptado |
+| [ADR-019](ADR-019-retencion-reservas-sin-pagar.md) | Una reserva de socio sin pagar retiene el turno 5 minutos | Aceptado |

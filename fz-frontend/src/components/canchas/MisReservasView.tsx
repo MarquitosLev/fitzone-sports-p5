@@ -4,7 +4,7 @@
  * Características:
  * - Listado de reservas del usuario socio o cliente externo.
  * - Banner destacado con el próximo turno confirmado.
- * - Filtros rápidos: Todas, Próximas (CONFIRMADA, PENDIENTE_PAGO), Historial (CANCELADA, FINALIZADA).
+ * - Filtros rápidos: Todas, Próximas (CONFIRMADA, PENDIENTE_PAGO), Historial (CANCELADA, FINALIZADA, VENCIDA).
  * - Cancelación de reservas con ConfirmDialog y actualización inmediata.
  * - Enlace directo al checkout de pago (/pagos) para turnos en PENDIENTE_PAGO.
  */
@@ -28,9 +28,15 @@ import {
   cancelarReserva,
   CANCELACION_DISPONIBLE,
 } from '../../services/canchasService';
-import { listarMisPagos } from '../../services/pagosService';
+import {
+  listarMisPagos,
+  obtenerComprobantePorTransaccion,
+  descargarComprobantePdf,
+  descargarBlobEnNavegador,
+} from '../../services/pagosService';
 import { useToast } from '../../context/ToastContext';
-import type { ReservaCanchaDTO } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import type { ReservaCanchaDTO, TransaccionDTO } from '../../types';
 import { formatearMonto, toLocalISOString } from '../../utils/formatters';
 
 export interface MisReservasViewProps {
@@ -41,9 +47,13 @@ export interface MisReservasViewProps {
 
 export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasViewProps) {
   const { addToast } = useToast();
+  const { usuario } = useAuth();
+  const esPersonal = usuario?.tipoUsuario === 'RECEPCIONISTA' || usuario?.tipoUsuario === 'GERENTE';
   const navigate = useNavigate();
 
   const [reservas, setReservas] = useState<ReservaCanchaDTO[]>([]);
+  const [pagosConfirmadosMap, setPagosConfirmadosMap] = useState<Record<number, TransaccionDTO>>({});
+  const [descargandoComprobanteIds, setDescargandoComprobanteIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,9 +72,16 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
       const data = await listarMisReservas();
       // El backend no guarda un estado en la reserva: está paga si tiene un pago confirmado (ADR-004)
       const pagos = await listarMisPagos();
-      const pagadas = new Set(
-        pagos.filter((p) => p.estadoPago === 'CONFIRMADO').map((p) => p.reservaCanchaId)
-      );
+      const confirmados = pagos.filter((p) => p.estadoPago === 'CONFIRMADO' && p.reservaCanchaId != null);
+      const pagosMap: Record<number, TransaccionDTO> = {};
+      confirmados.forEach((p) => {
+        if (p.reservaCanchaId != null && !pagosMap[p.reservaCanchaId]) {
+          pagosMap[p.reservaCanchaId] = p;
+        }
+      });
+      setPagosConfirmadosMap(pagosMap);
+
+      const pagadas = new Set(confirmados.map((p) => p.reservaCanchaId));
       // LocalDateTime del backend en hora local: se compara contra la hora local, no UTC
       const ahora = toLocalISOString(new Date());
       setReservas(
@@ -74,7 +91,9 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
             ? r.fechaHoraFin < ahora
               ? 'FINALIZADA'
               : 'CONFIRMADA'
-            : 'PENDIENTE_PAGO',
+            : r.retencionVencida
+              ? 'VENCIDA'
+              : 'PENDIENTE_PAGO',
         }))
       );
     } catch (err: unknown) {
@@ -119,6 +138,58 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
     }
   };
 
+  // Descarga del comprobante oficial de pago (SCRUM-146)
+  const handleDescargarComprobante = async (reserva: ReservaCanchaDTO) => {
+    const transaccion = pagosConfirmadosMap[reserva.idReservaCancha];
+    if (!transaccion) {
+      addToast({
+        type: 'error',
+        title: 'Comprobante no disponible',
+        message: 'No se encontró el registro de pago para esta reserva.',
+      });
+      return;
+    }
+
+    setDescargandoComprobanteIds((prev) => new Set(prev).add(reserva.idReservaCancha));
+    try {
+      const comp = await obtenerComprobantePorTransaccion(transaccion.idTransaccion);
+      if (!comp || !comp.idComprobante) {
+        addToast({
+          type: 'error',
+          title: 'Comprobante no disponible',
+          message: 'El comprobante fiscal todavía no fue emitido para este pago.',
+        });
+        return;
+      }
+
+      const numFactura = comp.numeroFactura || `FAC-${transaccion.idTransaccion}`;
+
+      addToast({
+        type: 'info',
+        title: 'Descargando comprobante',
+        message: `Generando PDF oficial ${numFactura}...`,
+      });
+
+      const blob = await descargarComprobantePdf(comp.idComprobante);
+      descargarBlobEnNavegador(blob, `comprobante-${numFactura}.pdf`);
+    } catch (err: unknown) {
+      addToast({
+        type: 'error',
+        title: 'Error al descargar',
+        message:
+          err instanceof Error
+            ? err.message
+            : 'No se pudo descargar el comprobante en PDF.',
+      });
+    } finally {
+      setDescargandoComprobanteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(reserva.idReservaCancha);
+        return next;
+      });
+    }
+  };
+
   // Próximo turno confirmado para banner destacado
   const proximoConfirmado = useMemo(() => {
     return reservas.find((r) => r.estado === 'CONFIRMADA');
@@ -132,7 +203,7 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
         return st === 'CONFIRMADA' || st === 'PENDIENTE_PAGO';
       }
       if (activeFilter === 'Historial') {
-        return st === 'FINALIZADA' || st === 'CANCELADA';
+        return st === 'FINALIZADA' || st === 'CANCELADA' || st === 'VENCIDA';
       }
       return true;
     });
@@ -144,7 +215,7 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
       (r) => (r.estado ?? 'CONFIRMADA') === 'CONFIRMADA' || r.estado === 'PENDIENTE_PAGO'
     ).length;
     const historial = reservas.filter(
-      (r) => r.estado === 'FINALIZADA' || r.estado === 'CANCELADA'
+      (r) => r.estado === 'FINALIZADA' || r.estado === 'CANCELADA' || r.estado === 'VENCIDA'
     ).length;
     return {
       Todas: reservas.length,
@@ -318,8 +389,8 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
                   ? 'Aún no tenés reservas de cancha. Podés consultar los turnos disponibles y reservar el tuyo al instante.'
                   : `No tenés reservas registradas bajo el filtro "${activeFilter}".`
               }
-              actionLabel={onNuevaReserva ? 'Reservar turno' : undefined}
-              onAction={onNuevaReserva}
+              actionLabel={!esPersonal && onNuevaReserva ? 'Reservar turno' : undefined}
+              onAction={!esPersonal ? onNuevaReserva : undefined}
             />
           ) : (
             reservasFiltradas.map((b) => {
@@ -327,6 +398,7 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
               const isConfirmed = b.estado === 'CONFIRMADA' || !b.estado;
               const isCancelled = b.estado === 'CANCELADA';
               const isFinished = b.estado === 'FINALIZADA';
+              const isExpired = b.estado === 'VENCIDA';
 
               return (
                 <div
@@ -385,6 +457,11 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
                           Turno finalizado
                         </span>
                       )}
+                      {isExpired && (
+                        <span className="text-fitzone-red font-bold">
+                          No se pagó en 5 minutos · El turno se liberó, volvé a reservarlo
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -435,7 +512,8 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
                             variant="secondary"
                             size="sm"
                             leftIcon={FileText}
-                            onClick={() => navigate('/pagos')}
+                            onClick={() => void handleDescargarComprobante(b)}
+                            isLoading={descargandoComprobanteIds.has(b.idReservaCancha)}
                           >
                             Ver comprobante
                           </Button>

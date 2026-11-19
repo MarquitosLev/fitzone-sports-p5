@@ -122,6 +122,11 @@ public class MembresiaService {
             throw new ReglaNegocioException("Una membresía cancelada no puede ser renovada");
         }
 
+        // Un socio que pasó a ser personal conserva su membresía, pero el personal no contrata planes
+        if (membresia.getUsuario() == null || membresia.getUsuario().getTipoUsuario() != TipoUsuario.SOCIO) {
+            throw new ReglaNegocioException("Solo los usuarios con rol SOCIO pueden renovar una membresía");
+        }
+
         if (idPlan != null) {
             Plan nuevoPlan = planRepository.findById(idPlan)
                     .orElseThrow(() -> new RecursoNoEncontradoException("Plan", idPlan));

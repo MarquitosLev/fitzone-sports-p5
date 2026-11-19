@@ -11,7 +11,7 @@ Todos los usuarios de prueba comparten la contraseña inicial: `password123`.
 
 | Rol | Correo Electrónico | Contraseña | DNI | Sede Asignada | Estado de Membresía | Caso de Prueba Principal |
 |---|---|---|---|---|---|---|
-| **GERENTE** | `gerente@fitzone.com` | `password123` | `00000001` | Sede Central (1) | — | ABM de personal, planes, roles y canchas |
+| **GERENTE** | `gerente@fitzone.com` | `password123` | `00000001` | *Global (null)*: gerente central, opera en todas las sedes | — | ABM de personal, planes, roles y canchas |
 | **RECEPCIONISTA** | `recepcionista@fitzone.com` | `password123` | `00000002` | Sede Central (1) | — | Alta de socios, cobros, validación de ingresos QR y aforo |
 | **SOCIO (Al día)** | `socio@fitzone.com` | `password123` | `00000003` | *Global (null)* | **ACTIVO** (vence en 25 días) | Reserva de clases, descuento -15% en canchas, pase QR |
 | **SOCIO (Moroso)** | `socio.vencido@fitzone.com` | `password123` | `00000005` | *Global (null)* | **VENCIDO** (vencida hace 10 días) | **RN-03**: Bloqueo de clases/descuentos; flujo de renovación |
