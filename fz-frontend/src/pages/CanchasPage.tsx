@@ -36,6 +36,7 @@ import {
 } from '../services/canchasService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { useTienePrestacion } from '../hooks/usePrestaciones';
 import type { CanchaDTO, CanchaFormData } from '../types';
 import { formatearMonto } from '../utils/formatters';
@@ -47,13 +48,26 @@ export interface CanchasPageProps {
   fechaInicial?: string;
 }
 
-export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPageProps) {
+export function CanchasPage({ initialTab, fechaInicial }: CanchasPageProps) {
   const { sedeActiva } = useSede();
   const { addToast } = useToast();
+  const { usuario } = useAuth();
 
-  const puedeAdminCanchas = useTienePrestacion('CANCHAS_ADMIN') || initialTab === 'admin';
+  const esSocio = usuario?.tipoUsuario === 'SOCIO';
+  const esInvitado = !usuario;
+  const tieneAdminCanchas = useTienePrestacion('CANCHAS_ADMIN') || usuario?.tipoUsuario === 'GERENTE';
+  const puedeAdminCanchas = tieneAdminCanchas || initialTab === 'admin';
 
-  const [seccionActiva, setSeccionActiva] = useState<CanchasTab>(initialTab);
+  // Si no se especifica tab inicial: personal de gestión va directo a 'admin', socios/invitados a 'reservar'
+  const tabPorDefecto: CanchasTab = initialTab ?? (puedeAdminCanchas && !esSocio ? 'admin' : 'reservar');
+  const [seccionActiva, setSeccionActiva] = useState<CanchasTab>(tabPorDefecto);
+
+  // El personal con rol de gestión solo opera la administración de canchas
+  useEffect(() => {
+    if (!initialTab && puedeAdminCanchas && !esSocio && seccionActiva !== 'admin') {
+      setSeccionActiva('admin');
+    }
+  }, [initialTab, puedeAdminCanchas, esSocio, seccionActiva]);
 
   const [canchas, setCanchas] = useState<CanchaDTO[]>([]);
   const [loading, setLoading] = useState(false);
@@ -241,74 +255,78 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
 
   return (
     <div className="space-y-6">
-      {/* Pestañas Superiores de Navegación del Módulo */}
+      {/* Pestañas Superiores de Navegación del Módulo (solo socios y visitantes ven reserva) */}
       <div className="flex items-center gap-2 border-b border-slate-200/80 pb-3 overflow-x-auto scrollbar-none">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={seccionActiva === 'reservar'}
-          onClick={() => setSeccionActiva('reservar')}
-          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
-            seccionActiva === 'reservar'
-              ? 'bg-fitzone-navy text-white shadow-xs'
-              : 'text-slate-600 hover:text-fitzone-navy hover:bg-slate-100'
-          }`}
-        >
-          <Clock className="w-4 h-4 text-fitzone-coral" />
-          <span>Reservar Cancha</span>
-        </button>
+        {(esSocio || esInvitado) && (
+          <>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={seccionActiva === 'reservar'}
+              onClick={() => setSeccionActiva('reservar')}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+                seccionActiva === 'reservar'
+                  ? 'bg-fitzone-navy text-white shadow-xs'
+                  : 'text-slate-600 hover:text-fitzone-navy hover:bg-slate-100'
+              }`}
+            >
+              <Clock className="w-4 h-4 text-fitzone-coral" />
+              <span>Reservar Cancha</span>
+            </button>
 
-        <button
-          type="button"
-          role="tab"
-          aria-selected={seccionActiva === 'mis-reservas'}
-          onClick={() => setSeccionActiva('mis-reservas')}
-          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
-            seccionActiva === 'mis-reservas'
-              ? 'bg-fitzone-navy text-white shadow-xs'
-              : 'text-slate-600 hover:text-fitzone-navy hover:bg-slate-100'
-          }`}
-        >
-          <Calendar className="w-4 h-4 text-[#F0B429]" />
-          <span>Mis Reservas</span>
-        </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={seccionActiva === 'mis-reservas'}
+              onClick={() => setSeccionActiva('mis-reservas')}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+                seccionActiva === 'mis-reservas'
+                  ? 'bg-fitzone-navy text-white shadow-xs'
+                  : 'text-slate-600 hover:text-fitzone-navy hover:bg-slate-100'
+              }`}
+            >
+              <Calendar className="w-4 h-4 text-[#F0B429]" />
+              <span>Mis Reservas</span>
+            </button>
+          </>
+        )}
 
         {puedeAdminCanchas && (
-        <button
-          type="button"
-          role="tab"
-          aria-selected={seccionActiva === 'admin'}
-          onClick={() => setSeccionActiva('admin')}
-          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
-            seccionActiva === 'admin'
-              ? 'bg-fitzone-navy text-white shadow-xs'
-              : 'text-slate-600 hover:text-fitzone-navy hover:bg-slate-100'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          <span>Gestión de Canchas</span>
-        </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={seccionActiva === 'admin'}
+            onClick={() => setSeccionActiva('admin')}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+              seccionActiva === 'admin'
+                ? 'bg-fitzone-navy text-white shadow-xs'
+                : 'text-slate-600 hover:text-fitzone-navy hover:bg-slate-100'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Gestión de Canchas</span>
+          </button>
         )}
       </div>
 
-      {/* SECCIÓN 1: RESERVA DE CANCHA */}
-      {seccionActiva === 'reservar' && (
+      {/* SECCIÓN 1: RESERVA DE CANCHA (solo socio o visitante sin sesión) */}
+      {seccionActiva === 'reservar' && (esSocio || esInvitado) && (
         <ReservaCanchaView
           fechaInicial={fechaInicial}
-          onVerMisReservas={() => setSeccionActiva('mis-reservas')}
+          onVerMisReservas={esSocio ? () => setSeccionActiva('mis-reservas') : undefined}
           onReservaExitosa={() => setSeccionActiva('mis-reservas')}
         />
       )}
 
-      {/* SECCIÓN 2: MIS RESERVAS */}
-      {seccionActiva === 'mis-reservas' && (
+      {/* SECCIÓN 2: MIS RESERVAS (solo socio o visitante sin sesión) */}
+      {seccionActiva === 'mis-reservas' && (esSocio || esInvitado) && (
         <MisReservasView
           onNuevaReserva={() => setSeccionActiva('reservar')}
         />
       )}
 
       {/* SECCIÓN 3: GESTIÓN DE CANCHAS Y MANTENIMIENTO (SCRUM-80) */}
-      {seccionActiva === 'admin' && (
+      {(seccionActiva === 'admin' || (!esSocio && !esInvitado && puedeAdminCanchas)) && (
         <div className="space-y-6 animate-fade-in">
           {/* Encabezado Principal */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">

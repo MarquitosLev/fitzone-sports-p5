@@ -103,8 +103,33 @@ const sesionSocio: AuthContextType = {
   logout: () => {},
 };
 
+const gerente: UsuarioDTO = {
+  idUsuario: 3,
+  authId: 'auth-3',
+  dni: '20000000',
+  nombre: 'Gerente',
+  apellido: 'General',
+  email: 'gerente@fitzone.com',
+  telefono: '1199998888',
+  fotoUrl: null,
+  tipoUsuario: 'GERENTE',
+  idSede: 1,
+};
+
+const sesionGerente: AuthContextType = {
+  usuario: gerente,
+  token: 'token-gerente',
+  isAuthenticated: true,
+  isLoading: false,
+  login: async () => ({ token: 'token-gerente', usuario: gerente }),
+  register: async () => ({ token: 'token-gerente', usuario: gerente }),
+  reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
+  logout: () => {},
+};
+
 /** Reservar exige la sesión de un socio o externo: el turno queda a su nombre. */
-function renderWithProviders(ui: React.ReactElement, conSesionSocio = false) {
+function renderWithProviders(ui: React.ReactElement, sesion: AuthContextType | boolean = false) {
+  const authValue = typeof sesion === 'boolean' ? (sesion ? sesionSocio : null) : sesion;
   const pagina = (
     <MemoryRouter>
       <ToastProvider>
@@ -115,7 +140,7 @@ function renderWithProviders(ui: React.ReactElement, conSesionSocio = false) {
     </MemoryRouter>
   );
   return render(
-    conSesionSocio ? <AuthContext.Provider value={sesionSocio}>{pagina}</AuthContext.Provider> : pagina
+    authValue ? <AuthContext.Provider value={authValue}>{pagina}</AuthContext.Provider> : pagina
   );
 }
 
@@ -396,5 +421,37 @@ describe('CanchasPage (Integración)', () => {
     await waitFor(() => {
       expect(spyToggle).toHaveBeenCalledWith(1, true);
     });
+  });
+
+  // ── Segregación de Vistas por Rol (SCRUM-127 / Fix Gerente) ────────────────
+  it('el GERENTE ve únicamente la vista de gestión y no las pestañas de reserva de socio', async () => {
+    renderWithProviders(<CanchasPage />, sesionGerente);
+
+    await waitFor(() => {
+      expect(screen.getByText('Cancha 1 — Pádel')).toBeInTheDocument();
+    });
+
+    // No debe existir selector de pestañas de reserva ni mis reservas
+    expect(screen.queryByRole('tab', { name: /reservar cancha/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /mis reservas/i })).not.toBeInTheDocument();
+
+    // Debe mostrar la gestión de canchas y opciones de administración
+    expect(screen.getByRole('tab', { name: /gestión de canchas/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /nueva cancha/i })).toBeInTheDocument();
+  });
+
+  it('el SOCIO ve las pestañas de reserva y mis reservas pero no la pestaña de gestión de canchas', async () => {
+    renderWithProviders(<CanchasPage />, true);
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /reservar cancha/i })).toBeInTheDocument();
+    });
+
+    // El socio ve pestañas de reserva
+    expect(screen.getByRole('tab', { name: /reservar cancha/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /mis reservas/i })).toBeInTheDocument();
+
+    // El socio no ve gestión de canchas
+    expect(screen.queryByRole('tab', { name: /gestión de canchas/i })).not.toBeInTheDocument();
   });
 });
