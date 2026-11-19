@@ -1,8 +1,8 @@
 """Arma el dossier PDF de la entrega (Anexo A de los lineamientos) a partir de la documentación del repo.
 
 No duplica contenido: toma la portada y el resumen de dossier.md y les suma los ADR, los diagramas,
-la evidencia de RNF, los patrones y las pruebas del manual técnico, y las bitácoras, tal como están
-en el repo. Así el PDF sale coherente con el tag, que es lo que pide la cátedra.
+los diagramas UML, la evidencia de RNF, los patrones y las pruebas del manual técnico, la planificación,
+las bitácoras y el tablero exportado, tal como están en el repo. Así el PDF sale coherente con el tag, que es lo que pide la cátedra.
 
 Uso (desde la raíz del repo, después de crear el tag):
     pip install markdown
@@ -13,6 +13,7 @@ Necesita Chrome o Edge instalado para imprimir el HTML a PDF.
 """
 import argparse
 import base64
+import csv
 import re
 import shutil
 import subprocess
@@ -48,6 +49,8 @@ img.diagrama { max-width: 100%; max-height: 235mm; display: block; margin: 8px a
 .portada table { width: 85%; margin: 14px auto; font-size: 10pt; }
 .salto { page-break-after: always; }
 .adr, .bitacora, .diagrama-pagina { page-break-before: always; }
+.tablero table { font-size: 7.5pt; page-break-inside: auto; }
+.tablero tr { page-break-inside: avoid; }
 .diagrama-pagina { page-break-inside: avoid; }
 """
 
@@ -80,6 +83,29 @@ def diagrama(nombre: str, titulo: str) -> str:
             f"<p><small>Fuente editable: <code>{fuente}</code></small></p></div>")
 
 
+def planificacion() -> str:
+    """Plan de proyecto (Anexo H) con el Gantt incrustado, más el desglose tarjeta por tarjeta."""
+    plan = leer(DOCS / "planificacion" / "plan-de-proyecto.md").split("\n", 1)[1]
+    gantt = base64.b64encode((DOCS / "planificacion" / "cronograma-gantt.svg").read_bytes()).decode()
+    plan = plan.replace("![Cronograma de Gantt](cronograma-gantt.svg)",
+                        f"<img class='diagrama' alt='Cronograma de Gantt' src='data:image/svg+xml;base64,{gantt}'/>")
+    anexo = leer(DOCS / "planificacion" / "anexo-desglose-del-trabajo.md").split("\n", 1)[1]
+    return (md(bajar_titulos(plan)) + "<div class='adr'><h2>Anexo de la planificación: desglose tarjeta por tarjeta</h2>"
+            + md(bajar_titulos(anexo, 2)) + "</div>")
+
+
+def tablero() -> str:
+    """Tabla del tablero de Jira exportado (docs/planificacion/tablero/tablero-jira.csv)."""
+    with open(DOCS / "planificacion" / "tablero" / "tablero-jira.csv", encoding="utf-8-sig", newline="") as f:
+        filas = list(csv.DictReader(f))
+    columnas = ["Clave", "Tipo", "Resumen", "Responsable", "Estado", "Sprints", "Creada", "Resuelta"]
+    lineas = ["| " + " | ".join(columnas) + " |", "|" + " :-- |" * len(columnas)]
+    for fila in filas:
+        celdas = [fila[c].replace("|", "/").replace("SCRUM Sprint ", "S") for c in columnas]
+        lineas.append("| " + " | ".join(celdas) + " |")
+    return "\n".join(lineas)
+
+
 def html_dossier(valores: dict) -> str:
     partes = []
     portada = leer(SALIDA / "dossier.md")
@@ -90,40 +116,51 @@ def html_dossier(valores: dict) -> str:
     tapa, resto = portada.split("<!-- fin-portada -->", 1)
     partes.append(f"<div class='portada'>{md(tapa)}</div><div class='salto'></div>{md(resto)}")
 
-    partes.append("<h1>2. Arquitectura: diagramas C4</h1>")
+    partes.append("<h1>2. Arquitectura: diagramas C4 de los niveles 1, 2 y 3</h1>")
     partes.append(md("Notación y alcance de cada diagrama en `docs/diagramas/README.md`. Los C4 se dibujaron como flowchart de Mermaid con los colores de la notación C4."))
     for nombre, titulo in [("c4-1-contexto", "C4-1 Contexto"), ("c4-2-contenedores", "C4-2 Contenedores"),
                            ("c4-3-componentes-canchas", "C4-3 Componentes — Canchas (M4)"),
                            ("c4-3-componentes-acceso", "C4-3 Componentes — Acceso (M2)")]:
         partes.append(diagrama(nombre, titulo))
 
-    partes.append("<h1>3. Registros de decisión arquitectónica</h1>")
+    partes.append("<h1>3. Registros de decisión arquitectónica: ADR-001 a ADR-020</h1>")
     partes.append(md(bajar_titulos(leer(DOCS / "adr" / "README.md").split("\n", 1)[1])))
     for adr in sorted((DOCS / "adr").glob("ADR-*.md")):
         partes.append(f"<div class='adr'>{md(bajar_titulos(leer(adr)))}</div>")
 
-    partes.append("<h1>4. Modelado</h1>")
-    partes.append(md("El DER es el esquema que genera Hibernate (ADR-016). El diagrama de despliegue muestra qué sigue funcionando ante una caída de la conexión principal (ADR-007)."))
-    for nombre, titulo in [("der-fisico", "Diagrama entidad-relación (físico)"), ("despliegue", "Diagrama de despliegue"),
+    partes.append("<h1>4. Modelado: clases, secuencia, estados, actividad, DER y despliegue</h1>")
+    partes.append(md("Los diagramas UML describen el código de `main` al 2026-11-19; el de clases muestra Strategy, Observer y Repository como estructura. El DER es el esquema que genera Hibernate (ADR-016). El diagrama de despliegue muestra qué sigue funcionando ante una caída de la conexión principal (ADR-007)."))
+    for nombre, titulo in [("uml-clases-dominio", "UML de clases del dominio"),
+                           ("uml-secuencia-reserva-cancha-pago", "UML de secuencia — Reserva de cancha con pago"),
+                           ("uml-secuencia-reserva-concurrente", "UML de secuencia — Reserva concurrente (RN-02)"),
+                           ("uml-secuencia-acceso-offline", "UML de secuencia — Validación de acceso offline (RNF-01)"),
+                           ("uml-estados-membresia", "UML de estados — Membresía"),
+                           ("uml-estados-reserva", "UML de estados — Reserva de cancha y de clase"),
+                           ("uml-actividad-lista-espera", "UML de actividad — Lista de espera"),
+                           ("der-fisico", "Diagrama entidad-relación (físico)"), ("despliegue", "Diagrama de despliegue"),
                            ("pipeline-ci-cd", "Arquitectura del pipeline CI/CD")]:
         partes.append(diagrama(nombre, titulo))
 
-    partes.append("<h1>5. Patrones de diseño aplicados</h1>")
+    partes.append("<h1>5. Patrones de diseño aplicados y su justificación</h1>")
     partes.append(md(bajar_titulos(seccion_manual("## 4. Patrones de diseño", "## 5. "), -1)))
 
-    partes.append("<h1>6. Estrategia de pruebas y cobertura</h1>")
+    partes.append("<h1>6. Estrategia de pruebas y reporte de cobertura</h1>")
     partes.append(md(bajar_titulos(seccion_manual("## 8. Pruebas y cobertura", "## 9. "), -1)))
     partes.append(md("Decisión y umbral: ADR-008 (sección 3). Los reportes completos se publican como artefactos en cada ejecución del pipeline."))
 
-    partes.append("<h1>7. Cumplimiento de los requisitos no funcionales</h1>")
+    partes.append("<h1>7. Cumplimiento de los requisitos no funcionales, con su evidencia</h1>")
     partes.append(md(bajar_titulos(leer(DOCS / "rnf" / "README.md").split("\n", 1)[1])))
 
-    partes.append("<h1>8. Bitácoras individuales</h1>")
+    partes.append("<h1>8. Planificación: plan, cronograma, trazabilidad, seguimiento y riesgos</h1>")
+    partes.append(md("Plan de proyecto con el formato del Anexo H, en `docs/planificacion/`. El tablero exportado está en la sección 11."))
+    partes.append(planificacion())
+
+    partes.append("<h1>9. Bitácoras individuales de los seis integrantes</h1>")
     partes.append(md("Una por integrante, en `docs/bitacoras/LOG-<apellido>.md`. Cada entrada enlaza los commits del repositorio."))
     for log in sorted((DOCS / "bitacoras").glob("LOG-*.md")):
         partes.append(f"<div class='bitacora'>{md(bajar_titulos(leer(log)))}</div>")
 
-    partes.append("<h1>9. Índice de los manuales</h1>")
+    partes.append("<h1>10. Índice de los manuales entregados, con su ubicación en el repositorio</h1>")
     partes.append(md("""| Manual | Ubicación en el repositorio | Contenido |
 | :-- | :-- | :-- |
 | Usuario | `docs/manuales/manual-usuario.md` | Recorridos por rol (socio, externo, recepcionista, gerente) con capturas y credenciales de prueba |
@@ -132,11 +169,15 @@ def html_dossier(valores: dict) -> str:
 
 Además: `README.md` (puesta en marcha), `docs/DATOS_DE_PRUEBA.md` (usuarios y datos de la semilla), `fz-backend/swagger.json` (contrato OpenAPI) y `docs/bruno/` (colecciones por módulo)."""))
 
-    partes.append("<h1>10. Anexo: tablero del proyecto</h1>")
-    partes.append(md("El tablero es el proyecto `SCRUM` de Jira (`integrador-p5.atlassian.net`). Las ramas, commits y Pull Requests llevan el código del ticket (`SCRUM-<N>`), así que cada cambio del repositorio se cruza con su historia. La exportación del tablero se adjunta por separado."))
+    partes.append("<h1>11. Anexo: tablero del proyecto exportado</h1>")
+    partes.append(md("El tablero es el proyecto `SCRUM` de Jira (`integrador-p5.atlassian.net`), usado desde el 28/08/2026. Las ramas, commits y Pull Requests llevan el código del ticket (`SCRUM-<N>`), así que cada cambio del repositorio se cruza con su historia. La exportación completa, con épica, requisitos y criterio de aceptación de cada tarjeta, está en `docs/planificacion/tablero/PROGV-2026-TIF-Equipo05-Registro.xlsx` y en `tablero-jira.csv`. Las 122 tarjetas:"))
+    partes.append(f"<div class='tablero'>{md(tablero())}</div>")
 
-    cuerpo = "\n".join(partes)
-    return f"<!doctype html><html lang='es'><head><meta charset='utf-8'><title>Dossier FitZone Sports</title><style>{CSS}</style></head><body>{cuerpo}</body></html>"
+    return envolver("\n".join(partes), "Dossier FitZone Sports")
+
+
+def envolver(cuerpo: str, titulo: str) -> str:
+    return f"<!doctype html><html lang='es'><head><meta charset='utf-8'><title>{titulo}</title><style>{CSS}</style></head><body>{cuerpo}</body></html>"
 
 
 def imprimir_pdf(html: Path, pdf: Path) -> None:
@@ -162,13 +203,20 @@ def main() -> None:
                 apellido, legajo = linea.split("=", 1)
                 valores["LEGAJO_" + apellido.strip().upper()] = legajo.strip()
 
-    nombre = f"PROGV-2026-TIF-Grupo-{args.equipo}-Dossier"
-    html = SALIDA / f"{nombre}.html"
-    html.write_text(html_dossier(valores), encoding="utf-8")
-    pdf = SALIDA / f"{nombre}.pdf"
-    imprimir_pdf(html, pdf)
-    html.unlink()
-    print(f"Listo: {pdf}")
+    # El dossier completo y la planificación como archivo aparte, con los nombres del punto 3.3
+    plan = ("<h1 class='sin-salto'>Planificación del proyecto — FitZone Sports — Equipo " + args.equipo + "</h1>"
+            + planificacion() + "<h1>Anexo: tablero del proyecto exportado</h1>" + f"<div class='tablero'>{md(tablero())}</div>")
+    documentos = {
+        f"PROGV-2026-TIF-Equipo{args.equipo}-Dossier": html_dossier(valores),
+        f"PROGV-2026-TIF-Equipo{args.equipo}-Planificacion": envolver(plan, "Planificación FitZone Sports"),
+    }
+    for nombre, contenido in documentos.items():
+        html = SALIDA / f"{nombre}.html"
+        html.write_text(contenido, encoding="utf-8")
+        pdf = SALIDA / f"{nombre}.pdf"
+        imprimir_pdf(html, pdf)
+        html.unlink()
+        print(f"Listo: {pdf}")
 
 
 if __name__ == "__main__":

@@ -29,13 +29,14 @@ Licenciatura en Sistemas — Programación V — Año 2026
 1. Resumen ejecutivo del sistema
 2. Arquitectura: diagramas C4 de los niveles 1, 2 y 3
 3. Registros de decisión arquitectónica: ADR-001 a ADR-020
-4. Modelado: DER, despliegue y pipeline
+4. Modelado: clases, secuencia, estados, actividad, DER y despliegue
 5. Patrones de diseño aplicados y su justificación
 6. Estrategia de pruebas y reporte de cobertura
 7. Cumplimiento de los requisitos no funcionales, con su evidencia
-8. Bitácoras individuales de los integrantes
-9. Índice de los manuales entregados
-10. Anexo: tablero del proyecto
+8. Planificación: plan, cronograma, trazabilidad, seguimiento y riesgos
+9. Bitácoras individuales de los seis integrantes
+10. Índice de los manuales entregados, con su ubicación en el repositorio
+11. Anexo: tablero del proyecto exportado
 
 # 1. Resumen ejecutivo del sistema
 
