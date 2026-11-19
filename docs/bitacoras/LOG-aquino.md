@@ -229,3 +229,21 @@
 **Actividad** Revisé y mergeé el PR #84 de Agustín con la reserva de cancha como invitado y el PR #89 de Luciano con la sincronización del auth_id en el login.
 
 **Commits** Sin commits: revisión y merge de PR.
+
+### 2026-11-13 · ? h
+
+**Actividad** Agregué mi bitácora al repositorio (PR #99).
+
+**Commits** `3b2dc89` bitácora
+
+---
+
+## Sprint 7 — Cierre — Semana del 2026-11-16
+
+### 2026-11-19 · ? h
+
+**Actividad** Hice la descarga del comprobante en PDF desde Mis Reservas (SCRUM-146, PR 107). Resolví conflictos con develop en CanchasPage para SCRUM-141 (PR 111). Revisé y mergeé los PR del equipo de gerente central (PR 106), login de invitados (PR 110), bloqueo de planes a personal (PR 112), solapas de canchas (PR 108) y sede en mobile (PR 111). Revisé el PR 113 de retención de reservas (SCRUM-148).
+
+**Problema o bloqueo** En Mis Reservas, si fallaba buscar el comprobante usaba el ID de transacción y tiraba 404, y con varias transacciones guardaba la vieja en lugar de la última. En CanchasPage los tests chocaban con los cambios de roles de develop y el timeout fallaba al correr toda la suite.
+
+**Commits** `4e0b22f` comprobante en reservas · `6ba2b68` fixes de descarga · `8a6e94a` conflictos develop SCRUM-146 · `ba21047` conflictos develop SRUM-141 · `30a69c7` merge PR 111
