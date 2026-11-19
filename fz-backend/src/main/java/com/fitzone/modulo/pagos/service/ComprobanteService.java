@@ -144,6 +144,9 @@ public class ComprobanteService {
             agregarCeldaDato(tablaDatos, "Fecha de Emisión:", fechaEmision, fontBodyBold, fontBody);
             agregarCeldaDato(tablaDatos, "Socio / Cliente:", nombreSocio, fontBodyBold, fontBody);
             agregarCeldaDato(tablaDatos, "DNI:", dniSocio, fontBodyBold, fontBody);
+            if (usuario == null && comprobante.getClienteEmail() != null) {
+                agregarCeldaDato(tablaDatos, "Email:", comprobante.getClienteEmail(), fontBodyBold, fontBody);
+            }
             agregarCeldaDato(tablaDatos, "Sede:", sedeNombre, fontBodyBold, fontBody);
             agregarCeldaDato(tablaDatos, "Estado:", transaccion.getEstadoPago().name(), fontBodyBold, fontBody);
             document.add(tablaDatos);

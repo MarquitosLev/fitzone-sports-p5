@@ -73,8 +73,9 @@ export function FormularioInvitado({
           aria-live="polite"
         >
           <Timer className="w-4 h-4 text-fitzone-coral" />
-          Te guardamos el turno {Math.floor(segundosRestantes / 60)}:
-          {String(segundosRestantes % 60).padStart(2, '0')} min. Si no pagás, se libera.
+          Tenés {Math.floor(segundosRestantes / 60)}:
+          {String(segundosRestantes % 60).padStart(2, '0')} min para pagar. El turno se confirma al pagar: si
+          alguien lo paga antes, te avisamos sin cobrarte.
         </p>
       )}
 

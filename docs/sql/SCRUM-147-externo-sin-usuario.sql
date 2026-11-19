@@ -20,9 +20,15 @@ BEGIN
 
     IF to_regclass('fz_pag_comprobantes') IS NOT NULL THEN
         ALTER TABLE fz_pag_comprobantes
-            ADD COLUMN IF NOT EXISTS cliente_nombre varchar(200),
+            ADD COLUMN IF NOT EXISTS cliente_nombre varchar(201),
             ADD COLUMN IF NOT EXISTS cliente_dni    varchar(20),
             ADD COLUMN IF NOT EXISTS cliente_email  varchar(255);
+    END IF;
+
+    -- Bases donde Hibernate ya creó la columna con 200: nombre (100) + espacio + apellido (100) no entraba
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'fz_pag_comprobantes' AND column_name = 'cliente_nombre') THEN
+        ALTER TABLE fz_pag_comprobantes ALTER COLUMN cliente_nombre TYPE varchar(201);
     END IF;
 END $$;
 

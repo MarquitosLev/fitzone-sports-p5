@@ -84,6 +84,7 @@ export function ReservaCanchaView({
   // Turno retenido por un invitado que recargó la página dentro de los 5 minutos (ADR-018)
   const [retenida, setRetenida] = useState<ReservaRetenida | null>(leerReservaRetenida);
   const retenidaARestaurar = useRef(retenida);
+  const ultimoPedidoDisponibilidad = useRef(0);
 
   // Estados de datos
   const [canchas, setCanchas] = useState<CanchaDTO[]>([]);
@@ -190,9 +191,12 @@ export function ReservaCanchaView({
       setFranjas([]);
       return;
     }
+    // Como un número de versión: solo la última consulta aplica su respuesta
+    const pedido = ++ultimoPedidoDisponibilidad.current;
     setLoadingFranjas(true);
     try {
       const data = await obtenerDisponibilidad(canchaSeleccionada.idCancha, fechaSeleccionada);
+      if (pedido !== ultimoPedidoDisponibilidad.current) return;
       setFranjas(data);
 
       // Si el turno previamente seleccionado ya no está libre en la nueva disponibilidad, deseleccionar
@@ -220,13 +224,14 @@ export function ReservaCanchaView({
         }
       }
     } catch {
+      if (pedido !== ultimoPedidoDisponibilidad.current) return;
       addToast({
         type: 'error',
         title: 'Error de disponibilidad',
         message: 'No se pudo obtener la disponibilidad para la fecha seleccionada.',
       });
     } finally {
-      setLoadingFranjas(false);
+      if (pedido === ultimoPedidoDisponibilidad.current) setLoadingFranjas(false);
     }
   }, [canchaSeleccionada, fechaSeleccionada, addToast]);
 

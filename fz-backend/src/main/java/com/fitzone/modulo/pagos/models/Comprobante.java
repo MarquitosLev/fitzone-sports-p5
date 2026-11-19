@@ -41,7 +41,8 @@ public class Comprobante extends BaseEntity {
     private String numeroFactura;
 
     // Datos del cliente externo: el comprobante es el único lugar donde quedan (ADR-018). Nulos si paga un usuario.
-    @Column(name = "cliente_nombre", length = 200)
+    // 201: nombre (100) + espacio + apellido (100), los máximos de ReservaInvitadoRequest
+    @Column(name = "cliente_nombre", length = 201)
     private String clienteNombre;
 
     @Column(name = "cliente_dni", length = 20)
