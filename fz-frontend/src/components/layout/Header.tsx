@@ -1,12 +1,14 @@
 /**
  * Header.tsx — Barra de navegación superior.
  *
- * Muestra: logo FitZone | menú de usuario / inicio de sesión.
+ * Muestra: logo FitZone | SedeSelector | menú de usuario (placeholder por ahora).
+ * El `SedeSelector` usa el `SedeContext` para cambiar la sede activa globalmente.
  */
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, LogOut, Menu, X } from 'lucide-react';
+import { MapPin, ChevronDown, User, LogOut, Menu, X, Lock } from 'lucide-react';
+import { useSede } from '../../context/SedeContext';
 import { useAuth } from '../../context/AuthContext';
 
 export interface HeaderProps {
@@ -17,10 +19,10 @@ export interface HeaderProps {
 export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderProps) {
   const navigate = useNavigate();
   const { usuario, logout } = useAuth();
+  const { sedeActiva, sedes, setSedeActiva } = useSede();
+  const [sedeDropdownOpen, setSedeDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
-<<<<<<< HEAD
-=======
   const esPersonalConSedeFija = Boolean(
     usuario &&
     (usuario.tipoUsuario === 'RECEPCIONISTA' || usuario.tipoUsuario === 'GERENTE') &&
@@ -39,7 +41,6 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
     }
   }, [sedeFijaOperador, sedeActiva, setSedeActiva]);
 
->>>>>>> origin/develop
   const handleLogout = () => {
     setProfileDropdownOpen(false);
     logout();
@@ -73,8 +74,6 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
           </div>
         </div>
 
-<<<<<<< HEAD
-=======
         {/* ── SedeSelector ────────────────────────────────────────────── */}
         {/*
           El SedeSelector permite al recepcionista/gerente cambiar de sede sin recargar.
@@ -148,7 +147,6 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
           )}
         </div>
 
->>>>>>> origin/develop
         {/* ── Usuario con sesión: perfil y cierre de sesión. Sin sesión: el visitante es un cliente externo ── */}
         {usuario ? (
           <div className="relative">

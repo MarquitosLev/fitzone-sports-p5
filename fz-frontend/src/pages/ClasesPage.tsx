@@ -153,7 +153,9 @@ export function ClasesPage() {
       if (loadSeqRef.current !== mySeq) return;
       setError(err instanceof Error ? err.message : 'Error al cargar los datos de clases');
     } finally {
-      if (!silencioso && loadSeqRef.current === mySeq) {
+      // Lo apaga la última carga, aunque sea silenciosa: si no, una recarga silenciosa que pisa
+      // a la carga inicial deja el spinner trabado
+      if (loadSeqRef.current === mySeq) {
         setLoading(false);
       }
     }

@@ -7,7 +7,7 @@
  * 3. Gestión de Canchas: Administración de inventario, altas, ediciones y mantenimiento.
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Layers,
   Plus,
@@ -71,43 +71,13 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-<<<<<<< HEAD
-  // Contador de secuencia para evitar race conditions al cambiar de sede
-  const loadSeqRef = useRef(0);
-
-  const cargarCanchas = async () => {
-    if (!sedeActiva) {
-      setCanchas([]);
-      return;
-    }
-    // Limpiar datos de la sede anterior antes de iniciar la carga
-    setCanchas([]);
-    const mySeq = ++loadSeqRef.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await listarCanchas(sedeActiva.idSede);
-      // Descartar respuestas de peticiones antiguas (A→B→A race condition)
-      if (loadSeqRef.current !== mySeq) return;
-      setCanchas(data);
-    } catch (err: unknown) {
-      if (loadSeqRef.current !== mySeq) return;
-      const mensaje = err instanceof Error ? err.message : 'Error al cargar canchas';
-      setError(mensaje);
-    } finally {
-      if (loadSeqRef.current === mySeq) {
-        setLoading(false);
-      }
-    }
-  };
-
-=======
   // Cargar Canchas con protección contra race conditions al cambiar de sede
->>>>>>> origin/develop
   useEffect(() => {
     let cancelado = false;
 
     const cargar = async () => {
+      // Se descartan las canchas de la sede anterior para no mostrarlas mientras carga la nueva (SCRUM-141)
+      setCanchas([]);
       if (!sedeActiva) return;
       setLoading(true);
       setError(null);
@@ -180,17 +150,12 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
   // Submit del formulario (alta o edición)
   const handleSubmitForm = async (datos: CanchaFormData) => {
     if (!sedeActiva) return;
-    // Capturar la sede al inicio de la operación para evitar que un cambio de sede
-    // en vuelo agregue la cancha creada a la lista de otra sede
-    const creationSedeId = sedeActiva.idSede;
     setFormLoading(true);
     setFormError(null);
 
     try {
       if (modalModo === 'alta') {
         const nueva = await crearCancha(sedeActiva.idSede, datos, sedeActiva.nombre);
-        // Descartar resultado si el usuario cambió de sede durante la petición
-        if (sedeActiva?.idSede !== creationSedeId) return;
         setCanchas((prev) => [...prev, nueva]);
         addToast({
           type: 'success',

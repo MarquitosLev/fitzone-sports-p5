@@ -12,7 +12,7 @@
  * - Al confirmar, lleva al checkout de pago (M5) o Mis Reservas.
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
@@ -105,60 +105,14 @@ export function ReservaCanchaView({
   const [confirmando, setConfirmando] = useState(false);
   const [errorConflicto, setErrorConflicto] = useState<string | null>(null);
 
-<<<<<<< HEAD
-  // Contador de secuencia para evitar race conditions al cambiar de sede (cargarCanchas)
-  const loadSeqRef = useRef(0);
-
-  // Cargar Canchas de la Sede
-  const cargarCanchas = useCallback(async () => {
-    if (!sedeActiva) {
-      setCanchas([]);
-      setCanchaSeleccionada(null);
-      return;
-    }
-    // Limpiar datos de la sede anterior antes de iniciar la carga
-    setCanchas([]);
-    setCanchaSeleccionada(null);
-    const mySeq = ++loadSeqRef.current;
-    setLoadingCanchas(true);
-    try {
-      const data = await listarCanchas(sedeActiva.idSede);
-      // Descartar respuestas de peticiones antiguas (A→B→A race condition)
-      if (loadSeqRef.current !== mySeq) return;
-      setCanchas(data);
-
-      // Si no hay cancha seleccionada o la actual ya no está, elegir la primera disponible
-      if (data.length > 0) {
-        const primeraDisponible = data.find((c) => !c.enMantenimiento) || data[0];
-        setCanchaSeleccionada((prev) => {
-          if (!prev) return primeraDisponible;
-          const sigueExistiendo = data.find((c) => c.idCancha === prev.idCancha);
-          return sigueExistiendo || primeraDisponible;
-        });
-      } else {
-        setCanchaSeleccionada(null);
-      }
-    } catch {
-      if (loadSeqRef.current !== mySeq) return;
-      addToast({
-        type: 'error',
-        title: 'Error de carga',
-        message: 'No se pudieron cargar las canchas de la sede activa.',
-      });
-    } finally {
-      if (loadSeqRef.current === mySeq) {
-        setLoadingCanchas(false);
-      }
-    }
-  }, [sedeActiva, addToast]);
-
-=======
   // Cargar Canchas de la Sede con protección contra respuestas obsoletas al cambiar de sede
->>>>>>> origin/develop
   useEffect(() => {
     let cancelado = false;
 
     const cargar = async () => {
+      // Se descartan las canchas de la sede anterior para no mostrarlas ni pedir su disponibilidad (SCRUM-141)
+      setCanchas([]);
+      setCanchaSeleccionada(null);
       if (!sedeActiva) return;
       setLoadingCanchas(true);
       try {
@@ -201,23 +155,15 @@ export function ReservaCanchaView({
     };
   }, [sedeActiva?.idSede, addToast]);
 
-  // Contador de secuencia para evitar race conditions al cambiar de cancha/fecha (cargarDisponibilidad)
-  const availSeqRef = useRef(0);
-
   // Cargar Disponibilidad cuando cambia cancha o fecha
   const cargarDisponibilidad = useCallback(async () => {
     if (!canchaSeleccionada) {
       setFranjas([]);
       return;
     }
-    const targetCanchaId = canchaSeleccionada.idCancha;
-    const targetFecha = fechaSeleccionada;
-    const mySeq = ++availSeqRef.current;
     setLoadingFranjas(true);
     try {
-      const data = await obtenerDisponibilidad(targetCanchaId, targetFecha);
-      // Descartar respuesta si la cancha o fecha cambió mientras la petición estaba en vuelo
-      if (availSeqRef.current !== mySeq) return;
+      const data = await obtenerDisponibilidad(canchaSeleccionada.idCancha, fechaSeleccionada);
       setFranjas(data);
 
       // Si el turno previamente seleccionado ya no está libre en la nueva disponibilidad, deseleccionar
@@ -227,16 +173,13 @@ export function ReservaCanchaView({
         return sigueLibre || null;
       });
     } catch {
-      if (availSeqRef.current !== mySeq) return;
       addToast({
         type: 'error',
         title: 'Error de disponibilidad',
         message: 'No se pudo obtener la disponibilidad para la fecha seleccionada.',
       });
     } finally {
-      if (availSeqRef.current === mySeq) {
-        setLoadingFranjas(false);
-      }
+      setLoadingFranjas(false);
     }
   }, [canchaSeleccionada, fechaSeleccionada, addToast]);
 

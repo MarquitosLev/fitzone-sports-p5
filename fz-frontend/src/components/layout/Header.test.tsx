@@ -120,15 +120,6 @@ describe('Header', () => {
     });
   });
 
-<<<<<<< HEAD
-  describe('SCRUM-141: Selector de sede unificado en Sidebar', () => {
-    it('no renderiza el selector de sede ni el dropdown en el Header', () => {
-      renderHeader(socio);
-
-      expect(screen.queryByRole('button', { name: /sede/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
-      expect(screen.queryByTitle(/sede fija de operador/i)).not.toBeInTheDocument();
-=======
   describe('SCRUM-140: Selector y desplegable de sedes con scroll', () => {
     const muchasSedes: SedeDTO[] = Array.from({ length: 25 }, (_, i) => ({
       idSede: i + 1,
@@ -199,7 +190,6 @@ describe('Header', () => {
 
       expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
       expect(screen.getByTitle(/sede fija de operador/i)).toBeInTheDocument();
->>>>>>> origin/develop
     });
   });
 });

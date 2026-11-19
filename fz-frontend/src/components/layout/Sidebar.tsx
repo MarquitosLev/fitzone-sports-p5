@@ -34,26 +34,6 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
     usuario.idSede
   );
 
-<<<<<<< HEAD
-  // Resolver la sede asignada al operador si tiene sede fija
-  const sedeAsignada = esPersonalConSedeFija && usuario?.idSede
-    ? sedes.find((s) => s.idSede === usuario.idSede) ?? null
-    : null;
-
-  // Sincronizar globalmente sedeActiva con la sede asignada del personal con sede fija
-  useEffect(() => {
-    if (sedeAsignada && sedeActiva?.idSede !== sedeAsignada.idSede) {
-      setSedeActiva(sedeAsignada);
-    }
-  }, [sedeAsignada, sedeActiva?.idSede, setSedeActiva]);
-
-  // Cerrar el dropdown de sedes al cerrar el drawer móvil
-  useEffect(() => {
-    if (!mobileOpen) {
-      setSedeDropdownOpen(false);
-    }
-  }, [mobileOpen]);
-=======
   const sedeFijaOperador = esPersonalConSedeFija
     ? sedes.find((s) => s.idSede === usuario?.idSede) ?? null
     : null;
@@ -65,7 +45,13 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
       setSedeActiva(sedeFijaOperador);
     }
   }, [sedeFijaOperador, sedeActiva, setSedeActiva]);
->>>>>>> origin/develop
+
+  // Al cerrar el drawer móvil se cierra también la lista de sedes, para que no reaparezca abierta (SCRUM-141)
+  useEffect(() => {
+    if (!mobileOpen) {
+      setSedeDropdownOpen(false);
+    }
+  }, [mobileOpen]);
 
   // Visitante sin sesión ve solo lo público (canchas); usuario con sesión ve según prestaciones
   const modulosVisibles = NAV_ITEMS.filter((item) => {
@@ -101,21 +87,13 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
             {esPersonalConSedeFija ? (
               <div className="flex items-center justify-between mt-1">
                 <span className="font-extrabold text-fitzone-navy text-sm truncate">
-<<<<<<< HEAD
-                  {sedeAsignada?.nombre ?? sedeActiva?.nombre ?? 'Sin sede seleccionada'}
-=======
                   {sedeMostrada?.nombre ?? 'Sin sede seleccionada'}
->>>>>>> origin/develop
                 </span>
                 <span title="Sede fija de operador asignada por sistema">
                   <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
                 </span>
               </div>
-<<<<<<< HEAD
-            ) : (
-=======
             ) : isMobile ? (
->>>>>>> origin/develop
               <button
                 type="button"
                 id="sidebar-sede-selector-btn"
@@ -126,11 +104,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                 aria-label="Selector de sede en navegación"
               >
                 <span className="font-extrabold text-fitzone-navy text-sm truncate group-hover:text-fitzone-coral transition-colors">
-<<<<<<< HEAD
-                  {sedeActiva?.nombre ?? 'Seleccionar sede'}
-=======
                   {sedeMostrada?.nombre ?? 'Seleccionar sede'}
->>>>>>> origin/develop
                 </span>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className="w-2 h-2 rounded-full bg-fitzone-green animate-pulse" />
@@ -141,13 +115,6 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                   />
                 </div>
               </button>
-<<<<<<< HEAD
-            )}
-          </div>
-
-          {/* Dropdown de sedes en Sidebar: hacia abajo y contenido dentro del ancho */}
-          {sedeDropdownOpen && !esPersonalConSedeFija && (
-=======
             ) : (
               /* En escritorio (>= lg), la barra lateral mantiene la insignia informativa estática para no duplicar el selector de Header */
               <div className="flex items-center justify-between mt-1">
@@ -161,7 +128,6 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
 
           {/* Dropdown de sedes en Sidebar (solo interactivo en drawer móvil) */}
           {isMobile && sedeDropdownOpen && !esPersonalConSedeFija && (
->>>>>>> origin/develop
             <>
               {/* Backdrop para cerrar al hacer click fuera */}
               <div
@@ -171,11 +137,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
               <div
                 role="listbox"
                 aria-label="Sedes disponibles"
-<<<<<<< HEAD
-                className="absolute top-full left-0 right-0 w-full mt-2 bg-white rounded-2xl shadow-modal border border-slate-100 py-2 z-50 animate-slide-up max-h-60 overflow-y-auto overscroll-contain"
-=======
                 className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-modal border border-slate-100 py-2 z-50 animate-slide-up max-h-60 overflow-y-auto overscroll-contain"
->>>>>>> origin/develop
               >
                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-4 pt-1 pb-2">
                   Sedes disponibles
@@ -185,21 +147,13 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                     key={sede.idSede}
                     type="button"
                     role="option"
-<<<<<<< HEAD
-                    aria-selected={sedeActiva?.idSede === sede.idSede}
-=======
                     aria-selected={sedeMostrada?.idSede === sede.idSede}
->>>>>>> origin/develop
                     onClick={() => {
                       setSedeActiva(sede);
                       setSedeDropdownOpen(false);
                     }}
                     className={`w-full text-left px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${
-<<<<<<< HEAD
-                      sedeActiva?.idSede === sede.idSede
-=======
                       sedeMostrada?.idSede === sede.idSede
->>>>>>> origin/develop
                         ? 'bg-fitzone-navy text-white'
                         : 'text-slate-700 hover:bg-slate-50'
                     }`}
@@ -207,11 +161,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                     <span className="block truncate">{sede.nombre}</span>
                     <span
                       className={`text-[11px] font-medium block ${
-<<<<<<< HEAD
-                        sedeActiva?.idSede === sede.idSede ? 'text-white/70' : 'text-slate-400'
-=======
                         sedeMostrada?.idSede === sede.idSede ? 'text-white/70' : 'text-slate-400'
->>>>>>> origin/develop
                       }`}
                     >
                       Aforo máx.: {sede.aforoMaximo} personas
