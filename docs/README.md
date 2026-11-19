@@ -10,11 +10,11 @@ Esta carpeta contiene la documentación viva, las especificaciones de arquitectu
    **Guía Maestra y Contexto de Entrenamiento para IA:**  
    Contiene el protocolo obligatorio de trabajo para asistentes de IA (pensar y armar planes antes de desarrollar, no inventar requisitos, política estricta de git), resumen exhaustivo de los 5 módulos del monolito modular, convenciones de código (Java 21, Spring Boot, PostgreSQL, React 19), arquitectura de roles con Supabase Auth y reglas de negocio críticas.
 
-2. **[Documentación de Infraestructura y Despliegue](../../Documentaciones/documentacion_completa_deploy_develop.md)**  
+2. **[Documentación de Infraestructura y Despliegue](./manuales/manual-instalacion-operacion.md)**  
    Guía de despliegue continuo en Vercel (Frontend), Render (Backend) y Supabase (PostgreSQL).
 
-3. **[Guía de Supabase Auth y Roles](../../Documentaciones/guia_supabase_auth_roles.md)**  
-   Manual paso a paso para la configuración del JWKS, API de login y consumo de endpoints con JWT.
+3. **[Guía de Supabase Auth y Roles](./adr/ADR-020-supabase-auth.md)**  
+   Decisión de autenticación: Supabase Auth valida la identidad (JWKS y JWT) y el backend decide los permisos por rol y por sede.
 
 4. **[GUIA_SUPABASE_USUARIOS.md](./GUIA_SUPABASE_USUARIOS.md)**  
    Tutorial práctico para la gestión de usuarios con Supabase Auth: obtención de service-role key, variables de entorno, flag `alta-por-email`, URLs de redirección, plantillas de correo, semilla del primer gerente y solución de problemas comunes.
@@ -32,6 +32,6 @@ Esta carpeta contiene la documentación viva, las especificaciones de arquitectu
    Pipeline de integración continua con GitHub Actions: etapas, decisiones y alternativas, cómo reproducirlo en local, cómo leer los reportes de cobertura de JaCoCo y V8, y estado actual de la suite.
 
 9. **[Lineamientos de entrega del TIF](./Lineamientos_Entrega_TIF_FitZone_Sports.md)**  
-   Documento de la cátedra: fecha límite (19/11/2026, 18:00), tag `v1.0-entrega`, estructura del repositorio, bitácoras, los nueve ADR obligatorios, diagramas, manuales, rúbrica y checklist de autoevaluación.
+   Documento de la cátedra en su primera versión (nueve ADR). La versión vigente, publicada en el campus, pide diez ADR obligatorios, catorce diagramas y la planificación del proyecto: la documentación del repositorio sigue esa versión.
 
 

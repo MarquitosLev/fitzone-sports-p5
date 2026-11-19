@@ -86,7 +86,7 @@ Se puede entrar en cualquier sede de la cadena. No se puede tener dos ingresos a
 
 ![QR inhabilitado por falta de membresía](img/socio-mi-qr-sin-membresia.png)
 
-**Sin señal:** el pase QR necesita conexión para mostrarse y la recepción necesita conexión para validarlo. Hoy **no existe un modo sin conexión**. Si falla internet, la recepción registra el ingreso a mano con el DNI (ver 4.4).
+**Sin señal:** el pase QR se firma en tu propio celular, así que se sigue generando sin conexión. Para eso tenés que haber abierto *Mi Pase QR* con conexión al menos una vez en ese dispositivo, y tener la pantalla cargada cuando te quedes sin señal. Si la recepción tampoco tiene conexión, valida tu QR con su lista local y confirma el ingreso cuando vuelva internet (ver 4.4).
 
 ### 3.5 Reserva de clases grupales y lista de espera
 
@@ -177,7 +177,8 @@ En esta versión, poner o sacar una cancha de mantenimiento lo hace **el gerente
 | El socio dice que pagó pero figura VENCIDO | Buscarlo en *Membresías* por DNI y revisar el último pago en *Pagos*. Si el pago está confirmado, renovar la membresía |
 | *Ya tiene un ingreso abierto* | Buscarlo en *Personas Actualmente en Sede* y registrar el egreso pendiente |
 | Aforo completo | No se puede registrar el ingreso hasta que alguien salga |
-| Se cayó internet | Anotar en planilla DNI, nombre y hora de cada ingreso, y cargarlos cuando vuelva la conexión. Mientras tanto, el sistema no controla aforo ni membresías |
+| Se cayó internet | El terminal pasa solo a modo sin conexión y muestra *Sin conexión con el servidor central*. Los QR se siguen validando con la lista local de socios habilitados (se descarga cada 5 minutos y vale 24 horas), y cada ingreso aprobado queda en *Ingresos sin confirmar* como *Pendiente*. Al volver la conexión se sincronizan solos, o con el botón *Sincronizar*. Si uno figura *Rechazado al sincronizar*, revisarlo con el socio y descartarlo |
+| *Sin conexión y sin datos locales* | El terminal no tiene una lista vigente (por ejemplo, se abrió por primera vez sin internet). No se puede validar hasta que vuelva la conexión: anotar DNI y hora y cargarlos después con *Registrar ingreso* |
 | El QR no se lee | Pedir al socio que presione *Actualizar ahora* y volver a leer |
 
 ### 4.5 Usuarios y membresías

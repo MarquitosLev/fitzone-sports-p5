@@ -1,7 +1,7 @@
 # FitZone Sports — Documentación de Componentes UI Base
 
 > **Ubicación:** `src/components/ui/`  
-> **Importación recomendada:** `import { Componente } from '@/components/ui';` o `from '../components/ui';` (exportados desde [`index.js`](fitzone-sports-p5/fz-frontend/src/components/ui/index.js)).
+> **Importación recomendada:** `import { Componente } from '@/components/ui';` o `from '../components/ui';` (exportados desde [`index.ts`](ui/index.ts)).
 
 Todos los componentes son **puramente presentacionales** (controlados al 100% por props, sin llamadas a API directas ni acoplamiento de negocio) y utilizan la paleta corporativa de FitZone configurada en Tailwind CSS.
 
@@ -31,7 +31,7 @@ Todos los componentes son **puramente presentacionales** (controlados al 100% po
 
 Botón versátil con soporte de variantes de diseño, estados asíncronos y posicionamiento de iconos.
 
-- **Archivo:** [`Button.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/Button.jsx)
+- **Archivo:** [`Button.tsx`](ui/Button.tsx)
 - **Props principales:**
   - `variant`: `'primary'` (Navy) | `'coral'` (CTA principal) | `'secondary'` (Blanco con borde) | `'danger'` (Rojo destructivo) | `'success'` (Verde) | `'outline'` | `'ghost'`. _(Default: `'primary'`)_.
   - `size`: `'xs'` | `'sm'` | `'md'` | `'lg'`. _(Default: `'md'`)_.
@@ -55,7 +55,7 @@ Botón versátil con soporte de variantes de diseño, estados asíncronos y posi
 
 Campo de entrada para texto, correos y claves con soporte de etiquetas, iconos y mensajes de validación.
 
-- **Archivo:** [`TextField.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/TextField.jsx)
+- **Archivo:** [`TextField.tsx`](ui/TextField.tsx)
 - **Props principales:**
   - `label`: `string`. Etiqueta visible encima del input.
   - `helperText`: `string`. Texto explicativo debajo del input.
@@ -85,7 +85,7 @@ Campo de entrada para texto, correos y claves con soporte de etiquetas, iconos y
 
 Menú desplegable accesible y estilizado con la estética FitZone.
 
-- **Archivo:** [`Select.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/Select.jsx)
+- **Archivo:** [`Select.tsx`](ui/Select.tsx)
 - **Props principales:**
   - `label`: `string`.
   - `options`: `Array<{ value: string|number, label: string }>` o strings.
@@ -116,7 +116,7 @@ Menú desplegable accesible y estilizado con la estética FitZone.
 
 Input especializado para fechas y horas con formato estandarizado.
 
-- **Archivo:** [`DateTimeField.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/DateTimeField.jsx)
+- **Archivo:** [`DateTimeField.tsx`](ui/DateTimeField.tsx)
 - **Props principales:**
   - `type`: `'date'` | `'time'` | `'datetime-local'`. _(Default: `'date'`)_.
   - `label`: `string`.
@@ -143,7 +143,7 @@ Input especializado para fechas y horas con formato estandarizado.
 
 Ventana emergente accesible con desenfoque de fondo y scroll contenido.
 
-- **Archivo:** [`Modal.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/Modal.jsx)
+- **Archivo:** [`Modal.tsx`](ui/Modal.tsx)
 - **Props principales:**
   - `isOpen`: `boolean`. Controla si el modal es visible.
   - `onClose`: `() => void`. Disparado al presionar Escape o clic fuera.
@@ -172,7 +172,7 @@ Ventana emergente accesible con desenfoque de fondo y scroll contenido.
 
 Diálogo especializado para confirmar acciones peligrosas o advertencias.
 
-- **Archivo:** [`ConfirmDialog.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/ConfirmDialog.jsx)
+- **Archivo:** [`ConfirmDialog.tsx`](ui/ConfirmDialog.tsx)
 - **Props principales:**
   - `isOpen`: `boolean`.
   - `onClose`: `() => void`.
@@ -204,7 +204,7 @@ Diálogo especializado para confirmar acciones peligrosas o advertencias.
 
 Tabla de datos completa con soporte de columnas dinámicas, estados skeleton de carga, estado vacío integrado y paginación.
 
-- **Archivo:** [`DataTable.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/DataTable.jsx)
+- **Archivo:** [`DataTable.tsx`](ui/DataTable.tsx)
 - **Props principales:**
   - `columns`: `Array<{ key: string, header: string, width?: string, align?: 'left'|'center'|'right', render?: (row, index) => ReactNode, className?: string }>`
   - `data`: `Array<object>`. Lista de filas a renderizar.
@@ -245,7 +245,7 @@ Tabla de datos completa con soporte de columnas dinámicas, estados skeleton de 
 
 Contenedor modular con variantes de fondo y soporte de patrón de componentes compuestos.
 
-- **Archivo:** [`Card.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/Card.jsx)
+- **Archivo:** [`Card.tsx`](ui/Card.tsx)
 - **Props principales:**
   - `variant`: `'default'` (Blanco con sombra) | `'glass'` (Glassmorphism) | `'flat'` | `'navy'` (Fondo `#1B2A55` oscuro) | `'highlight'` (Borde superior acento en Coral).
   - `title`, `subtitle`, `action`, `icon`, `footer`: Ranuras directas por props.
@@ -273,7 +273,7 @@ Contenedor modular con variantes de fondo y soporte de patrón de componentes co
 
 Insignia que traduce automáticamente cualquier código de estado del backend a su color corporativo y texto en español.
 
-- **Archivo:** [`StatusBadge.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/StatusBadge.jsx)
+- **Archivo:** [`StatusBadge.tsx`](ui/StatusBadge.tsx)
 - **Mapeo automático de estados:**
   - **Verde (`green`):** `ACTIVO`, `ACTIVA`, `CONFIRMADA`, `CONFIRMADO`, `PAGADO`, `DISPONIBLE`, `PERMITIDO`, `ONLINE`, `APROBADO`, `REGULAR`.
   - **Rojo (`red`):** `VENCIDO`, `VENCIDA`, `SUSPENDIDO`, `CANCELADO`, `CANCELADA`, `RECHAZADO`, `DENEGADO`, `INACTIVA`, `AUSENTE`, `ERROR`.
@@ -298,7 +298,7 @@ Insignia que traduce automáticamente cualquier código de estado del backend a 
 
 Etiqueta simple para indicar categorías, etiquetas o recuentos.
 
-- **Archivo:** [`Badge.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/Badge.jsx)
+- **Archivo:** [`Badge.tsx`](ui/Badge.tsx)
 - **Props:** `variant` (`'navy'`, `'coral'`, `'green'`, `'red'`, `'gold'`, `'gray'`, `'green-soft'`, etc.), `size` (`'xs'`, `'sm'`, `'md'`), `children`.
 
 ---
@@ -307,7 +307,7 @@ Etiqueta simple para indicar categorías, etiquetas o recuentos.
 
 Banners de notificación y diagnóstico integrados. Soporta directamente la estructura de errores devuelta por las APIs backend (`error.title`, `error.message`, `error.errors[]`).
 
-- **Archivo:** [`Alert.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/Alert.jsx)
+- **Archivo:** [`Alert.tsx`](ui/Alert.tsx)
 - **Props principales:**
   - `type`: `'success'` | `'error'` | `'warning'` | `'info'`. _(Default: `'info'`)_.
   - `title`: `string`. Encabezado destacado.
@@ -332,7 +332,7 @@ Banners de notificación y diagnóstico integrados. Soporta directamente la estr
 
 Sistema de notificaciones temporizadas flotantes.
 
-- **Archivos:** [`Toast.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/Toast.jsx), [`ToastContainer.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/ToastContainer.jsx)
+- **Archivos:** [`Toast.tsx`](ui/Toast.tsx), [`ToastContainer.tsx`](ui/ToastContainer.tsx)
 - **Uso:** Incluir `<ToastContainer />` en la raíz de la app y disparar toasts mediante el contexto global `addToast(title, message, type)`.
 
 ---
@@ -341,7 +341,7 @@ Sistema de notificaciones temporizadas flotantes.
 
 Indicador circular de carga animada.
 
-- **Archivo:** [`Spinner.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/Spinner.jsx)
+- **Archivo:** [`Spinner.tsx`](ui/Spinner.tsx)
 - **Props:**
   - `size`: `'xs'` | `'sm'` | `'md'` | `'lg'` | `'xl'`. _(Default: `'md'`)_.
   - `color`: `'navy'` | `'coral'` | `'green'` | `'white'` | `'gray'`.
@@ -354,7 +354,7 @@ Indicador circular de carga animada.
 
 Vista de feedback ilustrada para estados vacíos o búsquedas sin coincidencias.
 
-- **Archivo:** [`EmptyState.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/EmptyState.jsx)
+- **Archivo:** [`EmptyState.tsx`](ui/EmptyState.tsx)
 - **Props:**
   - `icon`: Componente icono de Lucide (ej: `Filter`, `Calendar`, `Inbox`).
   - `title`: `string`.
@@ -368,7 +368,7 @@ Vista de feedback ilustrada para estados vacíos o búsquedas sin coincidencias.
 
 Tarjeta de métricas clave (KPI) para paneles y dashboards (aforo, ingresos, reservas).
 
-- **Archivo:** [`StatCard.jsx`](fitzone-sports-p5/fz-frontend/src/components/ui/StatCard.jsx)
+- **Archivo:** [`StatCard.tsx`](ui/StatCard.tsx)
 - **Props:**
   - `title`: `string`.
   - `value`: `string` o `number`.

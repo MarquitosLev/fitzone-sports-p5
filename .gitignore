@@ -33,3 +33,6 @@ target/
 *.sw?
 .DS_Store
 Thumbs.db
+
+# Dossier generado: lleva el hash del tag (docs/entregables/README.md)
+docs/entregables/*.pdf

@@ -17,7 +17,7 @@ Sin commits: todavía no existía el repositorio.
 
 ## Sprint 2 — Unidad I — Semana del 2026-08-24
 
-### 2026-08-28 · ? h
+### 2026-08-28 · ≈ 1,5 h
 
 **Actividad**
 Quedó armado el tablero en Jira con las primeras tareas: diagramas C4 e inicializar front y back.
@@ -58,7 +58,7 @@ Sin commits.
 
 ## Sprint 3 — Unidad II — Semana del 2026-09-07
 
-### 2026-09-13 · ? h
+### 2026-09-13 · ≈ 1,5 h
 
 **Actividad**
 Creé el repositorio con fz-frontend y fz-backend.
@@ -70,7 +70,7 @@ Creé el repositorio con fz-frontend y fz-backend.
 
 ## Sprint 3 — Unidad II — Semana del 2026-09-14
 
-### 2026-09-14 · ? h
+### 2026-09-14 · ≈ 2 h
 
 **Actividad**
 Configuré Postgres en Docker, los perfiles por entorno y el Dockerfile del back. Inicialicé el front con Vite y una vista que consulta el /ping.
@@ -81,7 +81,7 @@ El front no podía llamar al back por CORS, así que lo habilité en el endpoint
 **Commits**
 `e9d33ac` docker y perfiles · `e183395` extensiones de init.sql · `f4fe95e` ping · `6a98ddc` front con Vite
 
-### 2026-09-16 · ? h
+### 2026-09-16 · ≈ 1,5 h
 
 **Actividad**
 Dejé andando los entornos en Supabase, Vercel y Render. El back despliega desde develop.
@@ -92,7 +92,7 @@ Front en Vercel, back en Render con Docker y base en Supabase, todo en plan grat
 **Commits**
 Sin commits nuevos: la configuración se hizo en los paneles (PR #1 y #2).
 
-### 2026-09-20 · ? h
+### 2026-09-20 · ≈ 1,5 h
 
 **Actividad**
 Rehice el Docker de Postgres local y escribí la guía de desarrollo para trabajar con agentes de IA.
@@ -107,7 +107,7 @@ Saqué el init script del Docker para que el esquema lo genere Hibernate y todos
 
 ## Sprint 4 — Unidad II — Semana del 2026-09-21
 
-### 2026-09-26 · ? h
+### 2026-09-26 · ≈ 3 h
 
 **Actividad**
 Hice la entidad Usuario sobre la BaseEntity de Benja, vinculada al usuario de Supabase Auth.
@@ -119,7 +119,7 @@ Hice la entidad Usuario sobre la BaseEntity de Benja, vinculada al usuario de Su
 
 ## Sprint 4 — Unidad II — Semana del 2026-09-28
 
-### 2026-09-29 · ? h
+### 2026-09-29 · ≈ 3 h
 
 **Actividad**
 Agregué las entidades Plan, Membresía y Cancha con sus repositorios, y cerré la capacitación de Spring Boot.
@@ -127,7 +127,7 @@ Agregué las entidades Plan, Membresía y Cancha con sus repositorios, y cerré 
 **Commits**
 `86611d4` Plan · `02e8747` Membresía · `ef3cd7d` Cancha
 
-### 2026-10-03 · ? h
+### 2026-10-03 · ≈ 1,5 h
 
 **Actividad**
 Corregí la entidad Cancha después de la revisión de Agustín.
@@ -142,7 +142,7 @@ Una variable no respetaba la nomenclatura del equipo; la renombré.
 
 ## Sprint 5 — Unidad II — Semana del 2026-10-05
 
-### 2026-10-07 · ? h
+### 2026-10-07 · ≈ 2 h
 
 **Actividad**
 Agregué Comprobante con su FK a Transacción.
@@ -157,7 +157,7 @@ MembresiaRepository hacía fallar el arranque por un método findByBetweenFechas
 
 ## Sprint 5 — Unidad II — Semana del 2026-10-12
 
-### 2026-10-14 · ? h
+### 2026-10-14 · ≈ 1,5 h
 
 **Actividad**
 Revisé el PR de Agustín con la base de la API: prefijo /api/v1, formato de error y Swagger.
@@ -165,7 +165,7 @@ Revisé el PR de Agustín con la base de la API: prefijo /api/v1, formato de err
 **Commits**
 Sin commits: revisión del PR #22.
 
-### 2026-10-18 · ? h
+### 2026-10-18 · ≈ 2 h
 
 **Actividad**
 Hice los endpoints de alta, perfil, búsqueda y edición de usuarios contra Supabase Auth, con la colección de Bruno y datos de prueba.
@@ -180,7 +180,7 @@ La revisión marcó varias correcciones y las resolví en el mismo PR.
 
 ## Sprint 6 — Unidad II — Semana del 2026-10-19
 
-### 2026-10-19 · ? h
+### 2026-10-19 · ≈ 1,5 h
 
 **Actividad**
 Agregué un endpoint protegido /admin/database/query para consultar la base y terminé la conexión con Supabase.
@@ -188,7 +188,7 @@ Agregué un endpoint protegido /admin/database/query para consultar la base y te
 **Commits**
 `a010a36` endpoint de consulta
 
-### 2026-10-24 · ? h
+### 2026-10-24 · ≈ 1,5 h
 
 **Actividad**
 Revisé el PR de Agustín con los guards por rol y el panel de permisos.
@@ -200,7 +200,7 @@ Sin commits: revisión del PR #54.
 
 ## Sprint 6 — Unidad II — Semana del 2026-10-26
 
-### 2026-10-26 · ? h
+### 2026-10-26 · ≈ 1,5 h
 
 **Actividad**
 Revisé y mergeé el PR de Benja que integra el módulo 2 (QR, ingreso y aforo) con la API real.
@@ -208,7 +208,7 @@ Revisé y mergeé el PR de Benja que integra el módulo 2 (QR, ingreso y aforo) 
 **Commits**
 Sin commits: revisión del PR #57.
 
-### 2026-11-01 · ? h
+### 2026-11-01 · ≈ 2,5 h
 
 **Actividad**
 Integré clases con el usuario autenticado. También relevé lo que faltaba de la consigna y lo cargué como historias de usuario y backlog técnico.
@@ -226,7 +226,7 @@ Tomar el usuario del token con UsuarioActual y permitir cancelar solo lo propio.
 
 ## Sprint 7 — Unidad II — Semana del 2026-11-02
 
-### 2026-11-05 · ? h
+### 2026-11-05 · ≈ 2 h
 
 **Actividad**
 Cerré la API: ahora exige sesión y rol en todo menos las rutas públicas.
@@ -240,7 +240,7 @@ Dejar en SecurityConfig solo la lista de rutas públicas y exigir JWT en todas l
 **Commits**
 `6006a25` sesión y rol en toda la API
 
-### 2026-11-06 · ? h
+### 2026-11-06 · ≈ 3 h
 
 **Actividad**
 Integré canchas y pagos con el usuario autenticado. Les puse nombre a las FK y agregué CHECK en la base.
@@ -254,7 +254,7 @@ La sede del cobro sale siempre de la cancha de la reserva, no del request.
 **Commits**
 `fa4533b` canchas · `cdfa2e5` pagos · `5626e36` sede del cobro · `50ebc69` FK y CHECK · `f161158` comentarios
 
-### 2026-11-06 · ? h
+### 2026-11-06 · ≈ 3 h
 
 **Actividad**
 Conecté clases, canchas, pagos y la sesión del front con la API real, saqué los mocks de la interfaz y publiqué develop en main.
@@ -268,7 +268,7 @@ Reintentar un pago rechazado es un pago nuevo sobre la misma reserva o membresí
 **Commits**
 `bc0254e` clases · `c8baabc` canchas · `7d193dd` pagos · `b7fa922` sesión y rutas · `d1f2a4b` motivo del 403 · `f37bb45` · `4c81a93` · `17d7134` hora local · `cbf9e7a` sin mocks · `fdcabca` Vercel
 
-### 2026-11-07 · ? h
+### 2026-11-07 · ≈ 1,5 h
 
 **Actividad**
 Armé el pipeline de GitHub Actions con reporte de cobertura, que era lo que faltaba de la Unidad V.
@@ -279,7 +279,7 @@ Back y front en jobs paralelos, con JaCoCo y la cobertura de vitest publicadas c
 **Commits**
 `fd6f8e7` pipeline CI y cobertura
 
-### 2026-11-08 · ? h
+### 2026-11-08 · ≈ 1,5 h
 
 **Actividad**
 Aislé la sesión por pestaña.
@@ -297,7 +297,7 @@ Guardar la sesión en sessionStorage.
 
 ## Sprint 8 — Cierre — Semana del 2026-11-16
 
-### 2026-11-19 · ? h
+### 2026-11-19 · ≈ 6 h
 
 **Actividad**
 Cerré los dos bugs de canchas que quedaban: el invitado reserva y paga en un solo paso sin quedar guardado como usuario (SCRUM-147), y la reserva sin pagar del socio libera el turno a los 5 minutos (SCRUM-148). Atendí la revisión del PR, integré develop en la rama, la probé en local y abrí el PR de develop a main para publicar.

@@ -21,7 +21,7 @@ El dominio es transaccional: reservas que no se pueden superponer (RN-02), un ú
 Vamos a usar PostgreSQL 16 como única base de datos del sistema: `postgres:16-alpine` en Docker para el desarrollo local, y el proyecto de Supabase para los entornos en la nube. Lo que lo decidió fue la integridad transaccional: bloqueos pesimistas por fila, claves foráneas y CHECK que el motor hace cumplir aunque alguien escriba directo en la base.
 
 ## Consecuencias
-- **Positivas:** RN-01, RN-02, los cupos y el aforo se resuelven con `PESSIMISTIC_WRITE` (`SELECT … FOR UPDATE`) dentro de la transacción. Las FK y los CHECK con nombre (`ck_gym_accesos_una_reserva`, `ck_pag_transacciones_origen`) protegen la consistencia entre módulos. Supabase da la base y la autenticación en un solo servicio (ADR-010).
+- **Positivas:** RN-01, RN-02, los cupos y el aforo se resuelven con `PESSIMISTIC_WRITE` (`SELECT … FOR UPDATE`) dentro de la transacción. Las FK y los CHECK con nombre (`ck_gym_accesos_una_reserva`, `ck_pag_transacciones_origen`) protegen la consistencia entre módulos. Supabase da la base y la autenticación en un solo servicio (ADR-020).
 - **Negativas:** todas las sedes comparten una sola instancia (ver ADR-011 y ADR-015). Las capacidades más avanzadas del motor, como las restricciones de exclusión, no tienen equivalente en JPA y hay que escribirlas en SQL aparte.
 - **Deuda asumida:** RNF-03 pide índices para la disponibilidad de canchas, y todavía no están declarados (`@Index` sobre `id_cancha, fecha_hora_inicio`). El esquema no tiene migraciones versionadas (ADR-016).
 

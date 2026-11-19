@@ -1,8 +1,9 @@
 ---
-title: DER físico — FitZone Sports (v1.0, 2026-11-10, Leiva)
+title: DER físico — FitZone Sports (v1.1, 2026-11-19, Leiva y Bravo)
 ---
 %% DER físico — FitZone Sports (esquema generado por Hibernate, ver ADR-016)
 %% Autor: Leiva, Marcos Joel · Fecha: 2026-11-10 · Versión: 1.0
+%% Versión 1.1 (Bravo, Agustín · 2026-11-19): qr_clave_publica (ADR-007) y codigo_reintento (alta de socio online)
 %% Todas las tablas suman las columnas de auditoría de BaseEntity:
 %% created_at, updated_at, created_by, updated_by, is_deleted, deleted_at.
 erDiagram
@@ -22,6 +23,7 @@ erDiagram
     varchar foto_url
     varchar tipo_usuario "NOT NULL; SOCIO, EXTERNO, RECEPCIONISTA, GERENTE (CHECK)"
     bigint id_sede FK "sede asignada; NULL = gerente global"
+    varchar qr_clave_publica "len 200; clave pública ECDSA del dispositivo del socio (ADR-007)"
   }
   fz_pag_planes {
     int id_plan PK "IDENTITY"
@@ -98,6 +100,7 @@ erDiagram
     varchar token_transaccion_pasarela "sin datos de tarjeta (RNF-02)"
     timestamp fecha_hora_creacion "NOT NULL"
     timestamp fecha_hora_confirmacion
+    uuid codigo_reintento UK "reintento de la cuenta en el alta de socio online"
   }
   fz_pag_comprobantes {
     bigint id_comprobante PK "IDENTITY"

@@ -51,7 +51,7 @@ La web queda en `http://localhost:5173`. Con `VITE_USE_MOCK=true` funciona sin b
 
 ## 3. Puesta en marcha en producción
 
-El despliegue de referencia (ADR-008) es:
+El despliegue de referencia (ADR-009) es:
 
 | Componente | Servicio | Configuración |
 |---|---|---|
@@ -71,7 +71,7 @@ Con el perfil `prod`, Hibernate solo valida el esquema (`ddl-auto=validate`): un
 
 Hoy el entorno publicado es de desarrollo (`fitzone-backend-dev` sigue `develop`). En el plan gratuito de Render el servicio se duerme y tarda más de un minuto en responder al primer pedido.
 
-**No implementado:** no hay `Dockerfile` del frontend, así que `docker compose up --build` no levanta el sistema completo; solo la base.
+El frontend tiene su `Dockerfile` (SCRUM-112), así que `docker compose up --build` levanta el sistema completo: base, API y web.
 
 ## 4. Variables de entorno
 
@@ -119,7 +119,7 @@ Frontend (se incrustan en el build y son públicas: nunca poner secretos):
 
 ## 6. Despliegue y reversión
 
-Estrategia (ADR-008): despliegue continuo por rama. Cada push a la rama configurada redespliega Render y Vercel. Vercel además genera una preview por rama.
+Estrategia (ADR-009): despliegue continuo por rama. Cada push a la rama configurada redespliega Render y Vercel. Vercel además genera una preview por rama.
 
 El pipeline de [.github/workflows/ci.yml](../../.github/workflows/ci.yml) corre en cada PR y push a `develop`: `./mvnw -B verify` en el backend y `npm ci`, `npm run coverage` y `npm run build` en el frontend. El merge a `develop` se hace con el pipeline en verde.
 
@@ -153,11 +153,11 @@ Supabase hace además respaldos diarios en su plan, que se restauran desde su pa
 
 ## 8. Operación degradada
 
-**Estado actual:** el control de acceso requiere conexión (ADR-003). No hay modo offline ni cola local de ingresos.
+**Estado actual:** el control de acceso sigue funcionando sin conexión (ADR-007). El terminal de sede valida con una lista local de habilitados y guarda una cola de ingresos que se sincroniza al reconectar; el celular del socio firma el QR sin servidor.
 
 | Falla | Efecto | Qué hacer |
 |---|---|---|
-| Se cae internet en la sede | La recepción no puede validar QR | Registrar ingresos en planilla (DNI, hora) y cargarlos con *Registrar ingreso* cuando vuelva la conexión. Nadie valida aforo ni RN-01 mientras tanto |
+| Se cae internet en la sede | El terminal pasa a modo sin conexión y valida con la lista local (vigencia 24 h) | Nada que hacer en el momento. Al volver la conexión, revisar en *Ingresos sin confirmar* que no queden rechazados. Si el terminal no tenía lista vigente, registrar en planilla y cargar con *Registrar ingreso* |
 | Render dormido o caído | La web muestra errores de red | Esperar el arranque (más de 1 minuto en plan gratuito) o hacer rollback (sección 6) |
 | Supabase Auth caído | No se puede iniciar sesión; las sesiones abiertas siguen hasta que vence el token | Esperar; no hay login alternativo |
 | Base caída | La API responde 500 | Ver `/api/ping` y los logs; restaurar si hubo pérdida |

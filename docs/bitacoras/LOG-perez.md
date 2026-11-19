@@ -24,7 +24,7 @@
 
 ## Sprint 3 — Unidad I — Semana del 2026-09-14
 
-### 2026-09-20 · ? h
+### 2026-09-20 · ≈ 1,5 h
 
 **Actividad** Terminé el DER, que quedó en la carpeta de documentación del Drive.
 
@@ -34,7 +34,7 @@
 
 ## Sprint 5 — Unidad IV — Semana del 2026-10-12
 
-### 2026-10-16 · ? h
+### 2026-10-16 · ≈ 1,5 h
 
 **Actividad** Armé el esqueleto del front: rutas, layout con menú y selector de sede.
 
@@ -42,7 +42,7 @@
 
 **Commits** `65a809e` esqueleto, rutas y servicios
 
-### 2026-10-17 · ? h
+### 2026-10-17 · ≈ 4 h
 
 **Actividad** Hice la vista de clases, reservas y lista de espera para el socio, con 21 tests nuevos.
 
@@ -50,7 +50,7 @@
 
 **Commits** `95c7222` vista de clases · `4fbd031` correcciones · `6ec361e` zona horaria en mocks
 
-### 2026-10-18 · ? h
+### 2026-10-18 · ≈ 2 h
 
 **Actividad** Hice la pantalla de recepción con la validación del QR y el monitor de aforo.
 
@@ -60,7 +60,7 @@
 
 ## Sprint 6 — Unidad IV — Semana del 2026-10-19
 
-### 2026-10-19 · ? h
+### 2026-10-19 · ≈ 1,5 h
 
 **Actividad** Hice el checkout de pago simulado y los comprobantes.
 
@@ -68,7 +68,7 @@
 
 **Commits** `661f926` checkout y comprobantes
 
-### 2026-10-20 · ? h
+### 2026-10-20 · ≈ 1,5 h
 
 **Actividad** Corregí la descarga de PDF y las validaciones del checkout.
 
@@ -76,7 +76,7 @@
 
 **Commits** `5ec27b0` PDF y validaciones
 
-### 2026-10-22 · ? h
+### 2026-10-22 · ≈ 2,5 h
 
 **Actividad** Hice el login, el registro público, el logout y la redirección por rol, más pantallas base por rol para probar la integración.
 
@@ -86,7 +86,7 @@
 
 ## Sprint 7 — Cierre — Semana del 2026-11-02
 
-### 2026-11-08 · ? h
+### 2026-11-08 · ≈ 1,5 h
 
 **Actividad** Limpié textos de la interfaz que salieron en las pruebas de punta a punta.
 
@@ -94,7 +94,7 @@
 
 **Commits** `dd0cd67` textos de la interfaz 
 
-### 2026-11-08 · ? h
+### 2026-11-08 · ≈ 1,5 h
 
 **Actividad** Completé el backend de seguridad del login (SCRUM-130): implementé la vinculación del `auth_id` real de Supabase en `JwtAuthConverter`, `UsuarioActual` y `AuthController`, con fallback por email insensible a mayúsculas. También alineé el nombre `"Plan Anual VIP"` en `DataInitializer.java`, protegí los `setval` de las secuencias en el SQL de seed y documenté el procedimiento de reseteo de volúmenes de Docker.
 
@@ -102,7 +102,7 @@
 
 **Commits** `18663ba` sincronización auth\_id en backend, seed y documentación
 
-### 2026-11-11 · ? h
+### 2026-11-11 · ≈ 1,5 h
 
 **Actividad** Integré los cambios de `develop` en la rama `SCRUM-130`, resolví los conflictos con `SCRUM-134` (donde `EXTERNO` pasó a ser un invitado sin cuenta) y aplicé la corrección final de seguridad: rechazar el login si `tipoUsuario == EXTERNO`, y bloquear la sobreescritura del `auth_id` si el usuario encontrado por email ya tenía uno distinto de `null`.
 
@@ -114,19 +114,19 @@
 
 ## Sprint 8 — Cierre Final — Semana del 2026-11-13
 
-### 2026-11-13 · ? h
+### 2026-11-13 · ≈ 2 h
 
 **Actividad** Documenté la bitácora personal y abrí el PR de entrega (SCRUM-138).
 
 **Commits** `e31c76f` bitácora de Pérez · `3ffc3b7` merge PR #95
 
-### 2026-11-19 · ? h
+### 2026-11-19 · ≈ 3 h
 
 **Actividad** Implementé SCRUM-142: agregué en `LoginPage.tsx` el logo como enlace a `/canchas` y el texto explícito "Continuar sin iniciar sesión" para que los usuarios invitados puedan navegar al inicio sin tener cuenta.
 
 **Commits** `8e85cd3` enlace al inicio desde LoginPage para usuarios invitados
 
-### 2026-11-19 · ? h
+### 2026-11-19 · ≈ 3 h
 
 **Actividad** Resolví un hallazgo bloqueante de code review (Sourcery) en `LoginPage.tsx`: mientras el login estaba en progreso, el usuario podía navegar con los enlaces de salida y, al resolverse la promesa en segundo plano, `navigate()` sobreescribía la ruta nueva. Apliqué dos barreras: bloqueo visual y funcional de los tres enlaces de salida (`aria-disabled`, `pointer-events-none`, `onClick` con `preventDefault`) y una referencia `useRef` (`montado`) para que si el componente se desmontó antes de que resuelva el login, no se dispare ningún `navigate` ni actualización de estado tardíos. Agregué tres pruebas unitarias de regresión que cubren los tres escenarios: enlace "Continuar" bloqueado, logo y botón de registro bloqueados, y desmontaje antes de la resolución.
 

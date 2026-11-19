@@ -7,7 +7,7 @@
 - **Sprint:** 1
 
 ## Contexto
-La API tenía que exponer REST para el frontend web, validar el JWT de Supabase (ADR-010), aplicar las reglas de negocio con transacciones y bloqueos (ADR-004) y persistir en PostgreSQL (ADR-002). La cátedra trabaja la Unidad II (inyección de dependencias, patrones y persistencia) sobre Java. En la primera reunión se discutió Python contra Java. Parte del equipo ya había usado Java en materias anteriores, y nadie tenía experiencia productiva con frameworks de Python.
+La API tenía que exponer REST para el frontend web, validar el JWT de Supabase (ADR-020), aplicar las reglas de negocio con transacciones y bloqueos (ADR-004) y persistir en PostgreSQL (ADR-002). La cátedra trabaja la Unidad II (inyección de dependencias, patrones y persistencia) sobre Java. En la primera reunión se discutió Python contra Java. Parte del equipo ya había usado Java en materias anteriores, y nadie tenía experiencia productiva con frameworks de Python.
 
 ## Alternativas consideradas
 | Alternativa | A favor | En contra | Por qué se descartó |
