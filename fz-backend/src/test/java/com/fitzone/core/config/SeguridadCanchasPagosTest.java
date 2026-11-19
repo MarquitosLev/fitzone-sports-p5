@@ -186,14 +186,12 @@ class SeguridadCanchasPagosTest {
         String codigo = "3f0c5a52-1d1f-4c7e-9b1a-2f4a8f6a9c10";
         String reserva = """
                 {"idCancha":1,"fechaHoraInicio":"2026-12-01T10:00:00","fechaHoraFin":"2026-12-01T11:00:00",
-                 "nombre":"Ana","apellido":"Pérez","dni":"30111222","email":"ana@mail.com","telefono":"1155550000"}
+                 "nombre":"Ana","apellido":"Pérez","dni":"30111222","email":"ana@mail.com"}
                 """;
         mockMvc.perform(post("/v1/invitados/reservas").contentType(MediaType.APPLICATION_JSON).content(reserva))
                 .andExpect(status().isCreated());
         mockMvc.perform(get("/v1/invitados/reservas/" + codigo))
                 .andExpect(status().isOk());
-        mockMvc.perform(post("/v1/invitados/reservas/" + codigo + "/pago"))
-                .andExpect(status().isCreated());
     }
 
     @Test
@@ -201,7 +199,7 @@ class SeguridadCanchasPagosTest {
     void checkoutInvitado_validaDatos() throws Exception {
         String reserva = """
                 {"idCancha":1,"fechaHoraInicio":"2026-12-01T10:00:00","fechaHoraFin":"2026-12-01T11:00:00",
-                 "nombre":"Ana","apellido":"Pérez","dni":"30.111.222","email":"no-es-email","telefono":"1155550000"}
+                 "nombre":"Ana","apellido":"Pérez","dni":"30.111.222","email":"no-es-email"}
                 """;
         mockMvc.perform(post("/v1/invitados/reservas").contentType(MediaType.APPLICATION_JSON).content(reserva))
                 .andExpect(status().isBadRequest());

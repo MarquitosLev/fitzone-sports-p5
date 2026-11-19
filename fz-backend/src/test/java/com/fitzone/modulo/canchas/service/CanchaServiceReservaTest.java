@@ -138,7 +138,7 @@ class CanchaServiceReservaTest {
     }
 
     @Test
-    @DisplayName("Reservar como invitado: el externo sin cuenta reserva sin descuento")
+    @DisplayName("Reservar como invitado: la reserva queda sin usuario y sin descuento")
     void testReservarComoInvitadoExitoso() {
         LocalDateTime inicio = LocalDate.now().plusDays(1).atTime(10, 0);
         LocalDateTime fin = inicio.plusHours(1);
@@ -146,7 +146,6 @@ class CanchaServiceReservaTest {
         ReservaCancha reserva = ReservaCancha.builder()
                 .fechaHoraInicio(inicio)
                 .fechaHoraFin(fin)
-                .usuario(externo)
                 .build();
 
         when(canchaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(cancha));
@@ -154,11 +153,11 @@ class CanchaServiceReservaTest {
         when(canchaRepository.findById(1L)).thenReturn(Optional.of(cancha));
         when(reservaCanchaRepository.save(any(ReservaCancha.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ReservaCancha resultado = canchaService.reservarComoInvitado(1L, externo, reserva);
+        ReservaCancha resultado = canchaService.reservarComoInvitado(1L, reserva);
 
         assertThat(resultado).isNotNull();
         assertThat(resultado.getPrecioFinal()).isEqualByComparingTo("10000.00");
-        assertThat(resultado.getUsuario()).isEqualTo(externo);
+        assertThat(resultado.getUsuario()).isNull();
         verify(reservaCanchaRepository).save(any(ReservaCancha.class));
     }
 
@@ -175,13 +174,15 @@ class CanchaServiceReservaTest {
     }
 
     @Test
-    @DisplayName("Reservar como invitado: un socio no puede usar ese flujo")
-    void testReservarComoInvitadoConSocio() {
+    @DisplayName("Reservar como invitado: turno ocupado responde 409 y no guarda")
+    void testReservarComoInvitadoTurnoOcupado() {
         LocalDateTime inicio = LocalDate.now().plusDays(1).atTime(10, 0);
         ReservaCancha reserva = ReservaCancha.builder().fechaHoraInicio(inicio).fechaHoraFin(inicio.plusHours(1)).build();
+        when(canchaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(cancha));
+        when(reservaCanchaRepository.existsSolapamiento(1L, inicio, inicio.plusHours(1))).thenReturn(true);
 
-        assertThatThrownBy(() -> canchaService.reservarComoInvitado(1L, socio, reserva))
-                .isInstanceOf(ReglaNegocioException.class);
+        assertThatThrownBy(() -> canchaService.reservarComoInvitado(1L, reserva))
+                .isInstanceOf(ConflictoException.class);
         verify(reservaCanchaRepository, never()).save(any(ReservaCancha.class));
     }
 
@@ -361,7 +362,6 @@ class CanchaServiceReservaTest {
         ReservaCancha reserva = ReservaCancha.builder()
                 .fechaHoraInicio(inicio)
                 .fechaHoraFin(fin)
-                .usuario(externo)
                 .build();
 
         when(usuarioActual.obtener()).thenReturn(socio);

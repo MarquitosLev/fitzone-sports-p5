@@ -45,8 +45,9 @@ public class ReservaCancha extends BaseEntity {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Cancha cancha;
 
+    // Nulo en la reserva del cliente externo: no se lo guarda como usuario, sus datos quedan en el comprobante (ADR-018)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_usuario", nullable = false, foreignKey = @ForeignKey(name = "fk_cch_reservas_usuarios"))
+    @JoinColumn(name = "id_usuario", foreignKey = @ForeignKey(name = "fk_cch_reservas_usuarios"))
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Usuario usuario;
 

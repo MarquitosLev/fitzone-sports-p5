@@ -124,7 +124,7 @@ Cálculo del precio:
 
 Ejemplo: cancha de $10.000/h, de 19 a 20 h, socio activo: 10.000 − 1.500 + 2.000 = **$10.500**. Un socio con la membresía vencida puede reservar igual, pero paga como cliente externo: **$12.000**.
 
-**Cliente externo (sin cuenta):** entra a *Canchas* sin iniciar sesión, elige cancha y turno, carga sus datos y paga. Recibe un código de reserva para consultarla y descargar el comprobante.
+**Cliente externo (sin cuenta):** entra a *Canchas* sin iniciar sesión, elige cancha y turno, y carga nombre, apellido, DNI y email. Desde ese momento el turno se le guarda **5 minutos** en su navegador, con una cuenta regresiva: si no paga a tiempo, la ventana se cierra y se borra lo cargado. La reserva y el pago son un solo paso: si el pago se rechaza no queda nada reservado y puede reintentar mientras dure el tiempo; si otra persona pagó ese turno antes, se avisa sin cobrar. Con el pago aprobado recibe el código de reserva y descarga el comprobante, que es el único lugar donde quedan sus datos: FitZone no lo registra como usuario.
 
 ![Canchas sin sesión](img/00-canchas-publico.png)
 

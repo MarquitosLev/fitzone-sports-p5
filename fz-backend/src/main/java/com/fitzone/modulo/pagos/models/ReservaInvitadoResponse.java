@@ -21,9 +21,10 @@ public record ReservaInvitadoResponse(
         LocalDateTime fechaHoraFin,
         BigDecimal precioFinal,
         CotizacionDTO cotizacion,
-        boolean pagada) {
+        boolean pagada,
+        String numeroFactura) {
 
-    public static ReservaInvitadoResponse desde(ReservaCancha reserva, CotizacionDTO cotizacion, boolean pagada) {
+    public static ReservaInvitadoResponse desde(ReservaCancha reserva, CotizacionDTO cotizacion, Comprobante comprobante) {
         Cancha cancha = reserva.getCancha();
         boolean explicaElPrecio = cotizacion != null
                 && cotizacion.getPrecioFinal().compareTo(reserva.getPrecioFinal()) == 0;
@@ -39,6 +40,7 @@ public record ReservaInvitadoResponse(
                 reserva.getFechaHoraFin(),
                 reserva.getPrecioFinal(),
                 explicaElPrecio ? cotizacion : null,
-                pagada);
+                comprobante != null,
+                comprobante != null ? comprobante.getNumeroFactura() : null);
     }
 }

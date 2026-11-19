@@ -37,10 +37,14 @@ export function UsuarioForm({
   const { usuario: operador } = useAuth();
   const sedesList = sedesDisponibles || sedesContexto || [];
   const esGerente = !operador || operador.tipoUsuario === 'GERENTE';
-  const rolesDelCatalogo: SelectOption[] = listarRoles().map((r) => ({
-    value: r.codigo,
-    label: `${r.nombre} (${r.codigo})`,
-  }));
+  // El cliente externo no se da de alta: reserva como invitado y sus datos quedan en el comprobante (ADR-018).
+  // Se sigue mostrando al editar los EXTERNO anteriores al cambio.
+  const rolesDelCatalogo: SelectOption[] = listarRoles()
+    .filter((r) => modo !== 'alta' || r.codigo !== 'EXTERNO')
+    .map((r) => ({
+      value: r.codigo,
+      label: `${r.nombre} (${r.codigo})`,
+    }));
   const rolesDisponibles = esGerente
     ? rolesDelCatalogo
     : rolesDelCatalogo.filter((r) => r.value === 'SOCIO' || r.value === 'EXTERNO');

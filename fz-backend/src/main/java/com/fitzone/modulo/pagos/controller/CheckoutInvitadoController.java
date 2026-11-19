@@ -1,7 +1,5 @@
 package com.fitzone.modulo.pagos.controller;
 
-import com.fitzone.modulo.pagos.models.PagoInvitadoRequest;
-import com.fitzone.modulo.pagos.models.PagoInvitadoResponse;
 import com.fitzone.modulo.pagos.models.ReservaInvitadoRequest;
 import com.fitzone.modulo.pagos.models.ReservaInvitadoResponse;
 import com.fitzone.modulo.pagos.service.CheckoutInvitadoService;
@@ -33,24 +31,15 @@ public class CheckoutInvitadoController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Reserva de un turno como invitado; devuelve el código para pagar y descargar el comprobante")
-    public ReservaInvitadoResponse reservar(@Valid @RequestBody ReservaInvitadoRequest request) {
-        return checkoutInvitadoService.reservar(request);
+    @Operation(summary = "Reserva y pago de un turno como invitado en un paso; si el pago se rechaza no queda nada guardado")
+    public ReservaInvitadoResponse reservarYPagar(@Valid @RequestBody ReservaInvitadoRequest request) {
+        return checkoutInvitadoService.reservarYPagar(request);
     }
 
     @GetMapping("/{codigo}")
     @Operation(summary = "Detalle de la reserva de invitado por su código")
     public ReservaInvitadoResponse obtener(@PathVariable UUID codigo) {
         return checkoutInvitadoService.obtener(codigo);
-    }
-
-    @PostMapping("/{codigo}/pago")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Pago simulado de la reserva de invitado, siempre sin descuento")
-    public PagoInvitadoResponse pagar(@PathVariable UUID codigo,
-                                      @RequestBody(required = false) PagoInvitadoRequest request) {
-        boolean forzarRechazo = request != null && Boolean.TRUE.equals(request.getForzarRechazo());
-        return checkoutInvitadoService.pagar(codigo, forzarRechazo);
     }
 
     @GetMapping(value = "/{codigo}/comprobante/pdf", produces = MediaType.APPLICATION_PDF_VALUE)

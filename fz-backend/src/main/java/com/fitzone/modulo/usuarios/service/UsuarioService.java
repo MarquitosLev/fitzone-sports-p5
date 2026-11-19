@@ -77,6 +77,10 @@ public class UsuarioService {
 
     @Transactional
     public Usuario crear(Usuario usuario, Long idOperador) {
+        // El cliente externo no se registra: sus datos quedan solo en el comprobante de su reserva (ADR-018)
+        if (usuario.getTipoUsuario() == TipoUsuario.EXTERNO) {
+            throw new ReglaNegocioException("El cliente externo no se registra: reserva como invitado desde la web");
+        }
         validarOperadorParaCreacion(exigirOperador(idOperador), usuario.getTipoUsuario());
 
         String dniLimpio = usuario.getDni() != null ? usuario.getDni().trim() : "";
@@ -97,11 +101,6 @@ public class UsuarioService {
             validarReglaSede(usuario.getTipoUsuario(), usuario.getIdSede());
         }
 
-        // Flujo EXTERNO (checkout de invitado): no posee cuenta en Supabase Auth
-        if (usuario.getTipoUsuario() == TipoUsuario.EXTERNO) {
-            usuario.setAuthId(null);
-            return usuarioRepository.save(usuario);
-        }
 
         // Flujo para SOCIO, RECEPCIONISTA y GERENTE: creación en Supabase Auth
         UUID authId;

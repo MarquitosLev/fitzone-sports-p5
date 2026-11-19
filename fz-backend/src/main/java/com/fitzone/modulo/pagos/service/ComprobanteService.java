@@ -129,10 +129,12 @@ public class ComprobanteService {
             tablaDatos.setSpacingAfter(20);
 
             Usuario usuario = transaccion.getUsuario();
+            // El cliente externo no es usuario: sus datos están en el propio comprobante (ADR-018)
             String nombreSocio = (usuario != null)
                     ? (usuario.getNombre() + " " + usuario.getApellido())
-                    : "Socio no especificado";
-            String dniSocio = (usuario != null && usuario.getDni() != null) ? usuario.getDni() : "-";
+                    : (comprobante.getClienteNombre() != null ? comprobante.getClienteNombre() : "Socio no especificado");
+            String dniSocio = (usuario != null && usuario.getDni() != null) ? usuario.getDni()
+                    : (comprobante.getClienteDni() != null ? comprobante.getClienteDni() : "-");
             String sedeNombre = (transaccion.getSede() != null) ? transaccion.getSede().getNombre() : "-";
             String fechaEmision = (transaccion.getFechaHoraConfirmacion() != null)
                     ? transaccion.getFechaHoraConfirmacion().format(DATE_TIME_FORMATTER)

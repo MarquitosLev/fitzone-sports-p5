@@ -1,6 +1,6 @@
 # ADR-012 — La transacción apunta a la reserva, no la reserva a la transacción
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado. Para la reserva del cliente externo lo modifica [ADR-018](ADR-018-cliente-externo-sin-registro.md)
 - **Fecha:** 2026-09-14
 - **Registrado:** 2026-11-10
 - **Autor:** Equipo Grupo 5 (equipo de DER; registrado originalmente como "ADR-004" en el documento del Drive)
