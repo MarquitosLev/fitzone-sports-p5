@@ -1,4 +1,4 @@
-# ADR-007 — Pirámide de pruebas unitarias y de slice, con umbral de cobertura del 60 %
+# ADR-008 — Pirámide de pruebas unitarias y de slice, con umbral de cobertura del 60 %
 
 - **Estado:** Aceptado
 - **Fecha:** 2026-11-10

@@ -19,6 +19,11 @@ El sistema combina tablas operativas de mucho volumen (reservas, transacciones, 
 ## Decisión
 Usar UUID como clave primaria por defecto, con la única excepción de `fz_pag_planes`.
 
+## Consecuencias
+- **Positivas:** los identificadores no se podían adivinar ni recorrer cambiando un número en la URL.
+- **Negativas:** claves más pesadas y menos legibles al depurar, y una convención distinta para `fz_pag_planes`.
+- **Deuda asumida:** ninguna, porque la decisión no llegó a implementarse: la reemplazó ADR-016 al construir las entidades.
+
 ## Por qué se reemplazó
 Al implementar las entidades, el equipo usó `Long` con `GenerationType.IDENTITY` en todas las tablas, que es la convención más directa con Spring Data JPA y la más fácil de depurar con los datos de prueba. El riesgo de enumeración se resolvió donde de verdad había un recurso semipúblico: la reserva de cancha como invitado se consulta por `codigo_reserva` (UUID), no por su id (SCRUM-134). La convención vigente se registra en el ADR-016.
 

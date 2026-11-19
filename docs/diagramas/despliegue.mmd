@@ -2,7 +2,7 @@
 title: Despliegue — FitZone Sports (v1.1, 2026-11-19, Leiva)
 ---
 %% Diagrama de despliegue — FitZone Sports
-%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-19 · Versión: 1.1 (modo offline, ADR-020; publicación desde main)
+%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-19 · Versión: 1.1 (modo offline, ADR-007; publicación desde main)
 flowchart LR
   subgraph sede["Sede (x 25+)"]
     terminal["Terminal de recepción<br/>navegador web"]
@@ -44,7 +44,7 @@ flowchart LR
 
   terminal --- almacen
   navegador --- clave
-  caida["Caída de la conexión principal (ADR-020):<br/>el celular sigue firmando el QR y el terminal<br/>lo valida con la lista local y encola el ingreso.<br/>Al reconectar sincroniza y el servidor revalida RN-01."]
+  caida["Caída de la conexión principal (ADR-007):<br/>el celular sigue firmando el QR y el terminal<br/>lo valida con la lista local y encola el ingreso.<br/>Al reconectar sincroniza y el servidor revalida RN-01."]
   terminal -. sin conexión .-> caida
 
   classDef offline fill:#eafaf1,stroke:#1e8449,color:#145a32

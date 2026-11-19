@@ -84,7 +84,7 @@ Los carga la semilla al arrancar el backend. Todos usan la contraseña `password
 | Backend (JUnit 5 + Mockito, JaCoCo) | 357 en verde | 73,8 % de líneas · 72,8 % de instrucciones · 57,4 % de ramas |
 | Frontend (Vitest + Testing Library, V8) | 483 en verde | 72,7 % de líneas · 70,1 % de sentencias · 67,2 % de ramas |
 
-El umbral declarado es 60 % de líneas en cada proyecto ([ADR-007](docs/adr/ADR-007-estrategia-de-pruebas.md)). Para correr la suite y generar los reportes:
+El umbral declarado es 60 % de líneas en cada proyecto ([ADR-008](docs/adr/ADR-008-estrategia-de-pruebas.md)). Para correr la suite y generar los reportes:
 
 ```bash
 cd fz-backend && ./mvnw verify       # pruebas + reporte JaCoCo en target/site/jacoco/

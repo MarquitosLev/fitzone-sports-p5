@@ -2,13 +2,13 @@
 title: C4-3 Componentes — Acceso (v1.1, 2026-11-19, Leiva)
 ---
 %% C4-3 Componentes — Módulo Gimnasio y Acceso (M2)
-%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-19 · Versión: 1.1 (camino offline, ADR-020)
+%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-19 · Versión: 1.1 (camino offline, ADR-007)
 %% Notación C4 sobre flowchart: azul = contenedor, celeste = componente, verde = camino offline (RNF-01).
 flowchart TB
   socioApp["<b>Aplicación web — Mi Pase QR</b><br/>[Contenedor: React, qrcode.react]<br/>Muestra el QR del socio y lo renueva cada 60 s"]
   pase["<b>paseOffline</b><br/>[Componente: WebCrypto ECDSA P-256, IndexedDB]<br/>Firma el QR F2 de cada minuto en el celular,<br/>sin servidor; la clave privada no sale del dispositivo"]
   recepApp["<b>Aplicación web — Recepción</b><br/>[Contenedor: React]<br/>Lee el QR, registra ingreso y egreso, muestra aforo"]
-  subgraph offline["Terminal de sede sin conexión (RNF-01, ADR-020)"]
+  subgraph offline["Terminal de sede sin conexión (RNF-01, ADR-007)"]
     con["<b>conectividad</b><br/>[Componente: circuit breaker]<br/>Solo una falla de transporte activa el modo offline"]
     tloc["<b>terminalLocal</b><br/>[Componente: localStorage]<br/>Lista de habilitados (refresco 5 min, vale 24 h);<br/>verifica la firma con la clave pública, RN-01 y aforo"]
     cola["<b>colaIngresos</b><br/>[Componente: patrón Outbox, localStorage]<br/>Ingresos provisorios; lotes de 50 al reconectar"]

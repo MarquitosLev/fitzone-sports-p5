@@ -51,7 +51,7 @@ La web queda en `http://localhost:5173`. Con `VITE_USE_MOCK=true` funciona sin b
 
 ## 3. Puesta en marcha en producción
 
-El despliegue de referencia (ADR-008) es:
+El despliegue de referencia (ADR-009) es:
 
 | Componente | Servicio | Configuración |
 |---|---|---|
@@ -119,7 +119,7 @@ Frontend (se incrustan en el build y son públicas: nunca poner secretos):
 
 ## 6. Despliegue y reversión
 
-Estrategia (ADR-008): despliegue continuo por rama. Cada push a la rama configurada redespliega Render y Vercel. Vercel además genera una preview por rama.
+Estrategia (ADR-009): despliegue continuo por rama. Cada push a la rama configurada redespliega Render y Vercel. Vercel además genera una preview por rama.
 
 El pipeline de [.github/workflows/ci.yml](../../.github/workflows/ci.yml) corre en cada PR y push a `develop`: `./mvnw -B verify` en el backend y `npm ci`, `npm run coverage` y `npm run build` en el frontend. El merge a `develop` se hace con el pipeline en verde.
 
@@ -153,7 +153,7 @@ Supabase hace además respaldos diarios en su plan, que se restauran desde su pa
 
 ## 8. Operación degradada
 
-**Estado actual:** el control de acceso sigue funcionando sin conexión (ADR-020). El terminal de sede valida con una lista local de habilitados y guarda una cola de ingresos que se sincroniza al reconectar; el celular del socio firma el QR sin servidor.
+**Estado actual:** el control de acceso sigue funcionando sin conexión (ADR-007). El terminal de sede valida con una lista local de habilitados y guarda una cola de ingresos que se sincroniza al reconectar; el celular del socio firma el QR sin servidor.
 
 | Falla | Efecto | Qué hacer |
 |---|---|---|

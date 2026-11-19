@@ -20,8 +20,8 @@ Además: autenticación con Supabase Auth y permisos por rol, aislamiento por se
 
 | Qué queda afuera | Por qué | Referencia |
 |---|---|---|
-| App móvil nativa del socio | Un tercer cliente no entraba en el plazo; el QR sin conexión se resolvió en la web con firma en el dispositivo | SCRUM-113, ADR-003, ADR-020 |
-| Pasarela de pago real | El caso pide un pago simulado; no se guardan datos de tarjeta | ADR-009 |
+| App móvil nativa del socio | Un tercer cliente no entraba en el plazo; el QR sin conexión se resolvió en la web con firma en el dispositivo | SCRUM-113, ADR-003, ADR-007 |
+| Pasarela de pago real | El caso pide un pago simulado; no se guardan datos de tarjeta | ADR-010 |
 | Instructor asignado a cada clase | Se priorizó la integración de los módulos | SCRUM-114 |
 | Índices de disponibilidad y restricción `EXCLUDE` en la base | La no sobreventa se garantiza con bloqueo pesimista en el servicio | SCRUM-115, ADR-004 |
 | Migraciones automáticas con Flyway | El esquema lo genera JPA y los cambios en producción van con scripts SQL versionados | SCRUM-133, ADR-016 |
@@ -208,10 +208,10 @@ El equipo no llevó un registro formal durante el cuatrimestre: los riesgos se d
 | Riesgo | Prob. | Impacto | Mitigación prevista | Qué ocurrió |
 | :--- | :--- | :--- | :--- | :--- |
 | R1. La concurrencia en la reserva de canchas (RN-02) se resuelve tarde y aparece en integración (ADR-004, SCRUM-75, 10/10) | Media | Alto | Bloqueo pesimista sobre la cancha en el servicio desde el sprint 5, no al final | **Mitigado en parte.** El bloqueo y la verificación de solapamiento quedaron en el sprint 5. No se agregó la restricción `EXCLUDE` en la base (SCRUM-115) ni una prueba con dos transacciones reales |
-| R2. El acceso sin conexión (RNF-01) es demasiado costoso para el plazo (ADR-003, 10/11) | Alta | Alto | Documentarlo como deuda y priorizar el resto | **Se materializó y se absorbió tarde.** Se descartó el 10/11 y se implementó en la web entre el 14 y el 17/11 (SCRUM-139, ADR-020), sin app móvil |
+| R2. El acceso sin conexión (RNF-01) es demasiado costoso para el plazo (ADR-003, 10/11) | Alta | Alto | Documentarlo como deuda y priorizar el resto | **Se materializó y se absorbió tarde.** Se descartó el 10/11 y se implementó en la web entre el 14 y el 17/11 (SCRUM-139, ADR-007), sin app móvil |
 | R3. La integración del frontend con la API real se atrasa porque cada lado avanza con datos simulados (objetivo del sprint 6, 19/10) | Alta | Alto | Un sprint completo de integración y pruebas de punta a punta al final | **Se materializó.** El sprint 6 cerró 4 días tarde y las pruebas de punta a punta generaron 15 tarjetas de corrección; hubo que quitar mocks que seguían en la interfaz (SCRUM-117) |
 | R4. Conflictos de merge por ramas largas que tocan los mismos archivos (bitácora de Bravo, 21/10) | Alta | Medio | Traer `develop` a la rama antes del PR y revisar cada PR | **Se materializó varias veces** (21/10, 08/11, 18 y 19/11), incluida una rama con marcadores de conflicto commiteados. Se resolvió con merges y revisión cruzada |
-| R5. Depender de Supabase Auth para iniciar sesión (ADR-010, SCRUM-91, 22/10) | Media | Alto | Validar el JWT con las claves públicas de Supabase y dejar un seed con usuarios de prueba | **Se materializó en parte.** Los usuarios del seed no podían entrar sin ajustar el `auth_id` (SCRUM-130); en local hace falta la clave de servicio |
+| R5. Depender de Supabase Auth para iniciar sesión (ADR-020, SCRUM-91, 22/10) | Media | Alto | Validar el JWT con las claves públicas de Supabase y dejar un seed con usuarios de prueba | **Se materializó en parte.** Los usuarios del seed no podían entrar sin ajustar el `auth_id` (SCRUM-130); en local hace falta la clave de servicio |
 | R6. Un integrante concentra la carga y otros quedan con poco trabajo (sprint 4) | Alta | Medio | Repartir tarjetas por módulo entre back y front al planificar | **Se materializó y no se corrigió.** Tres integrantes tuvieron el 76 % de los puntos |
 | R7. La entrega del 19/11 recorta el sprint de cierre (lineamientos, punto 2.2) | Alta | Alto | Manuales y bitácoras en el tramo del 9 al 15/11; la última semana, para defectos | **Se materializó.** Manuales, ADR y diagramas se escribieron el 10 y 11/11, pero el acceso offline, los ajustes finales, los UML y la planificación se hicieron del 16 al 19/11 |
 | R8. Cambios de esquema en producción sin migraciones automáticas (ADR-016, SCRUM-133, 06/11) | Media | Medio | Scripts SQL versionados en `docs/sql/` y aplicados antes de desplegar | **Se materializó.** Flyway quedó en el backlog y hubo que correr scripts a mano (SCRUM-137, clave del QR y cliente externo) |

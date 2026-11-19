@@ -7,7 +7,7 @@ Describe el código de la rama `develop` al 2026-11-10. Lo que no está implemen
 
 ## 1. Visión arquitectónica
 
-FitZone Sports es un **monolito modular** (ADR-001): una API Spring Boot organizada en cinco módulos funcionales, una SPA en React y una base PostgreSQL compartida. La autenticación se delega en Supabase Auth (ADR-010) y la autorización la decide el backend.
+FitZone Sports es un **monolito modular** (ADR-001): una API Spring Boot organizada en cinco módulos funcionales, una SPA en React y una base PostgreSQL compartida. La autenticación se delega en Supabase Auth (ADR-020) y la autorización la decide el backend.
 
 Diagramas C4, con fuente editable en [docs/diagramas](../diagramas/README.md):
 
@@ -21,7 +21,7 @@ Diagramas C4, con fuente editable en [docs/diagramas](../diagramas/README.md):
 | Despliegue | [despliegue](../diagramas/despliegue.svg) |
 | Pipeline | [pipeline-ci-cd](../diagramas/pipeline-ci-cd.svg) |
 
-Decisiones de arquitectura: ver el índice de [docs/adr](../adr/README.md). Las nueve que pide la cátedra son ADR-001 a ADR-009; ADR-010 a ADR-017 registran decisiones del equipo, tres de ellas reemplazadas.
+Decisiones de arquitectura: ver el índice de [docs/adr](../adr/README.md). Las diez que pide la cátedra son ADR-001 a ADR-010; ADR-011 a ADR-020 registran decisiones del equipo, tres de ellas reemplazadas.
 
 ## 2. Módulos funcionales
 
@@ -95,7 +95,7 @@ Cada entidad tiene una interfaz `JpaRepository` en `modulo/*/repository`. Las co
 |---|---|
 | Builder | Lombok `@Builder` en `ContextoPrecio`, `CotizacionDTO` y modelos de respuesta |
 | Singleton | Todos los `@Service`, `@Component` y `@Repository`: Spring crea una instancia por contenedor |
-| Adapter (puerto y adaptador) | `PasarelaPago` es el puerto del módulo de pagos; `PasarelaMock` lo implementa. Integrar Mercado Pago es agregar otra implementación (ADR-009). `SupabaseAuthClient` adapta la API REST de Supabase Auth |
+| Adapter (puerto y adaptador) | `PasarelaPago` es el puerto del módulo de pagos; `PasarelaMock` lo implementa. Integrar Mercado Pago es agregar otra implementación (ADR-010). `SupabaseAuthClient` adapta la API REST de Supabase Auth |
 | Facade | Los servicios de cada módulo exponen operaciones de negocio completas y ocultan repositorios, bloqueos y eventos al controlador |
 | Template de errores | `GlobalExceptionHandler` traduce la jerarquía `NegocioException` a `RespuestaError` con código HTTP y `CodigoError` |
 
@@ -113,11 +113,11 @@ Mecanismo común (ADR-004): **verificar y bloquear en la misma transacción** co
 
 Dos pedidos simultáneos por el mismo turno se serializan en la fila de la cancha: el segundo espera, ve la reserva del primero y recibe `409 Conflicto`.
 
-Limitaciones: la garantía vive en la aplicación. Un `INSERT` que no pase por el servicio puede solapar reservas, porque falta la restricción `EXCLUDE USING gist` en `fz_cch_reservas`. Los tests mockean el bloqueo; no hay un test de concurrencia contra una base real (deuda en ADR-007).
+Limitaciones: la garantía vive en la aplicación. Un `INSERT` que no pase por el servicio puede solapar reservas, porque falta la restricción `EXCLUDE USING gist` en `fz_cch_reservas`. Los tests mockean el bloqueo; no hay un test de concurrencia contra una base real (deuda en ADR-008).
 
 ## 6. Arquitectura offline del control de acceso
 
-Implementada en los PR #102 y #103 (ADR-020, que reemplaza a ADR-003). Diagrama: [c4-3-componentes-acceso](../diagramas/c4-3-componentes-acceso.svg), recuadro verde.
+Implementada en los PR #102 y #103 (ADR-007, que reemplaza a ADR-003). Diagrama: [c4-3-componentes-acceso](../diagramas/c4-3-componentes-acceso.svg), recuadro verde.
 
 **Flujo en línea** (sin cambios): la recepción envía el token a `POST /v1/accesos/ingreso`. El backend verifica firma y ventana, rechaza un QR ya usado, valida membresía, RN-01 y aforo con bloqueo pesimista, y registra el acceso.
 
@@ -178,7 +178,7 @@ public class DescuentoMartesEstrategia implements EstrategiaPrecio {
 
 ## 8. Pruebas y cobertura
 
-Estrategia en ADR-007: tests unitarios (servicios con Mockito; componentes, hooks y servicios del frontend con Vitest y Testing Library), tests de slice de controladores (`@WebMvcTest` + `GlobalExceptionHandler`) y recorridos manuales con Bruno (`docs/bruno/`).
+Estrategia en ADR-008: tests unitarios (servicios con Mockito; componentes, hooks y servicios del frontend con Vitest y Testing Library), tests de slice de controladores (`@WebMvcTest` + `GlobalExceptionHandler`) y recorridos manuales con Bruno (`docs/bruno/`).
 
 ```bash
 cd fz-backend && ./mvnw verify          # tests + reporte JaCoCo
@@ -201,7 +201,7 @@ Medición del 2026-11-19, sobre `main`: backend 357 tests, 73,8 % de líneas y 5
 2. Backend: JDK 21 y `./mvnw -B verify` (compila, corre tests, genera JaCoCo).
 3. Frontend: Node, `npm ci`, `npm run coverage` y `npm run build` (incluye el chequeo de tipos de `tsc`).
 4. Publica los reportes de cobertura como artefactos del workflow.
-5. Entrega: Render y Vercel despliegan solos al recibir el push en la rama configurada (ADR-008).
+5. Entrega: Render y Vercel despliegan solos al recibir el push en la rama configurada (ADR-009).
 
 ## 10. Convenciones
 

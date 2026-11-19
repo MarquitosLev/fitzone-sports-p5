@@ -1,6 +1,6 @@
 # ADR-003 — Control de acceso en línea, sin modo offline
 
-- **Estado:** Reemplazado por [ADR-020](ADR-020-acceso-offline-qr-firmado.md) (2026-11-19)
+- **Estado:** Reemplazado por [ADR-007](ADR-007-acceso-offline-qr-firmado.md) (2026-11-19)
 - **Fecha:** 2026-11-10
 - **Autor:** Leiva, Marcos Joel
 - **Sprint:** 7

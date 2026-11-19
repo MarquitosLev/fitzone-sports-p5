@@ -4,8 +4,8 @@ Cada RNF de la especificación de la cátedra con dónde se cumple en el código
 
 | RNF | Tema | Estado | Decisión |
 |---|---|---|---|
-| [RNF-01](#rnf-01--disponibilidad-acceso-sin-conexión) | Disponibilidad: el acceso funciona sin la conexión principal | Cumple | [ADR-020](../adr/ADR-020-acceso-offline-qr-firmado.md) |
-| [RNF-02](#rnf-02--seguridad-sin-datos-de-tarjeta) | Seguridad: no se guardan datos de tarjeta | Cumple | [ADR-009](../adr/ADR-009-medios-de-pago.md) |
+| [RNF-01](#rnf-01--disponibilidad-acceso-sin-conexión) | Disponibilidad: el acceso funciona sin la conexión principal | Cumple | [ADR-007](../adr/ADR-007-acceso-offline-qr-firmado.md) |
+| [RNF-02](#rnf-02--seguridad-sin-datos-de-tarjeta) | Seguridad: no se guardan datos de tarjeta | Cumple | [ADR-010](../adr/ADR-010-medios-de-pago.md) |
 | [RNF-03](#rnf-03--rendimiento-disponibilidad-de-canchas) | Rendimiento: disponibilidad de canchas en milisegundos | Parcial | [ADR-004](../adr/ADR-004-concurrencia-reserva-canchas.md), [ADR-016](../adr/ADR-016-esquema-generado-por-jpa.md) |
 | [RNF-04](#rnf-04--escalabilidad-nueva-sede-sin-detener-el-sistema) | Escalabilidad: nueva sede sin detener el sistema | Cumple | [ADR-001](../adr/ADR-001-monolito-modular.md), [ADR-015](../adr/ADR-015-aislamiento-por-sede-en-servicios.md) |
 

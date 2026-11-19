@@ -1,4 +1,4 @@
-# ADR-010 — Autenticación delegada en Supabase Auth, autorización en el backend
+# ADR-020 — Autenticación delegada en Supabase Auth, autorización en el backend
 
 - **Estado:** Aceptado
 - **Fecha:** 2026-09-06

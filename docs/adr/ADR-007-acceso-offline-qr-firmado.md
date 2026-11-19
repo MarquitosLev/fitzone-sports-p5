@@ -1,4 +1,4 @@
-# ADR-020 — Control de acceso sin conexión: QR firmado en el dispositivo y terminal con cola de ingresos
+# ADR-007 — Control de acceso sin conexión: QR firmado en el dispositivo y terminal con cola de ingresos
 
 - **Estado:** Aceptado (reemplaza a ADR-003)
 - **Fecha:** 2026-11-19

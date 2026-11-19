@@ -23,7 +23,7 @@ Los siete UML describen el código de `main` al 2026-11-19. Se exportaron con Me
 
 ## Notación
 
-Los C4 están dibujados como `flowchart` de Mermaid con los colores de la notación C4: azul oscuro para personas, azul para el sistema y sus contenedores, celeste para componentes y gris para sistemas externos. Se eligió así porque el renderizador C4 nativo de Mermaid superpone las etiquetas de las relaciones. En el C4-3 de Acceso, el recuadro verde punteado marca el camino offline del terminal de sede que cumple RNF-01 (ADR-020, que reemplaza a ADR-003).
+Los C4 están dibujados como `flowchart` de Mermaid con los colores de la notación C4: azul oscuro para personas, azul para el sistema y sus contenedores, celeste para componentes y gris para sistemas externos. Se eligió así porque el renderizador C4 nativo de Mermaid superpone las etiquetas de las relaciones. En el C4-3 de Acceso, el recuadro verde punteado marca el camino offline del terminal de sede que cumple RNF-01 (ADR-007, que reemplaza a ADR-003).
 
 ## Qué refleja cada uno
 

@@ -103,7 +103,7 @@ def html_dossier(valores: dict) -> str:
         partes.append(f"<div class='adr'>{md(bajar_titulos(leer(adr)))}</div>")
 
     partes.append("<h1>4. Modelado</h1>")
-    partes.append(md("El DER es el esquema que genera Hibernate (ADR-016). El diagrama de despliegue muestra qué sigue funcionando ante una caída de la conexión principal (ADR-020)."))
+    partes.append(md("El DER es el esquema que genera Hibernate (ADR-016). El diagrama de despliegue muestra qué sigue funcionando ante una caída de la conexión principal (ADR-007)."))
     for nombre, titulo in [("der-fisico", "Diagrama entidad-relación (físico)"), ("despliegue", "Diagrama de despliegue"),
                            ("pipeline-ci-cd", "Arquitectura del pipeline CI/CD")]:
         partes.append(diagrama(nombre, titulo))
@@ -113,7 +113,7 @@ def html_dossier(valores: dict) -> str:
 
     partes.append("<h1>6. Estrategia de pruebas y cobertura</h1>")
     partes.append(md(bajar_titulos(seccion_manual("## 8. Pruebas y cobertura", "## 9. "), -1)))
-    partes.append(md("Decisión y umbral: ADR-007 (sección 3). Los reportes completos se publican como artefactos en cada ejecución del pipeline."))
+    partes.append(md("Decisión y umbral: ADR-008 (sección 3). Los reportes completos se publican como artefactos en cada ejecución del pipeline."))
 
     partes.append("<h1>7. Cumplimiento de los requisitos no funcionales</h1>")
     partes.append(md(bajar_titulos(leer(DOCS / "rnf" / "README.md").split("\n", 1)[1])))
