@@ -211,6 +211,76 @@ class UsuarioServiceTest {
     }
 
     @Test
+    @DisplayName("Gerente central da de alta un GERENTE sin sede: queda como gerente central")
+    void crear_gerenteSinSede_porGerenteCentral_exitoso() {
+        Usuario gerenteCentral = Usuario.builder()
+                .idUsuario(5L)
+                .tipoUsuario(TipoUsuario.GERENTE)
+                .build();
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(gerenteCentral));
+        when(usuarioRepository.existsByDni("88888888")).thenReturn(false);
+        when(supabaseAuthClient.isAltaPorEmail()).thenReturn(true);
+        when(supabaseAuthClient.invitarUsuario(eq("central@fitzone.com"), anyMap())).thenReturn(UUID.randomUUID());
+        when(usuarioRepository.saveAndFlush(any(Usuario.class))).thenAnswer(i -> i.getArgument(0));
+
+        Usuario nuevoGerente = Usuario.builder()
+                .dni("88888888")
+                .nombre("Gerente")
+                .apellido("Central")
+                .email("central@fitzone.com")
+                .tipoUsuario(TipoUsuario.GERENTE)
+                .build();
+
+        Usuario creado = usuarioService.crear(nuevoGerente, 5L);
+
+        assertThat(creado.getIdSede()).isNull();
+        verify(sedeRepository, never()).existsById(any());
+    }
+
+    @Test
+    @DisplayName("Gerente de sede no puede dar de alta un GERENTE sin sede (403) y no crea la cuenta")
+    void crear_gerenteSinSede_porGerenteDeSede_lanzaAccesoDenegado() {
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(operadorGerente));
+        when(usuarioRepository.existsByDni("88888888")).thenReturn(false);
+
+        Usuario nuevoGerente = Usuario.builder()
+                .dni("88888888")
+                .nombre("Gerente")
+                .apellido("Central")
+                .email("central@fitzone.com")
+                .tipoUsuario(TipoUsuario.GERENTE)
+                .build();
+
+        assertThatThrownBy(() -> usuarioService.crear(nuevoGerente, 2L))
+                .isInstanceOf(AccesoDenegadoException.class)
+                .hasMessageContaining("gerente central");
+        verifyNoInteractions(supabaseAuthClient);
+    }
+
+    @Test
+    @DisplayName("Gerente central pasa a un gerente de sede a central al editarlo sin sede")
+    void actualizar_gerenteASinSede_porGerenteCentral_quedaSinSede() {
+        Usuario gerenteCentral = Usuario.builder()
+                .idUsuario(5L)
+                .tipoUsuario(TipoUsuario.GERENTE)
+                .build();
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(gerenteCentral));
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(operadorGerente));
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(i -> i.getArgument(0));
+
+        Usuario datos = Usuario.builder()
+                .nombre("Carlos")
+                .apellido("Gerente")
+                .email("carlos@fitzone.com")
+                .tipoUsuario(TipoUsuario.GERENTE)
+                .build();
+
+        Usuario actualizado = usuarioService.actualizar(2L, datos, 5L);
+
+        assertThat(actualizado.getIdSede()).isNull();
+    }
+
+    @Test
     @DisplayName("RECEPCIONISTA sin sede asignada lanza ReglaNegocioException (422)")
     void crear_recepcionistaSinSede_lanzaReglaNegocio() {
         when(usuarioRepository.findById(2L)).thenReturn(Optional.of(operadorGerente));
