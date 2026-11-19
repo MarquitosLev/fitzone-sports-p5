@@ -55,7 +55,8 @@ Los carga la semilla al arrancar el backend con el perfil `local`. Detalle y cas
 | Tema | Dónde |
 | :-- | :-- |
 | Decisiones de arquitectura (ADR-001 a ADR-020) | [docs/adr/](docs/adr/README.md) |
-| Diagramas C4, DER, despliegue y pipeline (fuente `.mmd` + `.svg`) | [docs/diagramas/](docs/diagramas/README.md) |
+| Diagramas C4, UML, DER, despliegue y pipeline (fuente `.mmd` + `.svg`) | [docs/diagramas/](docs/diagramas/README.md) |
+| Planificación: plan, cronograma, trazabilidad, seguimiento, riesgos y tablero | [docs/planificacion/](docs/planificacion/README.md) |
 | Manual de usuario, por rol | [docs/manuales/manual-usuario.md](docs/manuales/manual-usuario.md) |
 | Manual de instalación y operación | [docs/manuales/manual-instalacion-operacion.md](docs/manuales/manual-instalacion-operacion.md) |
 | Manual técnico | [docs/manuales/manual-tecnico.md](docs/manuales/manual-tecnico.md) |
