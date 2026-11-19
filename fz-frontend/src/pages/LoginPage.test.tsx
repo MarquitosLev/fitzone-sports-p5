@@ -97,4 +97,25 @@ describe('SCRUM-89: LoginPage Component & Role Redirection', () => {
     expect(await screen.findByText(/error de inicio de sesión/i)).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
+
+  // SCRUM-142: el logo y el enlace de texto deben llevar al inicio público sin sesión
+  it('SCRUM-142: el logo y el enlace de texto apuntan a /canchas para usuarios sin sesión', () => {
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <AuthProvider>
+          <LoginPage />
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    // El logo/marca debe ser un enlace accesible que apunte a /canchas
+    const logoLink = screen.getByRole('link', { name: /ir al inicio/i });
+    expect(logoLink).toBeInTheDocument();
+    expect(logoLink).toHaveAttribute('href', '/canchas');
+
+    // El enlace de texto explícito para invitados también debe existir y apuntar a /canchas
+    const enlaceInvitado = screen.getByRole('link', { name: /continuar sin iniciar sesión/i });
+    expect(enlaceInvitado).toBeInTheDocument();
+    expect(enlaceInvitado).toHaveAttribute('href', '/canchas');
+  });
 });

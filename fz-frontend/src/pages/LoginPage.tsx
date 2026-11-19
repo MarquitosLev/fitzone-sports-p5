@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LoginForm } from '../components/auth';
 import { INICIO_POR_ROL } from '../components/layout/navegacion';
@@ -47,26 +47,32 @@ export function LoginPage() {
 
       {/* Tarjeta de Login */}
       <div className="w-full max-w-[460px] bg-white rounded-3xl p-6 sm:p-10 shadow-2xl relative z-10 border border-white/20">
-        {/* Cabecera de Marca FitZone Sports */}
+        {/* Cabecera de Marca FitZone Sports — también sirve de enlace al inicio público */}
         <div className="flex flex-col items-center gap-2 text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-fitzone-navy flex items-center justify-center shadow-md">
-            <svg width="32" height="32" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-              <rect width="64" height="64" rx="16" fill="#1B2A55" />
-              <path
-                d="M19.5 17H44.5C45.9 17 47 18.1 47 19.5V44.5C47 45.9 45.9 47 44.5 47H19.5C18.1 47 17 45.9 17 44.5V19.5C17 18.1 18.1 17 19.5 17Z"
-                stroke="#F26D6D"
-                strokeWidth="4"
-              />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-fitzone-navy font-outfit tracking-tight">
-              FitZone
-            </h1>
-            <span className="text-[11px] font-black text-fitzone-coral tracking-[0.25em] block">
-              SPORTS
-            </span>
-          </div>
+          <Link
+            to="/canchas"
+            aria-label="Ir al inicio — ver canchas disponibles"
+            className="flex flex-col items-center gap-2 group outline-none focus-visible:ring-2 focus-visible:ring-fitzone-coral rounded-2xl"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-fitzone-navy flex items-center justify-center shadow-md group-hover:opacity-80 transition-opacity">
+              <svg width="32" height="32" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <rect width="64" height="64" rx="16" fill="#1B2A55" />
+                <path
+                  d="M19.5 17H44.5C45.9 17 47 18.1 47 19.5V44.5C47 45.9 45.9 47 44.5 47H19.5C18.1 47 17 45.9 17 44.5V19.5C17 18.1 18.1 17 19.5 17Z"
+                  stroke="#F26D6D"
+                  strokeWidth="4"
+                />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-fitzone-navy font-outfit tracking-tight">
+                FitZone
+              </h1>
+              <span className="text-[11px] font-black text-fitzone-coral tracking-[0.25em] block">
+                SPORTS
+              </span>
+            </div>
+          </Link>
         </div>
 
         {/* Formulario de Login */}
@@ -77,6 +83,16 @@ export function LoginPage() {
           onForgotPassword={() => setShowForgotModal(true)}
           onNavigateToRegister={() => navigate('/registro')}
         />
+
+        {/* Enlace de salida para usuarios invitados */}
+        <div className="mt-5 text-center">
+          <Link
+            to="/canchas"
+            className="text-sm text-slate-500 hover:text-fitzone-navy underline underline-offset-2 transition-colors"
+          >
+            Continuar sin iniciar sesión
+          </Link>
+        </div>
       </div>
 
       {/* Modal informativo para recuperación de contraseña */}
