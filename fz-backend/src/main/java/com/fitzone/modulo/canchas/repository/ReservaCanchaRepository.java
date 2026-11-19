@@ -36,7 +36,7 @@ public interface ReservaCanchaRepository extends JpaRepository<ReservaCancha, Lo
                               @Param("inicio") LocalDateTime inicio,
                               @Param("fin") LocalDateTime fin);
 
-    @Query("SELECT r FROM ReservaCancha r JOIN FETCH r.cancha c JOIN FETCH c.sede JOIN FETCH r.usuario " +
+    @Query("SELECT r FROM ReservaCancha r JOIN FETCH r.cancha c JOIN FETCH c.sede LEFT JOIN FETCH r.usuario " +
            "WHERE r.codigoReserva = :codigo")
     Optional<ReservaCancha> findConDetalleByCodigoReserva(@Param("codigo") UUID codigo);
 
