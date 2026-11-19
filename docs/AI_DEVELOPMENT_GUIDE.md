@@ -81,7 +81,7 @@ Todo el backend vive en el mismo repositorio (`fz-backend`), organizado en 5 mó
 
 | Rol | ¿Requiere Login en Supabase? | `auth_id` en BD | Descripción y Permisos |
 | :--- | :--- | :--- | :--- |
-| **`EXTERNO`** | **NO (Invitado)** | `NULL` | Usuario que navega la web, completa sus datos y reserva una cancha pagando de inmediato (como compra en e-commerce). **No tiene cuenta en `auth.users`**. |
+| **`EXTERNO`** | **NO (Invitado)** | `NULL` | Cliente que reserva una cancha desde la web y paga en el mismo paso. **No se guarda en `fz_usr_usuarios`** (ADR-018): la reserva y la transacción quedan con `id_usuario` nulo y su nombre, DNI y email van al comprobante. El valor del enum se conserva para los datos anteriores al cambio. |
 | **`SOCIO`** | **SÍ** | `UUID` (Supabase UID) | Usuario registrado con membresía. Accede a reservar clases grupales, canchas con -15% desc., y ver perfil. |
 | **`RECEPCIONISTA`** | **SÍ** | `UUID` (Supabase UID) | Empleado de mostrador. Da de alta socios, cobra en efectivo/posnet, gestiona molinetes. Limitado por su sede asignada. |
 | **`GERENTE`** | **SÍ** | `UUID` (Supabase UID) | Administrador total. Modifica precios, planes, da de alta sedes, canchas, y consulta métricas de negocio. |
@@ -104,7 +104,7 @@ Todo el backend vive en el mismo repositorio (`fz-backend`), organizado en 5 mó
 * **Compensación de Fallos:** Si al crear un usuario en Supabase la inserción en la base de datos falla, el backend ejecuta una llamada de compensación (`DELETE /auth/v1/admin/users/{id}`) para evitar registros huérfanos.
 * **Matriz de Permisos de Operador:**
   - El **GERENTE** es el administrador total: único habilitado para dar de alta o editar personal (`RECEPCIONISTA`, `GERENTE`) y asignar/cambiar roles (`tipoUsuario`).
-  - El **RECEPCIONISTA** solo puede dar de alta y editar usuarios `SOCIO` y `EXTERNO`.
+  - El **RECEPCIONISTA** solo puede dar de alta usuarios `SOCIO` (el `EXTERNO` no se da de alta, ADR-018) y editar `SOCIO` y `EXTERNO` anteriores.
 * **Guía Completa:** Ver [docs/GUIA_SUPABASE_USUARIOS.md](./GUIA_SUPABASE_USUARIOS.md).
 
 ---

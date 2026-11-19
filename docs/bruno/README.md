@@ -19,7 +19,7 @@ docs/bruno/
 │   └── 04 - Error Sentencia Prohibida DDL-DML (422).bru
 ├── 01-usuarios/                    # Módulo 1: Usuarios, Sedes y Auth (SCRUM-65)
 │   ├── 01 - Crear Socio.bru
-│   ├── 02 - Crear Externo (Invitado).bru
+│   ├── 02 - Error Alta de Externo (422).bru
 │   ├── 03 - Crear Recepcionista.bru
 │   ├── 04 - Obtener Perfil por ID.bru
 │   ├── 05 - Buscar Usuarios con Filtros.bru

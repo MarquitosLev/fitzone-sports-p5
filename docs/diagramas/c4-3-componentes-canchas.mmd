@@ -5,11 +5,11 @@ title: C4-3 Componentes — Canchas (v1.0, 2026-11-10, Leiva)
 %% Autor: Leiva, Marcos Joel · Fecha: 2026-11-10 · Versión: 1.0
 %% Notación C4 sobre flowchart: azul = contenedor, celeste = componente.
 flowchart TB
-  spa["<b>Aplicación web</b><br/>[Contenedor: React]<br/>Grilla de disponibilidad, cotización,<br/>reserva y checkout de invitado"]
+  spa["<b>Aplicación web</b><br/>[Contenedor: React]<br/>Grilla de disponibilidad, cotización,<br/>reserva y checkout de invitado<br/>(retención de 5 min en localStorage)"]
 
   subgraph api["API backend — módulo canchas [Contenedor: Spring Boot]"]
     ctrl["<b>CanchaController</b><br/>[Componente: Spring MVC, /v1/canchas]<br/>ABM, mantenimiento, disponibilidad,<br/>cotización y reserva"]
-    checkout["<b>CheckoutInvitadoService</b><br/>[Componente: @Service, módulo pagos]<br/>Reserva y pago de cancha sin cuenta"]
+    checkout["<b>CheckoutInvitadoService</b><br/>[Componente: @Service, módulo pagos]<br/>Reserva y pago de cancha sin cuenta,<br/>en una transacción (ADR-018)"]
     svc["<b>CanchaService</b><br/>[Componente: @Service, @Transactional]<br/>Horario 08–23 h en horas enteras,<br/>bloqueo y verificación de solapamiento (RN-02)"]
     ua["<b>UsuarioActual</b><br/>[Componente: core.security]<br/>Usuario autenticado desde el JWT"]
     memb["<b>MembresiaRepository</b><br/>[Componente: Spring Data JPA]<br/>¿Membresía ACTIVA? (RN-03)"]
@@ -28,7 +28,7 @@ flowchart TB
   db[("<b>Base de datos</b><br/>[Contenedor: PostgreSQL 16]<br/>fz_cch_canchas · fz_cch_reservas")]
 
   spa -- "GET disponibilidad y cotización,<br/>POST reservas [HTTPS, JSON]" --> ctrl
-  spa -- "POST reserva de invitado [HTTPS, JSON]" --> checkout
+  spa -- "POST reserva y pago de invitado [HTTPS, JSON]" --> checkout
   ctrl -- "Delega" --> svc
   checkout -- "Reserva el turno" --> svc
   svc -- "Obtiene el usuario" --> ua

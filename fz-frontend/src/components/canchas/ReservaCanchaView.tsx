@@ -12,7 +12,7 @@
  * - Al confirmar, lleva al checkout de pago (M5) o Mis Reservas.
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
@@ -36,6 +36,13 @@ import {
 import { useSede } from '../../context/SedeContext';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
+import {
+  leerReservaRetenida,
+  retenerReserva,
+  liberarReservaRetenida,
+  useSegundosRestantes,
+  type ReservaRetenida,
+} from '../../hooks/useReservaRetenida';
 import { AppError } from '../../services/httpClient';
 import type {
   CanchaDTO,
@@ -74,6 +81,11 @@ export function ReservaCanchaView({
     return `${year}-${month}-${day}`;
   }, []);
 
+  // Turno retenido por un invitado que recargó la página dentro de los 5 minutos (ADR-018)
+  const [retenida, setRetenida] = useState<ReservaRetenida | null>(leerReservaRetenida);
+  const retenidaARestaurar = useRef(retenida);
+  const ultimoPedidoDisponibilidad = useRef(0);
+
   // Estados de datos
   const [canchas, setCanchas] = useState<CanchaDTO[]>([]);
   const [loadingCanchas, setLoadingCanchas] = useState(false);
@@ -83,7 +95,7 @@ export function ReservaCanchaView({
   const [filtroTipo, setFiltroTipo] = useState<string>('TODOS');
 
   // Fecha y Turnos
-  const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(fechaInicial ?? hoyIso);
+  const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(fechaInicial ?? retenida?.fecha ?? hoyIso);
   const [franjas, setFranjas] = useState<FranjaHorariaDTO[]>([]);
   const [loadingFranjas, setLoadingFranjas] = useState(false);
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<FranjaHorariaDTO | null>(null);
@@ -98,12 +110,45 @@ export function ReservaCanchaView({
   // Sin sesión se reserva como invitado; con sesión, solo el socio. El personal no reserva.
   const esInvitado = !usuario;
   const puedeReservar = esSocio || esInvitado;
+
+  // Con sesión no hay retención de invitado
+  useEffect(() => {
+    if (usuario) {
+      liberarReservaRetenida();
+      setRetenida(null);
+      retenidaARestaurar.current = null;
+    }
+  }, [usuario]);
   const [errorInvitado, setErrorInvitado] = useState<{ mensaje: string; pedirInicioSesion: boolean } | null>(null);
 
   // Modal de Confirmación
   const [modalConfirmacionOpen, setModalConfirmacionOpen] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [errorConflicto, setErrorConflicto] = useState<string | null>(null);
+
+  const soltarRetencion = () => {
+    liberarReservaRetenida();
+    setRetenida(null);
+  };
+
+  const cerrarConfirmacion = () => {
+    if (confirmando) return;
+    setModalConfirmacionOpen(false);
+    if (esInvitado) soltarRetencion();
+  };
+
+  // Al vencer los 5 minutos se borra la retención y se cierra la ventana de reserva
+  const segundosRestantes = useSegundosRestantes(retenida?.venceEn ?? null, () => {
+    soltarRetencion();
+    setModalConfirmacionOpen(false);
+    setTurnoSeleccionado(null);
+    setErrorInvitado(null);
+    addToast({
+      type: 'warning',
+      title: 'Tiempo agotado',
+      message: 'Pasaron 5 minutos y se liberó el turno. Podés elegirlo de nuevo si sigue libre.',
+    });
+  });
 
   // Cargar Canchas de la Sede con protección contra respuestas obsoletas al cambiar de sede
   useEffect(() => {
@@ -124,8 +169,9 @@ export function ReservaCanchaView({
           // Si no hay cancha seleccionada o la actual ya no está, elegir la primera disponible
           if (data.length > 0) {
             const primeraDisponible = data.find((c) => !c.enMantenimiento) || data[0];
+            const deLaRetenida = data.find((c) => c.idCancha === retenidaARestaurar.current?.idCancha);
             setCanchaSeleccionada((prev) => {
-              if (!prev) return primeraDisponible;
+              if (!prev) return deLaRetenida || primeraDisponible;
               const sigueExistiendo = data.find((c) => c.idCancha === prev.idCancha);
               return sigueExistiendo || primeraDisponible;
             });
@@ -161,9 +207,12 @@ export function ReservaCanchaView({
       setFranjas([]);
       return;
     }
+    // Como un número de versión: solo la última consulta aplica su respuesta
+    const pedido = ++ultimoPedidoDisponibilidad.current;
     setLoadingFranjas(true);
     try {
       const data = await obtenerDisponibilidad(canchaSeleccionada.idCancha, fechaSeleccionada);
+      if (pedido !== ultimoPedidoDisponibilidad.current) return;
       setFranjas(data);
 
       // Si el turno previamente seleccionado ya no está libre en la nueva disponibilidad, deseleccionar
@@ -172,14 +221,33 @@ export function ReservaCanchaView({
         const sigueLibre = data.find((f) => f.id === prev.id && f.estado === 'LIBRE');
         return sigueLibre || null;
       });
+
+      // Al recargar con un turno retenido, se vuelve a abrir su confirmación si sigue libre
+      const aRestaurar = retenidaARestaurar.current;
+      if (
+        aRestaurar &&
+        aRestaurar.idCancha === canchaSeleccionada.idCancha &&
+        aRestaurar.fecha === fechaSeleccionada
+      ) {
+        retenidaARestaurar.current = null;
+        const franja = data.find((f) => f.horaInicio === aRestaurar.horaInicio && f.estado === 'LIBRE');
+        if (franja) {
+          setTurnoSeleccionado(franja);
+          setModalConfirmacionOpen(true);
+        } else {
+          liberarReservaRetenida();
+          setRetenida(null);
+        }
+      }
     } catch {
+      if (pedido !== ultimoPedidoDisponibilidad.current) return;
       addToast({
         type: 'error',
         title: 'Error de disponibilidad',
         message: 'No se pudo obtener la disponibilidad para la fecha seleccionada.',
       });
     } finally {
-      setLoadingFranjas(false);
+      if (pedido === ultimoPedidoDisponibilidad.current) setLoadingFranjas(false);
     }
   }, [canchaSeleccionada, fechaSeleccionada, addToast]);
 
@@ -256,6 +324,16 @@ export function ReservaCanchaView({
     if (!canchaSeleccionada || !turnoSeleccionado || !cotizacion) return;
     setErrorConflicto(null);
     setErrorInvitado(null);
+    if (esInvitado) {
+      setRetenida(
+        retenerReserva({
+          idCancha: canchaSeleccionada.idCancha,
+          fecha: fechaSeleccionada,
+          horaInicio: turnoSeleccionado.horaInicio,
+          horaFin: turnoSeleccionado.horaFin,
+        })
+      );
+    }
     setModalConfirmacionOpen(true);
   };
 
@@ -273,6 +351,8 @@ export function ReservaCanchaView({
         },
         datos
       );
+      // Reserva y pago van juntos: si llegó acá, el turno está pago y tiene comprobante
+      soltarRetencion();
       setModalConfirmacionOpen(false);
       navigate(`/reserva-invitado/${reserva.codigoReserva}`);
     } catch (err: unknown) {
@@ -280,13 +360,14 @@ export function ReservaCanchaView({
       if (codigo === 'REQUIERE_INICIO_SESION') {
         setErrorInvitado({ mensaje: (err as Error).message, pedirInicioSesion: true });
       } else if (err instanceof AppError && err.status === 409) {
+        soltarRetencion();
         setModalConfirmacionOpen(false);
         setErrorConflicto(err.message);
         await cargarDisponibilidad();
         setTurnoSeleccionado(null);
       } else {
         setErrorInvitado({
-          mensaje: err instanceof Error ? err.message : 'No se pudo reservar el turno',
+          mensaje: err instanceof Error ? err.message : 'No se pudo pagar el turno',
           pedirInicioSesion: false,
         });
       }
@@ -612,9 +693,7 @@ export function ReservaCanchaView({
       {/* Modal de Confirmación y Desglose de Pago */}
       <Modal
         isOpen={modalConfirmacionOpen}
-        onClose={() => {
-          if (!confirmando) setModalConfirmacionOpen(false);
-        }}
+        onClose={cerrarConfirmacion}
         size="md"
         title="Confirmar reserva de cancha"
         subtitle="Verificá los detalles y el precio final antes de continuar"
@@ -659,7 +738,9 @@ export function ReservaCanchaView({
           {esInvitado ? (
             <FormularioInvitado
               onSubmit={handleReservarComoInvitado}
-              onCancelar={() => setModalConfirmacionOpen(false)}
+              onCancelar={cerrarConfirmacion}
+              montoTotal={cotizacion?.total}
+              segundosRestantes={retenida ? segundosRestantes : undefined}
               isLoading={confirmando}
               error={errorInvitado?.mensaje}
               pedirInicioSesion={errorInvitado?.pedirInicioSesion}

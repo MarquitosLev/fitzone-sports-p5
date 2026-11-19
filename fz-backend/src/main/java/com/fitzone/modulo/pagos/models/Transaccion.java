@@ -52,8 +52,9 @@ public class Transaccion extends BaseEntity {
     @Column(name = "id_transaccion", updatable = false, nullable = false)
     private Long idTransaccion;
 
+    // Nulo en el pago del cliente externo, que no es usuario del sistema (ADR-018)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_usuario", nullable = false, foreignKey = @ForeignKey(name = "fk_pag_transacciones_usuarios"))
+    @JoinColumn(name = "id_usuario", foreignKey = @ForeignKey(name = "fk_pag_transacciones_usuarios"))
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Usuario usuario;
 

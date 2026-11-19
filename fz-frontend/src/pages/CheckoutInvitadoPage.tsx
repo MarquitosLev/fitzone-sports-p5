@@ -2,18 +2,16 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Ticket } from 'lucide-react';
 import { Alert, Spinner } from '../components/ui';
-import { ResumenPago, ResultadoPago } from '../components/pagos';
+import { DesglosePrecio } from '../components/canchas';
 import { obtenerReservaInvitado } from '../services/canchasService';
-import {
-  pagarReservaInvitado,
-  descargarComprobanteInvitado,
-  descargarBlobEnNavegador,
-} from '../services/pagosService';
+import { descargarComprobanteInvitado, descargarBlobEnNavegador } from '../services/pagosService';
 import { useToast } from '../context/ToastContext';
-import { AppError } from '../services/httpClient';
-import type { ReservaInvitadoDTO, ResultadoPagoDTO, DetalleItemPago } from '../types';
+import type { ReservaInvitadoDTO } from '../types';
 
-/** Checkout público del invitado: el código de la URL es lo que da acceso a la reserva. */
+/**
+ * Comprobante público del invitado: el código de la URL es lo que da acceso a la reserva.
+ * La reserva ya llega pagada (ADR-018); solo las anteriores al cambio pueden figurar sin pagar.
+ */
 export function CheckoutInvitadoPage() {
   const { codigo = '' } = useParams<{ codigo: string }>();
   const { addToast } = useToast();
@@ -21,8 +19,6 @@ export function CheckoutInvitadoPage() {
   const [reserva, setReserva] = useState<ReservaInvitadoDTO | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [procesando, setProcesando] = useState(false);
-  const [resultado, setResultado] = useState<ResultadoPagoDTO | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -35,25 +31,10 @@ export function CheckoutInvitadoPage() {
     };
   }, [codigo]);
 
-  const pagar = async () => {
-    setProcesando(true);
-    try {
-      const res = await pagarReservaInvitado(codigo);
-      setResultado(res);
-      if (res.aprobado) setReserva((r) => (r ? { ...r, pagada: true } : r));
-    } catch (err: unknown) {
-      if (!(err instanceof AppError)) {
-        addToast({ type: 'error', title: 'Error de pago', message: err instanceof Error ? err.message : 'No se pudo pagar' });
-      }
-    } finally {
-      setProcesando(false);
-    }
-  };
-
   const descargarPdf = async () => {
     try {
       const blob = await descargarComprobanteInvitado(codigo);
-      descargarBlobEnNavegador(blob, `comprobante-${resultado?.comprobante?.numeroFactura ?? codigo.slice(0, 8)}.pdf`);
+      descargarBlobEnNavegador(blob, `comprobante-${reserva?.numeroFactura ?? codigo.slice(0, 8)}.pdf`);
     } catch (err: unknown) {
       addToast({ type: 'error', title: 'Error de descarga', message: err instanceof Error ? err.message : 'No se pudo descargar el PDF' });
     }
@@ -80,17 +61,6 @@ export function CheckoutInvitadoPage() {
     );
   }
 
-  const detalle: DetalleItemPago = {
-    tipo: 'CANCHA',
-    titulo: `Turno · ${reserva.cancha}`,
-    subtitulo: reserva.sede,
-    canchaNombre: reserva.cancha,
-    deporte: reserva.tipoCancha ?? undefined,
-    fecha: reserva.fechaHoraInicio.slice(0, 10),
-    horario: `${reserva.fechaHoraInicio.slice(11, 16)} a ${reserva.fechaHoraFin.slice(11, 16)} hs`,
-    cotizacion: reserva.cotizacion ?? undefined,
-  };
-
   return (
     <div className="space-y-6 max-w-3xl mx-auto pb-16">
       <div className="bg-fitzone-navy text-white rounded-3xl p-5 flex items-center gap-4">
@@ -101,24 +71,31 @@ export function CheckoutInvitadoPage() {
             {reserva.codigoReserva}
           </span>
           <p className="text-[11px] text-slate-300 mt-1">
-            Guardá este link: con el código pagás, descargás el comprobante y presentás el turno en la sede.
+            Guardá este link: con el código descargás el comprobante y presentás el turno en la sede.
           </p>
         </div>
       </div>
 
-      {resultado ? (
-        <ResultadoPago
-          transaccion={resultado.transaccion}
-          comprobante={resultado.comprobante}
-          errorMotivo={resultado.mensaje}
-          onReintentar={() => void pagar()}
-          onDescargarPdf={descargarPdf}
-        />
-      ) : reserva.pagada ? (
+      <div className="bg-white rounded-3xl border border-slate-100 p-5 space-y-1">
+        <h2 className="text-base font-black text-fitzone-navy font-outfit">{reserva.cancha}</h2>
+        <p className="text-xs text-slate-500">{reserva.sede}</p>
+        <p className="text-sm font-bold text-fitzone-navy">
+          {reserva.fechaHoraInicio.slice(0, 10)} · {reserva.fechaHoraInicio.slice(11, 16)} a{' '}
+          {reserva.fechaHoraFin.slice(11, 16)} hs
+        </p>
+      </div>
+
+      {reserva.cotizacion && <DesglosePrecio cotizacion={reserva.cotizacion} titulo="Detalle del pago" variant="card" />}
+
+      {reserva.pagada ? (
         <Alert
           type="success"
           title="Turno pagado"
-          message="Tu reserva ya está paga."
+          message={
+            reserva.numeroFactura
+              ? `Tu reserva está paga. Comprobante ${reserva.numeroFactura}.`
+              : 'Tu reserva está paga.'
+          }
           action={
             <button type="button" className="font-bold underline cursor-pointer" onClick={() => void descargarPdf()}>
               Descargar comprobante
@@ -126,7 +103,11 @@ export function CheckoutInvitadoPage() {
           }
         />
       ) : (
-        <ResumenPago detalle={detalle} montoTotal={reserva.precioFinal} isProcessing={procesando} onConfirmarPago={pagar} />
+        <Alert
+          type="warning"
+          title="Reserva sin pagar"
+          message="Esta reserva es anterior al pago en un paso y no registra pago. Consultá en la recepción de la sede."
+        />
       )}
     </div>
   );

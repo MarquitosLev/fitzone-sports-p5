@@ -204,12 +204,10 @@ public class CanchaService {
     }
 
     @Transactional
-    public ReservaCancha reservarComoInvitado(Long idCancha, Usuario invitado, ReservaCancha reserva) {
+    // El cliente externo no es usuario del sistema: la reserva queda sin usuario y paga precio de lista (ADR-018)
+    public ReservaCancha reservarComoInvitado(Long idCancha, ReservaCancha reserva) {
         validarTurno(reserva);
-        if (invitado.getTipoUsuario() != TipoUsuario.EXTERNO) {
-            throw new ReglaNegocioException("El checkout de invitado es solo para usuarios sin cuenta");
-        }
-        return guardarReserva(idCancha, invitado, reserva);
+        return guardarReserva(idCancha, null, reserva);
     }
 
     private void validarTurno(ReservaCancha reserva) {

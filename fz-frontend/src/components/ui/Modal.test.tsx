@@ -73,4 +73,24 @@ describe('Modal Component', () => {
     fireEvent.keyDown(window, { key: 'Tab', shiftKey: false });
     expect(document.activeElement).toBe(closeBtn);
   });
+
+  it('no le saca el foco al campo cuando el padre re-renderiza con otro onClose', async () => {
+    const { rerender } = render(
+      <Modal isOpen onClose={() => {}} title="Reserva">
+        <input aria-label="Nombre" />
+      </Modal>
+    );
+    await new Promise((r) => setTimeout(r, 30));
+    const campo = screen.getByLabelText('Nombre');
+    campo.focus();
+
+    rerender(
+      <Modal isOpen onClose={() => {}} title="Reserva">
+        <input aria-label="Nombre" />
+      </Modal>
+    );
+    await new Promise((r) => setTimeout(r, 30));
+
+    expect(document.activeElement).toBe(campo);
+  });
 });

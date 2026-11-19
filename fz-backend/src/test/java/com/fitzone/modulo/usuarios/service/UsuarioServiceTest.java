@@ -113,11 +113,8 @@ class UsuarioServiceTest {
     }
 
     @Test
-    @DisplayName("Alta de EXTERNO no genera cuenta en Supabase Auth y authId queda en null")
-    void crearExterno_sinSupabase() {
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(operadorRecepcionista));
-        when(usuarioRepository.existsByDni("55555555")).thenReturn(false);
-
+    @DisplayName("Alta de EXTERNO rechazada con 422: el cliente externo no se registra (ADR-018)")
+    void crearExterno_rechazado() {
         Usuario externo = Usuario.builder()
                 .dni("55555555")
                 .nombre("Martin")
@@ -126,18 +123,10 @@ class UsuarioServiceTest {
                 .tipoUsuario(TipoUsuario.EXTERNO)
                 .build();
 
-        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(i -> {
-            Usuario u = i.getArgument(0);
-            u.setIdUsuario(20L);
-            return u;
-        });
-
-        Usuario creado = usuarioService.crear(externo, 1L);
-
-        assertThat(creado.getIdUsuario()).isEqualTo(20L);
-        assertThat(creado.getAuthId()).isNull();
-        verify(supabaseAuthClient, never()).invitarUsuario(any(), any());
-        verify(supabaseAuthClient, never()).crearUsuarioConfirmado(any(), any(), any());
+        assertThatThrownBy(() -> usuarioService.crear(externo, 1L))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessageContaining("no se registra");
+        verify(usuarioRepository, never()).save(any());
     }
 
     @Test

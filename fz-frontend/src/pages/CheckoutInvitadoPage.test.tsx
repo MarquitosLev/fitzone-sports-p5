@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { CheckoutInvitadoPage } from './CheckoutInvitadoPage';
 import { ToastProvider } from '../context/ToastContext';
 import * as canchasService from '../services/canchasService';
-import * as pagosService from '../services/pagosService';
-import type { ReservaInvitadoDTO, TransaccionDTO } from '../types';
+import type { ReservaInvitadoDTO } from '../types';
 
 const reserva: ReservaInvitadoDTO = {
   codigoReserva: '3f0c5a52-1d1f-4c7e-9b1a-2f4a8f6a9c10',
@@ -19,7 +18,8 @@ const reserva: ReservaInvitadoDTO = {
   fechaHoraFin: '2099-01-10T11:00:00',
   precioFinal: 10000,
   cotizacion: null,
-  pagada: false,
+  pagada: true,
+  numeroFactura: '0001-00000003',
 };
 
 function renderPagina() {
@@ -40,49 +40,24 @@ describe('CheckoutInvitadoPage', () => {
     vi.spyOn(canchasService, 'obtenerReservaInvitado').mockResolvedValue(reserva);
   });
 
-  it('muestra el código de reserva y el resumen del turno sin pedir sesión', async () => {
+  it('muestra el código, el turno y el comprobante sin pedir sesión ni volver a cobrar', async () => {
     renderPagina();
 
     expect(await screen.findByTestId('codigo-reserva')).toHaveTextContent(reserva.codigoReserva);
-    expect(screen.getByText('Turno · Pádel 1')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Pagar ·/i })).toBeInTheDocument();
-  });
-
-  it('paga con el código y muestra el comprobante', async () => {
-    const transaccion = {
-      idTransaccion: 9,
-      monto: 10000,
-      estadoPago: 'CONFIRMADO',
-      fechaHoraCreacion: '2099-01-01T10:00:00',
-      fechaHoraConfirmacion: '2099-01-01T10:00:01',
-      usuario: { dni: '30111222', nombre: 'Ana', apellido: 'Pérez' },
-      sede: { idSede: 1, nombre: 'Palermo' },
-    } as unknown as TransaccionDTO;
-    const pagar = vi.spyOn(pagosService, 'pagarReservaInvitado').mockResolvedValue({
-      transaccion,
-      comprobante: { idComprobante: 3, numeroFactura: '0001-00000003', transaccion },
-      aprobado: true,
-      mensaje: '¡Pago acreditado exitosamente!',
-    });
-
-    renderPagina();
-    fireEvent.click(await screen.findByRole('button', { name: /Pagar ·/i }));
-
-    await waitFor(() => {
-      expect(pagar).toHaveBeenCalledWith(reserva.codigoReserva);
-      expect(screen.getByText('¡Pago Confirmado!')).toBeInTheDocument();
-      expect(screen.getByText('0001-00000003')).toBeInTheDocument();
-    });
-  });
-
-  it('una reserva ya pagada muestra el aviso y permite descargar el comprobante', async () => {
-    vi.spyOn(canchasService, 'obtenerReservaInvitado').mockResolvedValue({ ...reserva, pagada: true });
-
-    renderPagina();
-
-    expect(await screen.findByText('Turno pagado')).toBeInTheDocument();
+    expect(screen.getByText('Pádel 1')).toBeInTheDocument();
+    expect(screen.getByText('Turno pagado')).toBeInTheDocument();
+    expect(screen.getByText(/0001-00000003/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /descargar comprobante/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Pagar ·/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /pagar/i })).not.toBeInTheDocument();
+  });
+
+  it('una reserva anterior al cambio sin pago avisa y no ofrece comprobante', async () => {
+    vi.spyOn(canchasService, 'obtenerReservaInvitado').mockResolvedValue({ ...reserva, pagada: false, numeroFactura: null });
+
+    renderPagina();
+
+    expect(await screen.findByText('Reserva sin pagar')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /descargar comprobante/i })).not.toBeInTheDocument();
   });
 
   it('con un código inexistente muestra el error y el link a Canchas', async () => {

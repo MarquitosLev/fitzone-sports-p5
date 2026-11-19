@@ -129,21 +129,6 @@ public class DataInitializer implements CommandLineRunner {
                         log.info("[DEV SEED] Creado Socio con cuota vencida (socio.vencido@fitzone.com)");
                 }
 
-                if (usuarioRepository.findByEmail("externo@fitzone.com").isEmpty() && usuarioRepository.findByDni("00000004").isEmpty()) {
-                        Usuario externo = Usuario.builder()
-                                        .dni("00000004")
-                                        .nombre("Laura")
-                                        .apellido("Externo")
-                                        .email("externo@fitzone.com")
-                                        .telefono("+5491100000003")
-                                        .tipoUsuario(TipoUsuario.EXTERNO)
-                                        .idSede(null)
-                                        .authId(null)
-                                        .build();
-                        usuarioRepository.save(externo);
-                        log.info("[DEV SEED] Creado Externo inicial (externo@fitzone.com)");
-                }
-
                 // 3. Planes (idempotente por nombre)
                 if (!planRepository.existsByNombre("Plan Mensual")) {
                         planRepository.save(Plan.builder()

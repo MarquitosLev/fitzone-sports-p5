@@ -1,0 +1,29 @@
+meta {
+  name: 03 - Pago Rechazado sin Reserva (422)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/invitados/reservas
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "idCancha": 1,
+    "fechaHoraInicio": "2026-12-10T12:00:00",
+    "fechaHoraFin": "2026-12-10T13:00:00",
+    "nombre": "Ana",
+    "apellido": "Pérez",
+    "dni": "30111222",
+    "email": "ana.invitada@mail.com",
+    "forzarRechazo": true
+  }
+}
+
+docs {
+  La pasarela simulada rechaza: responde 422 y no queda reserva ni pago (ADR-018).
+  El turno sigue libre en la disponibilidad.
+}
