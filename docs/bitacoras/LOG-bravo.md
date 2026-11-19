@@ -24,7 +24,7 @@
 
 ## Sprint 3 — Unidad I — Semana del 2026-09-14
 
-### 2026-09-20 · ? h
+### 2026-09-20 · ≈ 1,5 h
 
 **Actividad** Terminé el UML (SCRUM-25), que quedó en la carpeta de documentación del Drive.
 
@@ -34,7 +34,7 @@
 
 ## Sprint 4 — Unidad II — Semana del 2026-09-21
 
-### 2026-09-27 · ? h
+### 2026-09-27 · ≈ 1,5 h
 
 **Actividad** Hice la entidad ClaseGrupal con su repositorio (SCRUM-35) y abrí el PR #7.
 
@@ -44,19 +44,19 @@
 
 ## Sprint 4 — Unidad II — Semana del 2026-09-28
 
-### 2026-09-29 · ? h
+### 2026-09-29 · ≈ 2 h
 
 **Actividad** Traje develop a mi rama de ClaseGrupal y la corregí después de la revisión. Actualicé el README y mergeé el PR #8 de Benja con la entidad Sede.
 
 **Commits** `0e98c8d` merge de develop · `23d7dff` corrección ClaseGrupal · `05684bb` README
 
-### 2026-09-30 · ? h
+### 2026-09-30 · ≈ 1,5 h
 
 **Actividad** Mergeé mis PR de ClaseGrupal (#7) y del README (#11). Revisé y mergeé el PR #10 de Marcos con la entidad Plan.
 
 **Commits** Sin commits: revisión y merge de PR.
 
-### 2026-10-03 · ? h
+### 2026-10-03 · ≈ 5,5 h
 
 **Actividad** Agregué ReservaClase (SCRUM-36, PR #14), ListaEspera (SCRUM-37, PR #15) y ReservaCancha (SCRUM-39, PR #17, revisado por Benja), con sus repositorios. Revisé y mergeé los PR de Marcos de Membresía (#12), Cancha (#13) y el cambio de nombre de variable de Cancha (#16).
 
@@ -66,7 +66,7 @@
 
 ## Sprint 5 — Unidad II — Semana del 2026-10-12
 
-### 2026-10-14 · ? h
+### 2026-10-14 · ≈ 2 h
 
 **Actividad** Armé la base de la API (SCRUM-63): prefijo /api/v1, formato de error común, validación, Swagger y CORS.
 
@@ -76,13 +76,13 @@
 
 **Commits** `e57ee31` ajuste de modelos · `6208476` base de la API
 
-### 2026-10-16 · ? h
+### 2026-10-16 · ≈ 1,5 h
 
 **Actividad** Mergeé el PR #22 de la base de la API después de la aprobación de Marcos.
 
 **Commits** Sin commits: merge de PR.
 
-### 2026-10-18 · ? h
+### 2026-10-18 · ≈ 2,5 h
 
 **Actividad** Hice los endpoints de gestión de canchas y mantenimiento (SCRUM-68, PR #39). Revisé y mergeé el PR #32 de Benja con sedes y aforo.
 
@@ -92,7 +92,7 @@
 
 ## Sprint 6 — Unidad II — Semana del 2026-10-19
 
-### 2026-10-20 · ? h
+### 2026-10-20 · ≈ 4,5 h
 
 **Actividad** Implementé la cotización de turnos (SCRUM-73, PR #46) y la grilla de disponibilidad con reserva (SCRUM-75, PR #47). Mergeé los PR de Benja de agenda de clases (#33) y de planes y membresías (#43), y el de usuarios de Marcos (#40).
 
@@ -100,7 +100,7 @@
 
 **Commits** `20a3cf8` cotización con Strategy · `0132da2` grilla y reserva
 
-### 2026-10-21 · ? h
+### 2026-10-21 · ≈ 4,5 h
 
 **Actividad** Hice la lista de espera con notificación (SCRUM-74, PR #49) y los endpoints de la pasarela de pago simulada (SCRUM-76, PR #50). Revisé y mergeé los PR de Benja de ingreso con QR (#45) y reserva de clases (#48), y el de Marcos del endpoint seguro a la base (#44).
 
@@ -110,7 +110,7 @@
 
 **Commits** `9ccbd03` merge de develop · `86fc32b` conflictos en UsuarioController · `b0ac068` sincronización tras SCRUM-72 · `5414db4` lista de espera con Observer · `7da362e` pasarela simulada
 
-### 2026-10-22 · ? h
+### 2026-10-22 · ≈ 4,5 h
 
 **Actividad** Conecté el login con Supabase Auth y la validación del JWT, e integré el módulo 1 de punta a punta (SCRUM-95 y SCRUM-100). Mergeé el PR #51 de Benja con el comprobante en PDF.
 
@@ -118,7 +118,7 @@
 
 **Commits** `984d4f3` autenticación y roles · `746d7e2` módulo 1 end-to-end · `7d34908` navegación por rol
 
-### 2026-10-24 · ? h
+### 2026-10-24 · ≈ 4,5 h
 
 **Actividad** Limpié vistas del front, agregué guards con 403 y un panel para que gerencia arme niveles de acceso (SCRUM-106 y SCRUM-107, PR #54).
 
@@ -126,7 +126,7 @@
 
 **Commits** `a0a9744` guards y panel RBAC · `18dc55c` correcciones de la revisión
 
-### 2026-10-25 · ? h
+### 2026-10-25 · ≈ 3,5 h
 
 **Actividad** Cargué datos de prueba para la integración (SCRUM-94, PR #55, revisado y mergeado por Benja) y conecté usuarios y membresías del front con la API real. Mergeé el PR #54 y abrí el PR #56 del módulo 1.
 
@@ -138,7 +138,7 @@
 
 ## Sprint 6 — Unidad II — Semana del 2026-10-26
 
-### 2026-10-26 · ? h
+### 2026-10-26 · ≈ 1,5 h
 
 **Actividad** Sincronicé la rama del módulo 1 con develop para cerrar el PR #56, que revisó y mergeó Benja.
 
@@ -148,7 +148,7 @@
 
 ## Sprint 7 — Cierre — Semana del 2026-11-02
 
-### 2026-11-07 · ? h
+### 2026-11-07 · ≈ 1 h
 
 **Actividad** Corregí errores del checkout que salieron en las pruebas de punta a punta (SCRUM-120, PR #82, y SCRUM-122, PR #83).
 
@@ -158,7 +158,7 @@
 
 **Commits** `1dc4201` desglose de cancha · `1a09031` vigencia al renovar
 
-### 2026-11-07 · ? h
+### 2026-11-07 · ≈ 1 h
 
 **Actividad** Hice la reserva y el pago de cancha como invitado, sin cuenta (SCRUM-134, PR #84).
 
@@ -166,7 +166,7 @@
 
 **Commits** `3ac5f7d` reserva como invitado
 
-### 2026-11-08 · ? h
+### 2026-11-08 · ≈ 4 h
 
 **Actividad** Revisé y mergeé los fixes de Benja de descuento de socio (#72), etiquetas de cancha (#73), aviso duplicado (#74) y layout (#78), y los de Maxi de lista de espera (#80) y pestañas de clases (#81). Ajusté la vista del invitado y armé el alta de socio online (SCRUM-135).
 
@@ -176,7 +176,7 @@
 
 **Commits** `9af1e20` merge de develop en SCRUM-122 · `22192c9` merge de develop en SCRUM-134 · `a960db3` visitante como cliente externo · `e290eda` alta de socio online
 
-### 2026-11-09 · ? h
+### 2026-11-09 · ≈ 1,5 h
 
 **Actividad** Revisé y mergeé los PR de Benja de renovar desde Mi Pase QR (#76), reintento de pagos (#77) y seguridad del back (#79), este último después de su corrección del authId.
 
@@ -186,7 +186,7 @@
 
 ## Sprint 7 — Cierre — Semana del 2026-11-09
 
-### 2026-11-12 · ? h
+### 2026-11-12 · ≈ 2 h
 
 **Actividad** Corregí el alta de socio online según la revisión de Marcos del PR #90.
 
@@ -196,13 +196,13 @@
 
 **Commits** `5984c00` merge de develop · `204248b` correcciones de la revisión del alta de socio
 
-### 2026-11-13 · ? h
+### 2026-11-13 · ≈ 2 h
 
 **Actividad** Reescribí mi bitácora cruzándola con los commits, los PR y Jira (PR #99, revisado y mergeado por Benja). Revisé y mergeé la bitácora de Benja (#100).
 
 **Commits** `c737ddc` bitácora individual
 
-### 2026-11-14 · ? h
+### 2026-11-14 · ≈ 1,5 h
 
 **Actividad** Hice el control de acceso sin conexión del terminal de sede (RNF-01, SCRUM-139, PR #102). El back expone la lista de socios habilitados con el aforo de la sede y un endpoint que sincroniza hasta 50 ingresos aprobados sin conexión. El front valida contra esa lista cuando el servidor no responde, guarda los ingresos en una cola y los manda al reconectar.
 
@@ -216,7 +216,7 @@
 
 ## Sprint 8 — Cierre — Semana del 2026-11-16
 
-### 2026-11-17 · ? h
+### 2026-11-17 · ≈ 2 h
 
 **Actividad** Corregí lo que marcó Marcos en la revisión del PR #102 y agregué el QR firmado por el celular del socio (PR #103), para que el código también se genere sin conexión. Marcos mergeó los dos PR el 18/11.
 
@@ -226,7 +226,7 @@
 
 **Commits** `66bbf65` hora del escaneo corregida · `043224b` QR firmado por el dispositivo
 
-### 2026-11-18 · ? h
+### 2026-11-18 · ≈ 1,5 h
 
 **Actividad** A la noche, antes de la entrega, probé en el navegador los flujos de toda la aplicación con cada rol. En paralelo el equipo cargó en Jira las tarjetas de corrección SCRUM-140 a SCRUM-148, y me tocaron la SCRUM-143 y la SCRUM-144.
 
@@ -234,7 +234,7 @@
 
 **Commits** Sin commits: pruebas manuales.
 
-### 2026-11-19 · ? h
+### 2026-11-19 · ≈ 2 h
 
 **Actividad** Resolví la SCRUM-143 (PR #106): un gerente sin sede es ahora gerente central y opera en todas las sedes. Resolví la SCRUM-144 (PR #112): el personal ya no puede contratar ni renovar un plan propio. Benja revisó y mergeó los dos. Mergeé el PR #105 de Matías (SCRUM-140) y después arreglé su rama SRUM-141 (PR #111), que había quedado con marcadores de conflicto en seis archivos.
 
@@ -244,7 +244,7 @@
 
 **Commits** `5a172f6` gerente central sin sede · `28de8d7` personal sin plan propio · `b220c6c` conflictos de SRUM-141
 
-### 2026-11-19 · ? h
+### 2026-11-19 · ≈ 2 h
 
 **Actividad** Antes del congelamiento revisé todos los PR abiertos del equipo (#107 a #113): si cumplían su tarjeta, si entraban limpios en develop y si los tests pasaban con el merge simulado. Mergeé el #107 de Benja (SCRUM-146) y el #113 de Marcos (SCRUM-148).
 
@@ -252,7 +252,7 @@
 
 **Commits** Sin commits: revisión y merge de PR.
 
-### 2026-11-19 · ? h
+### 2026-11-19 · ≈ 2 h
 
 **Actividad** Revisé toda la entrega contra la versión nueva de los lineamientos, casilla por casilla del checklist del Anexo G, y actualicé esta bitácora (SCRUM-150).
 

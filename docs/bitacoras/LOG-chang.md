@@ -141,7 +141,7 @@ Priorizar la acción de confirmación de reserva directa sobre la lista de esper
 
 ## Sprint 7 — Cierre — Semana del 2026-11-09
 
-### 2026-11-13 · ? h
+### 2026-11-13 · ≈ 3 h
 
 **Actividad**
 Armé mi bitácora de frontend y vinculé las decisiones del stack técnico con el ADR-006.
@@ -153,7 +153,7 @@ Armé mi bitácora de frontend y vinculé las decisiones del stack técnico con 
 
 ## Sprint 7 — Cierre — Semana del 2026-11-16
 
-### 2026-11-19 · ? h
+### 2026-11-19 · ≈ 6 h
 
 **Actividad**
 Oculté las pestañas de reserva de socio al gerente en canchas, dejé fija la sede para el personal en el layout y resolví el conflicto con develop en CanchasPage.
