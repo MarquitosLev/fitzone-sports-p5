@@ -284,6 +284,43 @@ describe('CanchasPage (Integración)', () => {
     });
   });
 
+  it('SCRUM-146: al tocar "Ver comprobante" en una reserva confirmada descarga el PDF oficial sin navegar a /pagos', async () => {
+    const reservaConfirmada: ReservaCanchaDTO = {
+      ...mockReservas[0],
+      idReservaCancha: 3050,
+      estado: 'CONFIRMADA',
+      fechaHoraInicio: '2099-01-10T19:00:00',
+      fechaHoraFin: '2099-01-10T20:00:00',
+    };
+    vi.spyOn(canchasService, 'listarMisReservas').mockResolvedValueOnce([reservaConfirmada]);
+    vi.spyOn(pagosService, 'listarMisPagos').mockResolvedValueOnce([
+      { idTransaccion: 88, reservaCanchaId: 3050, estadoPago: 'CONFIRMADO' } as TransaccionDTO,
+    ]);
+    const spyObtenerComp = vi.spyOn(pagosService, 'obtenerComprobantePorTransaccion').mockResolvedValueOnce({
+      idComprobante: 15,
+      numeroFactura: 'FAC-0001-00000015',
+      transaccion: { idTransaccion: 88 } as TransaccionDTO,
+    });
+    const fakeBlob = new Blob(['%PDF-1.4 mock'], { type: 'application/pdf' });
+    const spyDescargarPdf = vi.spyOn(pagosService, 'descargarComprobantePdf').mockResolvedValueOnce(fakeBlob);
+    const spyDescargarBlob = vi.spyOn(pagosService, 'descargarBlobEnNavegador').mockImplementation(() => {});
+
+    renderWithProviders(<CanchasPage initialTab="mis-reservas" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/3050/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /ver comprobante/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /ver comprobante/i }));
+
+    await waitFor(() => {
+      expect(spyObtenerComp).toHaveBeenCalledWith(88);
+      expect(spyDescargarPdf).toHaveBeenCalledWith(15);
+      expect(spyDescargarBlob).toHaveBeenCalledWith(fakeBlob, 'comprobante-FAC-0001-00000015.pdf');
+    });
+  });
+
   // ── RF-09 / RF-12: Gestión de Canchas (Admin) ──────────────────────────────
   it('carga y muestra las canchas de la sede activa y sus métricas', async () => {
     renderWithProviders(<CanchasPage initialTab="admin" />);

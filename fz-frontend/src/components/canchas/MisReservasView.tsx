@@ -28,9 +28,14 @@ import {
   cancelarReserva,
   CANCELACION_DISPONIBLE,
 } from '../../services/canchasService';
-import { listarMisPagos } from '../../services/pagosService';
+import {
+  listarMisPagos,
+  obtenerComprobantePorTransaccion,
+  descargarComprobantePdf,
+  descargarBlobEnNavegador,
+} from '../../services/pagosService';
 import { useToast } from '../../context/ToastContext';
-import type { ReservaCanchaDTO } from '../../types';
+import type { ReservaCanchaDTO, TransaccionDTO } from '../../types';
 import { formatearMonto, toLocalISOString } from '../../utils/formatters';
 
 export interface MisReservasViewProps {
@@ -44,6 +49,8 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
   const navigate = useNavigate();
 
   const [reservas, setReservas] = useState<ReservaCanchaDTO[]>([]);
+  const [pagosConfirmadosMap, setPagosConfirmadosMap] = useState<Record<number, TransaccionDTO>>({});
+  const [descargandoComprobanteId, setDescargandoComprobanteId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,9 +69,16 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
       const data = await listarMisReservas();
       // El backend no guarda un estado en la reserva: está paga si tiene un pago confirmado (ADR-004)
       const pagos = await listarMisPagos();
-      const pagadas = new Set(
-        pagos.filter((p) => p.estadoPago === 'CONFIRMADO').map((p) => p.reservaCanchaId)
-      );
+      const confirmados = pagos.filter((p) => p.estadoPago === 'CONFIRMADO' && p.reservaCanchaId != null);
+      const pagosMap: Record<number, TransaccionDTO> = {};
+      confirmados.forEach((p) => {
+        if (p.reservaCanchaId != null) {
+          pagosMap[p.reservaCanchaId] = p;
+        }
+      });
+      setPagosConfirmadosMap(pagosMap);
+
+      const pagadas = new Set(confirmados.map((p) => p.reservaCanchaId));
       // LocalDateTime del backend en hora local: se compara contra la hora local, no UTC
       const ahora = toLocalISOString(new Date());
       setReservas(
@@ -116,6 +130,46 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
       });
     } finally {
       setCancelando(false);
+    }
+  };
+
+  // Descarga del comprobante oficial de pago (SCRUM-146)
+  const handleDescargarComprobante = async (reserva: ReservaCanchaDTO) => {
+    const transaccion = pagosConfirmadosMap[reserva.idReservaCancha];
+    if (!transaccion) {
+      addToast({
+        type: 'error',
+        title: 'Comprobante no disponible',
+        message: 'No se encontró el registro de pago para esta reserva.',
+      });
+      return;
+    }
+
+    setDescargandoComprobanteId(reserva.idReservaCancha);
+    try {
+      const comp = await obtenerComprobantePorTransaccion(transaccion.idTransaccion);
+      const idComp = comp?.idComprobante || transaccion.idTransaccion;
+      const numFactura = comp?.numeroFactura || `FAC-${transaccion.idTransaccion}`;
+
+      addToast({
+        type: 'info',
+        title: 'Descargando comprobante',
+        message: `Generando PDF oficial ${numFactura}...`,
+      });
+
+      const blob = await descargarComprobantePdf(idComp);
+      descargarBlobEnNavegador(blob, `comprobante-${numFactura}.pdf`);
+    } catch (err: unknown) {
+      addToast({
+        type: 'error',
+        title: 'Error al descargar',
+        message:
+          err instanceof Error
+            ? err.message
+            : 'No se pudo descargar el comprobante en PDF.',
+      });
+    } finally {
+      setDescargandoComprobanteId(null);
     }
   };
 
@@ -435,7 +489,8 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
                             variant="secondary"
                             size="sm"
                             leftIcon={FileText}
-                            onClick={() => navigate('/pagos')}
+                            onClick={() => void handleDescargarComprobante(b)}
+                            isLoading={descargandoComprobanteId === b.idReservaCancha}
                           >
                             Ver comprobante
                           </Button>
