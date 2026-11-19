@@ -117,13 +117,27 @@ Limitaciones: la garantía vive en la aplicación. Un `INSERT` que no pase por e
 
 ## 6. Arquitectura offline del control de acceso
 
-**No implementada** (ADR-003). Hoy el flujo es en línea:
+Implementada en los PR #102 y #103 (ADR-020, que reemplaza a ADR-003). Diagrama: [c4-3-componentes-acceso](../diagramas/c4-3-componentes-acceso.svg), recuadro verde.
 
-1. El socio abre *Mi Pase* y la web pide `GET /v1/usuarios/me/qr`.
-2. `QrTokenService` arma `idUsuario:ventana60s:nonce` y lo firma con HMAC-SHA256 (`QR_SECRET`). El QR se renueva cada 60 segundos.
-3. La recepción envía el token a `POST /v1/accesos/ingreso`. El backend verifica firma y ventana, rechaza un QR ya usado, valida membresía, RN-01 y aforo, y registra el acceso.
+**Flujo en línea** (sin cambios): la recepción envía el token a `POST /v1/accesos/ingreso`. El backend verifica firma y ventana, rechaza un QR ya usado, valida membresía, RN-01 y aforo con bloqueo pesimista, y registra el acceso.
 
-El diseño propuesto para RNF-01 (en rojo en [c4-3-componentes-acceso](../diagramas/c4-3-componentes-acceso.svg)): pase firmado con clave asimétrica guardado en el dispositivo, validación en la terminal de sede con la clave pública, cola local de ingresos y sincronización diferida que revalida RN-01 y aforo. Requiere la app móvil, que quedó fuera del alcance.
+**Pase del socio, sin servidor** (`fz-frontend/src/services/offline/paseOffline.ts`):
+
+1. La primera vez que el socio abre *Mi Pase* con conexión, el navegador genera un par ECDSA P-256 con WebCrypto. La privada se crea no exportable y queda en IndexedDB.
+2. La pública se registra con `PUT /v1/usuarios/me/clave-qr` (`ClaveQrController` → `QrFirmadoService`, columna `qr_clave_publica`).
+3. Cada minuto el celular firma `F2|<idUsuario>|<ventana>|<nonce>` y muestra `F2.<idUsuario>.<ventana>.<nonce>.<firma>`. `QrTokenService` reconoce el prefijo `F2.` y delega la verificación en `QrFirmadoService`; el formato HMAC anterior sigue aceptado.
+
+**Terminal de sede** (`terminalLocal.ts`, `conectividad.ts`, `colaIngresos.ts`):
+
+1. Cada 5 minutos baja `GET /v1/accesos/terminal/habilitados`: socios con membresía vigente y su clave pública, accesos abiertos de la sede y aforo. Se guarda en localStorage y vale 24 horas (`TerminalSedeService.VIGENCIA_LISTA`).
+2. `conectividad.ts` es un circuit breaker: solo una falla de transporte (timeout de 4 s, sin respuesta) abre el circuito por 30 s. Un 409 o 422 es una respuesta válida y no activa el modo offline, para que no se pueda saltear una regla cortando la red.
+3. Sin conexión, el terminal verifica la firma con la clave pública de la lista, aplica RN-01 y aforo sobre los datos locales y encola el ingreso (patrón Outbox, localStorage), con la hora del escaneo corregida según el reloj del servidor.
+4. Al reconectar manda lotes de hasta 50 a `POST /v1/accesos/sincronizacion`. `TerminalSedeService` confirma cada evento en su propia transacción: verifica el token contra el minuto del escaneo (no el del sync), rechaza eventos de más de 24 h o con más de 2 min de adelanto, y aplica RN-01 con el mismo bloqueo pesimista del flujo en línea. Es idempotente por `tokenQr`: un reenvío responde `DUPLICADO`.
+5. Los rechazados quedan en la cola con su motivo para que la recepción los vea y los descarte. Ningún conflicto se resuelve solo.
+
+**Pruebas:** `QrFirmadoServiceTest`, `TerminalSedeServiceTest` y `TerminalSedeSeguridadTest` en el backend; `paseFirmado.test.ts` y `terminalOffline.test.ts` en el frontend.
+
+**Límites conocidos:** no hay service worker, así que la pestaña de *Mi Pase* tiene que estar cargada para mostrar el QR sin señal. La lista puede tener hasta 5 minutos de atraso. No hay app móvil empaquetada.
 
 ## 7. Guía de extensión
 
@@ -177,7 +191,7 @@ cd fz-frontend && npm run coverage      # vitest + reporte V8
 
 Cómo leer el reporte: la columna de líneas indica qué código se ejecutó; la de ramas, qué caminos de cada `if` se recorrieron. Una clase de servicio con líneas altas y ramas bajas tiene casos de error sin probar.
 
-Medición del 2026-11-10: backend 263 tests, 66,0 % de líneas y 48,7 % de ramas; frontend 400 tests, 71,3 % de líneas y 66,2 % de ramas. El umbral acordado es 60 % de líneas; se publica pero todavía no hace fallar el build.
+Medición del 2026-11-19, sobre `main`: backend 357 tests, 73,8 % de líneas y 57,4 % de ramas; frontend 483 tests, 72,7 % de líneas y 67,2 % de ramas. El umbral acordado es 60 % de líneas; se publica pero todavía no hace fallar el build.
 
 ## 9. Pipeline de integración y entrega
 

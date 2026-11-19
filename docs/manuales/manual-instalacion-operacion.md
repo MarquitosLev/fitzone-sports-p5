@@ -153,11 +153,11 @@ Supabase hace además respaldos diarios en su plan, que se restauran desde su pa
 
 ## 8. Operación degradada
 
-**Estado actual:** el control de acceso requiere conexión (ADR-003). No hay modo offline ni cola local de ingresos.
+**Estado actual:** el control de acceso sigue funcionando sin conexión (ADR-020). El terminal de sede valida con una lista local de habilitados y guarda una cola de ingresos que se sincroniza al reconectar; el celular del socio firma el QR sin servidor.
 
 | Falla | Efecto | Qué hacer |
 |---|---|---|
-| Se cae internet en la sede | La recepción no puede validar QR | Registrar ingresos en planilla (DNI, hora) y cargarlos con *Registrar ingreso* cuando vuelva la conexión. Nadie valida aforo ni RN-01 mientras tanto |
+| Se cae internet en la sede | El terminal pasa a modo sin conexión y valida con la lista local (vigencia 24 h) | Nada que hacer en el momento. Al volver la conexión, revisar en *Ingresos sin confirmar* que no queden rechazados. Si el terminal no tenía lista vigente, registrar en planilla y cargar con *Registrar ingreso* |
 | Render dormido o caído | La web muestra errores de red | Esperar el arranque (más de 1 minuto en plan gratuito) o hacer rollback (sección 6) |
 | Supabase Auth caído | No se puede iniciar sesión; las sesiones abiertas siguen hasta que vence el token | Esperar; no hay login alternativo |
 | Base caída | La API responde 500 | Ver `/api/ping` y los logs; restaurar si hubo pérdida |

@@ -1,0 +1,3672 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FitZone Sports API",
+    "description": "API REST de FitZone Sports. Todos los errores responden con el formato { codigo, mensaje, detalles, timestamp } (schema RespuestaError). Para probar endpoints protegidos: POST /v1/auth/login, copiar el token y cargarlo en Authorize.",
+    "version": "v1"
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Checkout de invitado",
+      "description": "Reserva, pago y comprobante de una cancha sin cuenta; el cÃ³digo de la reserva da el acceso"
+    },
+    {
+      "name": "Usuarios",
+      "description": "Endpoints de registro, perfil, bÃºsqueda y ediciÃ³n de usuarios"
+    },
+    {
+      "name": "AutenticaciÃ³n",
+      "description": "Endpoints de login, alta de socio, sesiÃ³n y logout"
+    },
+    {
+      "name": "Planes",
+      "description": "Endpoints de catÃ¡logo de planes de membresÃ­a"
+    },
+    {
+      "name": "Prueba de errores",
+      "description": "Ejemplos del formato comÃºn de error (no disponibles en prod)"
+    },
+    {
+      "name": "Comprobantes",
+      "description": "Endpoints de descarga y visualizaciÃ³n de comprobantes oficiales de pago en PDF"
+    },
+    {
+      "name": "Clases Grupales",
+      "description": "Endpoints de gestiÃ³n y consulta de agenda de clases grupales"
+    },
+    {
+      "name": "Pagos",
+      "description": "Endpoints de procesamiento de pagos y consulta de transacciones"
+    },
+    {
+      "name": "MembresÃ­as",
+      "description": "Endpoints de gestiÃ³n de membresÃ­as de socios"
+    },
+    {
+      "name": "Reservas de Clases",
+      "description": "Endpoints de gestiÃ³n y cancelaciÃ³n de reservas de clases grupales"
+    },
+    {
+      "name": "Sedes",
+      "description": "Endpoints de gestiÃ³n de sedes y aforo en tiempo real"
+    },
+    {
+      "name": "Canchas",
+      "description": "Endpoints de gestiÃ³n de canchas y mantenimiento"
+    },
+    {
+      "name": "Lista de Espera",
+      "description": "Endpoints de gestiÃ³n de lista de espera para clases completas"
+    },
+    {
+      "name": "Accesos",
+      "description": "Endpoints de control de acceso fÃ­sico mediante QR dinÃ¡mico y egresos"
+    },
+    {
+      "name": "Pase QR firmado",
+      "description": "Registro de la clave del dispositivo con la que el socio firma su QR sin conexiÃ³n (RNF-01)"
+    },
+    {
+      "name": "Terminal de sede",
+      "description": "OperaciÃ³n del control de acceso sin conexiÃ³n con el servidor central (RNF-01)"
+    }
+  ],
+  "paths": {
+    "/v1/usuarios/{id}": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Detalle del perfil de un usuario por su ID interno",
+        "operationId": "obtenerPorId",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "EdiciÃ³n de datos de perfil de un usuario",
+        "operationId": "actualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Usuario"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios/me/clave-qr": {
+      "put": {
+        "tags": [
+          "Pase QR firmado"
+        ],
+        "summary": "Registra la clave pÃºblica ECDSA P-256 (SPKI base64) del dispositivo del socio en sesiÃ³n",
+        "operationId": "registrar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistroClaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistroClaveResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sedes/{id}": {
+      "get": {
+        "tags": [
+          "Sedes"
+        ],
+        "summary": "Detalle de una sede por ID",
+        "operationId": "obtenerPorId_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sede"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Sedes"
+        ],
+        "summary": "EdiciÃ³n de una sede (nombre y aforo mÃ¡ximo)",
+        "operationId": "actualizar_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Sede"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sede"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/clases/{id}": {
+      "get": {
+        "tags": [
+          "Clases Grupales"
+        ],
+        "summary": "Detalle de una clase grupal con cupo disponible calculado",
+        "operationId": "obtenerPorId_2",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaseGrupal"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Clases Grupales"
+        ],
+        "summary": "EdiciÃ³n de una clase grupal",
+        "operationId": "actualizar_2",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaseGrupal"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaseGrupal"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Clases Grupales"
+        ],
+        "summary": "Baja de una clase grupal (no permitida si tiene reservas confirmadas)",
+        "operationId": "eliminar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/v1/canchas/{id}": {
+      "get": {
+        "tags": [
+          "Canchas"
+        ],
+        "summary": "Detalle de una cancha por ID",
+        "operationId": "obtenerPorId_3",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cancha"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Canchas"
+        ],
+        "summary": "EdiciÃ³n de una cancha",
+        "operationId": "actualizar_3",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Cancha"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cancha"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "BÃºsqueda y listado de usuarios con filtros opcionales por DNI, tipo y/o sede",
+        "operationId": "buscar",
+        "parameters": [
+          {
+            "name": "dni",
+            "in": "query",
+            "description": "DNI para filtrar usuarios de forma exacta",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "description": "Tipo de usuario (SOCIO, EXTERNO, RECEPCIONISTA, GERENTE)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SOCIO",
+                "EXTERNO",
+                "RECEPCIONISTA",
+                "GERENTE"
+              ]
+            }
+          },
+          {
+            "name": "idSede",
+            "in": "query",
+            "description": "ID de sede para filtrar usuarios",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Usuario"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Alta de un nuevo usuario (socio, externo, recepcionista o gerente)",
+        "operationId": "crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Usuario"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sedes": {
+      "get": {
+        "tags": [
+          "Sedes"
+        ],
+        "summary": "Listado de sedes",
+        "operationId": "listar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Sede"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Sedes"
+        ],
+        "summary": "Alta de una nueva sede",
+        "operationId": "crear_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Sede"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sede"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/prueba/validacion": {
+      "post": {
+        "tags": [
+          "Prueba de errores"
+        ],
+        "summary": "400 si el body no cumple las validaciones",
+        "operationId": "validarBody",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PruebaValidacionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Campos invÃ¡lidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/pagos": {
+      "post": {
+        "tags": [
+          "Pagos"
+        ],
+        "summary": "Pago simulado de una membresÃ­a o reserva propia del usuario logueado",
+        "operationId": "procesarPago",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PagoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaccion"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/membresias": {
+      "get": {
+        "tags": [
+          "MembresÃ­as"
+        ],
+        "summary": "Listado general de todas las membresÃ­as registradas",
+        "operationId": "listar_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Membresia"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "MembresÃ­as"
+        ],
+        "summary": "Alta de una nueva membresÃ­a para un socio",
+        "operationId": "crear_2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Membresia"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membresia"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/membresias/{id}/renovar": {
+      "post": {
+        "tags": [
+          "MembresÃ­as"
+        ],
+        "summary": "RenovaciÃ³n manual de una membresÃ­a existente",
+        "operationId": "renovar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membresia"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/invitados/reservas": {
+      "post": {
+        "tags": [
+          "Checkout de invitado"
+        ],
+        "summary": "Reserva y pago de un turno como invitado en un paso; si el pago se rechaza no queda nada guardado",
+        "operationId": "reservarYPagar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReservaInvitadoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservaInvitadoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/clases": {
+      "get": {
+        "tags": [
+          "Clases Grupales"
+        ],
+        "summary": "Agenda de clases grupales de una sede con cupo disponible calculado",
+        "operationId": "listar_2",
+        "parameters": [
+          {
+            "name": "idSede",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClaseGrupal"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Clases Grupales"
+        ],
+        "summary": "Alta de una nueva clase grupal",
+        "operationId": "crear_3",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaseGrupal"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaseGrupal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/clases/{id}/reservas": {
+      "get": {
+        "tags": [
+          "Clases Grupales"
+        ],
+        "summary": "Lista de socios inscriptos con reserva confirmada en una clase grupal",
+        "operationId": "listarInscriptos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InscriptoResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Clases Grupales"
+        ],
+        "summary": "Reserva de cupo en una clase grupal para el socio logueado",
+        "operationId": "reservar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservaClase"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/clases/{id}/lista-espera": {
+      "get": {
+        "tags": [
+          "Clases Grupales"
+        ],
+        "summary": "Obtiene la cola de espera ordenada por turno (FIFO) de una clase grupal",
+        "operationId": "listarListaEspera",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ListaEspera"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Clases Grupales"
+        ],
+        "summary": "Anota al socio logueado en la lista de espera de una clase completa",
+        "operationId": "anotarseEnListaEspera",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaEspera"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/canchas": {
+      "get": {
+        "tags": [
+          "Canchas"
+        ],
+        "summary": "Listado de canchas de la sede (aislamiento por sede)",
+        "operationId": "listar_3",
+        "parameters": [
+          {
+            "name": "idSede",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Cancha"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Canchas"
+        ],
+        "summary": "Alta de una nueva cancha",
+        "operationId": "crear_4",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Cancha"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cancha"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/canchas/{id}/reservas": {
+      "post": {
+        "tags": [
+          "Canchas"
+        ],
+        "summary": "Reserva de un turno a nombre del socio logueado (sin cuenta: /invitados/reservas)",
+        "operationId": "reservar_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReservaCancha"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservaCancha"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "AutenticaciÃ³n"
+        ],
+        "summary": "Cierre de sesiÃ³n de la cuenta activa",
+        "operationId": "logout",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "tags": [
+          "AutenticaciÃ³n"
+        ],
+        "summary": "Inicio de sesiÃ³n de usuarios con correo y contraseÃ±a",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/alta-socio": {
+      "post": {
+        "tags": [
+          "AutenticaciÃ³n"
+        ],
+        "summary": "Alta de socio online: la cuenta se crea solo con el pago de la suscripciÃ³n aprobado",
+        "description": "Pago rechazado: 422 y no se crea nada. DNI o email de una cuenta: 409 REQUIERE_INICIO_SESION.",
+        "operationId": "altaSocio",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AltaSocioRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AltaSocioResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/alta-socio/reintentar-cuenta": {
+      "post": {
+        "tags": [
+          "AutenticaciÃ³n"
+        ],
+        "summary": "Crea la cuenta de un socio que ya pagÃ³ y quedÃ³ con la cuenta pendiente",
+        "operationId": "reintentarCuenta",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReintentoCuentaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AltaSocioResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/accesos/{id}/egreso": {
+      "post": {
+        "tags": [
+          "Accesos"
+        ],
+        "summary": "Registra la salida fÃ­sica del socio liberando cupo de aforo",
+        "operationId": "registrarEgreso",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Acceso"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/accesos/sincronizacion": {
+      "post": {
+        "tags": [
+          "Terminal de sede"
+        ],
+        "summary": "Confirma los ingresos aprobados sin conexiÃ³n. Responde 200 con el resultado de cada evento",
+        "operationId": "sincronizar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SincronizacionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SincronizacionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/accesos/ingreso": {
+      "post": {
+        "tags": [
+          "Accesos"
+        ],
+        "summary": "Valida token QR dinÃ¡mico, membresÃ­a activa y aforo, y registra el ingreso a la sede",
+        "operationId": "registrarIngreso",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngresoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Acceso"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reservas-clase/{id}/cancelar": {
+      "patch": {
+        "tags": [
+          "Reservas de Clases"
+        ],
+        "summary": "CancelaciÃ³n de reserva de clase grupal liberando cupo para la lista de espera",
+        "operationId": "cancelar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservaClase"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/membresias/{id}/estado": {
+      "patch": {
+        "tags": [
+          "MembresÃ­as"
+        ],
+        "summary": "Cambio de estado de una membresÃ­a (suspender, reactivar o cancelar)",
+        "operationId": "cambiarEstado",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membresia"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/canchas/{id}/mantenimiento": {
+      "patch": {
+        "tags": [
+          "Canchas"
+        ],
+        "summary": "Inhabilitar o habilitar una cancha por mantenimiento",
+        "operationId": "cambiarMantenimiento",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cancha"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios/{id}/reservas-clase": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Obtiene las reservas de clases grupales de un socio",
+        "operationId": "obtenerMisReservas",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReservaClase"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios/{id}/reservas-cancha": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Obtiene el listado de reservas de cancha realizadas por el usuario",
+        "operationId": "listarReservasCancha",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReservaCancha"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios/{id}/qr": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Genera y obtiene el token QR dinÃ¡mico vigente de un socio con los segundos restantes",
+        "operationId": "obtenerQr",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QrTokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios/{id}/pagos": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Obtiene el historial de transacciones de pago de un usuario",
+        "operationId": "listarPagos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Transaccion"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios/{id}/membresia": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Obtiene la membresÃ­a vigente (activa o suspendida) de un usuario",
+        "operationId": "obtenerMembresiaVigente",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membresia"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios/me": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Obtiene el perfil del usuario autenticado a partir del token JWT",
+        "operationId": "obtenerMiPerfil",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios/me/reservas-clase": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Obtiene las reservas de clases grupales del socio logueado",
+        "operationId": "obtenerMisReservasClase",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReservaClase"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios/me/reservas-cancha": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Obtiene las reservas de cancha del usuario logueado, con la cancha y su sede",
+        "operationId": "obtenerMisReservasCancha",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReservaCancha"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios/me/qr": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Genera y obtiene el token QR dinÃ¡mico vigente del socio autenticado en sesiÃ³n (SCRUM-96)",
+        "operationId": "obtenerMiQr",
+        "parameters": [
+          {
+            "name": "X-Usuario-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "idUsuario",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QrTokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios/me/pagos": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Historial de pagos del usuario logueado, con el plan o la cancha de cada uno",
+        "operationId": "obtenerMisPagos",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Transaccion"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usuarios/me/lista-espera": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Obtiene las listas de espera en las que estÃ¡ anotado el socio logueado",
+        "operationId": "obtenerMisListasEspera",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ListaEspera"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sedes/{id}/aforo": {
+      "get": {
+        "tags": [
+          "Sedes"
+        ],
+        "summary": "Consulta de aforo actual, mÃ¡ximo y porcentaje de ocupaciÃ³n en tiempo real",
+        "operationId": "obtenerAforo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AforoSede"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sedes/{id}/accesos/activos": {
+      "get": {
+        "tags": [
+          "Sedes"
+        ],
+        "summary": "Listado de personas que estÃ¡n adentro de la sede ahora (accesos activos)",
+        "operationId": "listarAccesosActivos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Acceso"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/prueba/regla-negocio": {
+      "get": {
+        "tags": [
+          "Prueba de errores"
+        ],
+        "summary": "Siempre responde 422",
+        "operationId": "reglaNegocio",
+        "responses": {
+          "422": {
+            "description": "Regla de negocio incumplida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/prueba/parametros": {
+      "get": {
+        "tags": [
+          "Prueba de errores"
+        ],
+        "summary": "400 si el parÃ¡metro falta, no es numÃ©rico o no es positivo",
+        "operationId": "validarParametro",
+        "parameters": [
+          {
+            "name": "idSede",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "ParÃ¡metro invÃ¡lido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/prueba/no-encontrado/{id}": {
+      "get": {
+        "tags": [
+          "Prueba de errores"
+        ],
+        "summary": "Siempre responde 404",
+        "operationId": "noEncontrado",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Recurso inexistente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/prueba/conflicto": {
+      "get": {
+        "tags": [
+          "Prueba de errores"
+        ],
+        "summary": "Siempre responde 409",
+        "operationId": "conflicto",
+        "responses": {
+          "409": {
+            "description": "Conflicto con el estado actual",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/planes": {
+      "get": {
+        "tags": [
+          "Planes"
+        ],
+        "summary": "Listado de todos los planes de membresÃ­a disponibles",
+        "operationId": "listar_4",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Plan"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/pagos/{id}": {
+      "get": {
+        "tags": [
+          "Pagos"
+        ],
+        "summary": "Consulta del estado y detalle de una transacciÃ³n por su ID",
+        "operationId": "obtenerPorId_4",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaccion"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/pagos/{id}/comprobante": {
+      "get": {
+        "tags": [
+          "Pagos"
+        ],
+        "summary": "Obtiene los datos del comprobante emitido para una transacciÃ³n confirmada",
+        "operationId": "obtenerComprobantePorPago",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comprobante"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/membresias/{id}": {
+      "get": {
+        "tags": [
+          "MembresÃ­as"
+        ],
+        "summary": "Obtiene el detalle de una membresÃ­a por su ID",
+        "operationId": "obtenerPorId_5",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membresia"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/invitados/reservas/{codigo}": {
+      "get": {
+        "tags": [
+          "Checkout de invitado"
+        ],
+        "summary": "Detalle de la reserva de invitado por su cÃ³digo",
+        "operationId": "obtener",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservaInvitadoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/invitados/reservas/{codigo}/comprobante/pdf": {
+      "get": {
+        "tags": [
+          "Checkout de invitado"
+        ],
+        "summary": "Descarga del comprobante en PDF de la reserva de invitado",
+        "operationId": "descargarComprobante",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "byte"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/comprobantes/{id}/pdf": {
+      "get": {
+        "tags": [
+          "Comprobantes"
+        ],
+        "summary": "Descarga o visualizaciÃ³n del comprobante de pago en formato PDF",
+        "operationId": "descargarPdf",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "byte"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/canchas/{id}/disponibilidad": {
+      "get": {
+        "tags": [
+          "Canchas"
+        ],
+        "summary": "Grilla de disponibilidad horaria de una cancha para una fecha dada",
+        "operationId": "obtenerDisponibilidad",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "fecha",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FranjaDisponibilidad"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/canchas/{id}/cotizacion": {
+      "get": {
+        "tags": [
+          "Canchas"
+        ],
+        "summary": "CotizaciÃ³n y desglose dinÃ¡mico del precio de un turno",
+        "description": "PÃºblica. Si se envÃ­a el token de un socio con membresÃ­a vigente, aplica el 15% de descuento.",
+        "operationId": "cotizar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "inicio",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "fin",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CotizacionDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/accesos": {
+      "get": {
+        "tags": [
+          "Accesos"
+        ],
+        "summary": "Historial de accesos fÃ­sicos de una sede ordenado por fecha de ingreso descendente",
+        "operationId": "listarPorSede",
+        "parameters": [
+          {
+            "name": "idSede",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Acceso"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/accesos/terminal/habilitados": {
+      "get": {
+        "tags": [
+          "Terminal de sede"
+        ],
+        "summary": "Lista local para validar sin conexiÃ³n: socios con membresÃ­a vigente, accesos abiertos de la sede y aforo",
+        "operationId": "habilitados",
+        "parameters": [
+          {
+            "name": "idSede",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HabilitadosResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ping": {
+      "get": {
+        "tags": [
+          "ping-controller"
+        ],
+        "operationId": "ping",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lista-espera/{id}": {
+      "delete": {
+        "tags": [
+          "Lista de Espera"
+        ],
+        "summary": "Salir de la lista de espera de una clase y reacomodar posiciones",
+        "operationId": "salir",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Usuario": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idUsuario": {
+            "type": "integer",
+            "format": "int64",
+            "readOnly": true
+          },
+          "authId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "dni": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 0
+          },
+          "nombre": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "apellido": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 0
+          },
+          "telefono": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 0
+          },
+          "fotoUrl": {
+            "type": "string"
+          },
+          "tipoUsuario": {
+            "type": "string",
+            "enum": [
+              "SOCIO",
+              "EXTERNO",
+              "RECEPCIONISTA",
+              "GERENTE"
+            ]
+          },
+          "idSede": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "password": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "apellido",
+          "dni",
+          "email",
+          "nombre",
+          "tipoUsuario"
+        ]
+      },
+      "RegistroClaveRequest": {
+        "type": "object",
+        "properties": {
+          "clavePublica": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "clavePublica"
+        ]
+      },
+      "RegistroClaveResponse": {
+        "type": "object",
+        "properties": {
+          "horaServidor": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Sede": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idSede": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 1
+          },
+          "aforoMaximo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "aforoMaximo",
+          "nombre"
+        ]
+      },
+      "ClaseGrupal": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idClase": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sede": {
+            "$ref": "#/components/schemas/Sede"
+          },
+          "nombreActividad": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fechaHoraInicio": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "duracionMinutos": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "cupoMaximo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "cupoDisponible": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "yaReservada": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "posicionEspera": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "idSede": {
+            "type": "integer",
+            "format": "int64",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "cupoMaximo",
+          "duracionMinutos",
+          "fechaHoraInicio",
+          "nombreActividad"
+        ]
+      },
+      "Cancha": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idCancha": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sede": {
+            "$ref": "#/components/schemas/Sede"
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "precioBaseHora": {
+            "type": "number"
+          },
+          "enMantenimiento": {
+            "type": "boolean"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "idSede": {
+            "type": "integer",
+            "format": "int64",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "nombre",
+          "precioBaseHora"
+        ]
+      },
+      "PruebaValidacionRequest": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cupo": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 50,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "cupo",
+          "email",
+          "nombre"
+        ]
+      },
+      "DetalleError": {
+        "type": "object",
+        "properties": {
+          "campo": {
+            "type": "string"
+          },
+          "mensaje": {
+            "type": "string"
+          }
+        }
+      },
+      "RespuestaError": {
+        "type": "object",
+        "description": "Formato comÃºn de error de toda la API",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "enum": [
+              "VALIDACION",
+              "SOLICITUD_INVALIDA",
+              "ACCESO_DENEGADO",
+              "RECURSO_NO_ENCONTRADO",
+              "CONFLICTO",
+              "REGLA_NEGOCIO",
+              "ERROR_INTERNO",
+              "SERVICIO_EXTERNO",
+              "QR_VENCIDO",
+              "MEMBRESIA_INACTIVA",
+              "YA_INGRESADO",
+              "AFORO_COMPLETO",
+              "CLASE_COMPLETA",
+              "REQUIERE_INICIO_SESION"
+            ]
+          },
+          "mensaje": {
+            "type": "string"
+          },
+          "detalles": {
+            "type": "array",
+            "description": "Detalle por campo; lista vacÃ­a si el error no es de un campo puntual",
+            "items": {
+              "$ref": "#/components/schemas/DetalleError"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PagoRequest": {
+        "type": "object",
+        "properties": {
+          "idSede": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "concepto": {
+            "type": "string",
+            "enum": [
+              "RESERVA_EXTERNO",
+              "RESERVA_SOCIO",
+              "MEMBRESIA",
+              "RESERVA_CANCHA"
+            ]
+          },
+          "idMembresia": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "idReservaCancha": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "forzarRechazo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "concepto"
+        ]
+      },
+      "Membresia": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idMembresia": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/Plan"
+          },
+          "fechaInicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "fechaVencimiento": {
+            "type": "string",
+            "format": "date"
+          },
+          "fechaCancelacion": {
+            "type": "string",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ACTIVO",
+              "VENCIDO",
+              "CANCELADO",
+              "SUSPENDIDO"
+            ]
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "idUsuario": {
+            "type": "integer",
+            "format": "int64",
+            "writeOnly": true
+          },
+          "idPlan": {
+            "type": "integer",
+            "format": "int32",
+            "writeOnly": true
+          }
+        }
+      },
+      "Plan": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idPlan": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "precioBase": {
+            "type": "number"
+          },
+          "duracionMeses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReservaCancha": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idReservaCancha": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "cancha": {
+            "$ref": "#/components/schemas/Cancha"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          },
+          "fechaHoraInicio": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fechaHoraFin": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "precioFinal": {
+            "type": "number"
+          },
+          "codigoReserva": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "idCancha": {
+            "type": "integer",
+            "format": "int64",
+            "writeOnly": true
+          },
+          "retencionVencida": {
+            "type": "boolean"
+          },
+          "idUsuario": {
+            "type": "integer",
+            "format": "int64",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "fechaHoraFin",
+          "fechaHoraInicio"
+        ]
+      },
+      "Transaccion": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idTransaccion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          },
+          "sede": {
+            "$ref": "#/components/schemas/Sede"
+          },
+          "membresia": {
+            "$ref": "#/components/schemas/Membresia"
+          },
+          "reservaCancha": {
+            "$ref": "#/components/schemas/ReservaCancha"
+          },
+          "concepto": {
+            "type": "string",
+            "enum": [
+              "RESERVA_EXTERNO",
+              "RESERVA_SOCIO",
+              "MEMBRESIA",
+              "RESERVA_CANCHA"
+            ]
+          },
+          "monto": {
+            "type": "number"
+          },
+          "estadoPago": {
+            "type": "string",
+            "enum": [
+              "PENDIENTE",
+              "CONFIRMADO",
+              "RECHAZADO",
+              "REEMBOLSADO"
+            ]
+          },
+          "tokenTransaccionPasarela": {
+            "type": "string"
+          },
+          "fechaHoraCreacion": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fechaHoraConfirmacion": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReservaInvitadoRequest": {
+        "type": "object",
+        "properties": {
+          "idCancha": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "fechaHoraInicio": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fechaHoraFin": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "nombre": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "apellido": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "dni": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\d{7,10}"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 0
+          },
+          "forzarRechazo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "apellido",
+          "dni",
+          "email",
+          "fechaHoraFin",
+          "fechaHoraInicio",
+          "idCancha",
+          "nombre"
+        ]
+      },
+      "CotizacionDTO": {
+        "type": "object",
+        "description": "Desglose y cotizaciÃ³n de precio de un turno de cancha",
+        "properties": {
+          "precioBase": {
+            "type": "number",
+            "description": "Precio estÃ¡ndar base segÃºn horas y tarifa de la cancha",
+            "example": 10000.0
+          },
+          "descuento": {
+            "type": "number",
+            "description": "Monto de descuento aplicado (15% para socios con membresÃ­a activa)",
+            "example": 1500.0
+          },
+          "recargo": {
+            "type": "number",
+            "description": "Monto de recargo aplicado por horario pico (19:00 a 21:00)",
+            "example": 2000.0
+          },
+          "precioFinal": {
+            "type": "number",
+            "description": "Precio total final calculado y congelado para el turno",
+            "example": 10500.0
+          }
+        }
+      },
+      "ReservaInvitadoResponse": {
+        "type": "object",
+        "properties": {
+          "codigoReserva": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "idReservaCancha": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "idCancha": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "cancha": {
+            "type": "string"
+          },
+          "tipoCancha": {
+            "type": "string"
+          },
+          "idSede": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sede": {
+            "type": "string"
+          },
+          "fechaHoraInicio": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fechaHoraFin": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "precioFinal": {
+            "type": "number"
+          },
+          "cotizacion": {
+            "$ref": "#/components/schemas/CotizacionDTO"
+          },
+          "pagada": {
+            "type": "boolean"
+          },
+          "numeroFactura": {
+            "type": "string"
+          }
+        }
+      },
+      "ReservaClase": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idReservaClase": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "clase": {
+            "$ref": "#/components/schemas/ClaseGrupal"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "CONFIRMADA",
+              "CANCELADA",
+              "ASISTIO",
+              "NO_ASISTIO"
+            ]
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ListaEspera": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idEspera": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "clase": {
+            "$ref": "#/components/schemas/ClaseGrupal"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          },
+          "ordenPosicion": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          }
+        }
+      },
+      "AltaSocioRequest": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "apellido": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "dni": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\d{7,10}"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 0
+          },
+          "telefono": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 0
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 72,
+            "minLength": 6
+          },
+          "idPlan": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "idSede": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "forzarRechazo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "apellido",
+          "dni",
+          "email",
+          "idPlan",
+          "idSede",
+          "nombre",
+          "password",
+          "telefono"
+        ]
+      },
+      "AltaSocioResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          },
+          "cuentaPendiente": {
+            "type": "boolean"
+          },
+          "mensaje": {
+            "type": "string"
+          },
+          "idMembresia": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "fechaVencimiento": {
+            "type": "string",
+            "format": "date"
+          },
+          "idComprobante": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "numeroFactura": {
+            "type": "string"
+          },
+          "codigoReintento": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ReintentoCuentaRequest": {
+        "type": "object",
+        "properties": {
+          "dni": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 72,
+            "minLength": 6
+          },
+          "codigoReintento": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "codigoReintento",
+          "dni",
+          "email",
+          "password"
+        ]
+      },
+      "Acceso": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idAcceso": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          },
+          "sede": {
+            "$ref": "#/components/schemas/Sede"
+          },
+          "fechaHoraIngreso": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fechaHoraEgreso": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tokenQr": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "EventoIngresoOffline": {
+        "type": "object",
+        "properties": {
+          "tokenQr": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 0
+          },
+          "idSede": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ocurrioEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "ocurrioEn",
+          "tokenQr"
+        ]
+      },
+      "SincronizacionRequest": {
+        "type": "object",
+        "properties": {
+          "eventos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventoIngresoOffline"
+            },
+            "maxItems": 50,
+            "minItems": 0
+          }
+        },
+        "required": [
+          "eventos"
+        ]
+      },
+      "ResultadoSincronizacion": {
+        "type": "object",
+        "properties": {
+          "tokenQr": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "mensaje": {
+            "type": "string"
+          },
+          "idAcceso": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "SincronizacionResponse": {
+        "type": "object",
+        "properties": {
+          "resultados": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResultadoSincronizacion"
+            }
+          }
+        }
+      },
+      "IngresoRequest": {
+        "type": "object",
+        "properties": {
+          "tokenQr": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 0
+          },
+          "idSede": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "tokenQr"
+        ]
+      },
+      "QrTokenResponse": {
+        "type": "object",
+        "properties": {
+          "tokenQr": {
+            "type": "string"
+          },
+          "segundosRestantes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "AforoSede": {
+        "type": "object",
+        "properties": {
+          "aforoActual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "aforoMaximo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "porcentaje": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "Comprobante": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idComprobante": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "transaccion": {
+            "$ref": "#/components/schemas/Transaccion"
+          },
+          "numeroFactura": {
+            "type": "string"
+          },
+          "clienteNombre": {
+            "type": "string"
+          },
+          "clienteDni": {
+            "type": "string"
+          },
+          "clienteEmail": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "InscriptoResponse": {
+        "type": "object",
+        "properties": {
+          "idReservaClase": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "idUsuario": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellido": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "CONFIRMADA",
+              "CANCELADA",
+              "ASISTIO",
+              "NO_ASISTIO"
+            ]
+          }
+        }
+      },
+      "FranjaDisponibilidad": {
+        "type": "object",
+        "properties": {
+          "horaInicio": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "horaFin": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "LIBRE",
+              "OCUPADO",
+              "MANTENIMIENTO"
+            ]
+          }
+        }
+      },
+      "AccesoAbierto": {
+        "type": "object",
+        "properties": {
+          "idAcceso": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "idUsuario": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "tokenQr": {
+            "type": "string"
+          },
+          "fechaHoraIngreso": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "HabilitadosResponse": {
+        "type": "object",
+        "properties": {
+          "horaServidor": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validaHasta": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idSede": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "aforoMaximo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "socios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SocioHabilitado"
+            }
+          },
+          "adentro": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccesoAbierto"
+            }
+          }
+        }
+      },
+      "SocioHabilitado": {
+        "type": "object",
+        "properties": {
+          "idUsuario": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellido": {
+            "type": "string"
+          },
+          "dni": {
+            "type": "string"
+          },
+          "venceMembresia": {
+            "type": "string",
+            "format": "date"
+          },
+          "clavePublica": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

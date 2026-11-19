@@ -1,19 +1,21 @@
 ---
-title: Despliegue — FitZone Sports (v1.0, 2026-11-10, Leiva)
+title: Despliegue — FitZone Sports (v1.1, 2026-11-19, Leiva)
 ---
 %% Diagrama de despliegue — FitZone Sports
-%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-10 · Versión: 1.0
+%% Autor: Leiva, Marcos Joel · Fecha: 2026-11-19 · Versión: 1.1 (modo offline, ADR-020; publicación desde main)
 flowchart LR
   subgraph sede["Sede (x 25+)"]
     terminal["Terminal de recepción<br/>navegador web"]
+    almacen[("localStorage del terminal<br/>lista de habilitados + cola de ingresos")]
   end
   subgraph cliente["Dispositivo del usuario"]
     navegador["Navegador / celular<br/>socio, externo, gerente"]
+    clave[("IndexedDB del celular<br/>clave privada ECDSA del pase QR")]
   end
 
   internet(("Internet<br/>conexión principal"))
 
-  subgraph nube["Nube — entorno dev (sigue develop)"]
+  subgraph nube["Nube — publicado desde main"]
     subgraph vercel["Vercel — proyecto fitzone-sports-p5"]
       spa["SPA React<br/>build estático de Vite<br/>preview por rama"]
     end
@@ -26,10 +28,10 @@ flowchart LR
     end
   end
 
-  subgraph local["Máquina de desarrollo — docker compose levanta solo PostgreSQL"]
+  subgraph local["Máquina local — docker compose up --build"]
     pgl[("postgres:16-alpine<br/>fitzone_postgres_local :5432<br/>docker/initdb")]
-    apil["API (mvnw spring-boot:run<br/>perfil local) :8080"]
-    spal["Vite dev server :5173"]
+    apil["fitzone_backend_local<br/>API perfil local :8080"]
+    spal["fitzone_frontend_local<br/>nginx :5173"]
   end
 
   terminal -- HTTPS --> internet
@@ -40,8 +42,10 @@ flowchart LR
   api -- "HTTPS (login, alta de cuentas, JWKS)" --> auth
   spal --> apil --> pgl
 
-  caida["Caída de la conexión principal:<br/>la terminal de sede no llega a la API,<br/>no se pueden validar QR ni registrar ingresos.<br/>No hay modo offline (ADR-003)."]
+  terminal --- almacen
+  navegador --- clave
+  caida["Caída de la conexión principal (ADR-020):<br/>el celular sigue firmando el QR y el terminal<br/>lo valida con la lista local y encola el ingreso.<br/>Al reconectar sincroniza y el servidor revalida RN-01."]
   terminal -. sin conexión .-> caida
 
-  classDef falla fill:#fdecea,stroke:#c0392b,color:#7b241c
-  class caida falla
+  classDef offline fill:#eafaf1,stroke:#1e8449,color:#145a32
+  class caida offline
