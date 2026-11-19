@@ -11,6 +11,15 @@ Cada diagrama tiene su fuente editable en Mermaid (`.mmd`) y su exportación en 
 | DER físico | [der-fisico.mmd](der-fisico.mmd) | [SVG](der-fisico.svg) | Leiva, Marcos Joel · 2026-11-10 · 1.0 |
 | Despliegue | [despliegue.mmd](despliegue.mmd) | [SVG](despliegue.svg) | Leiva, Marcos Joel · 2026-11-10 · 1.0 |
 | Pipeline CI/CD | [pipeline-ci-cd.mmd](pipeline-ci-cd.mmd) | [SVG](pipeline-ci-cd.svg) | Leiva, Marcos Joel · 2026-11-10 · 1.0 |
+| UML Clases del dominio (Strategy, Observer y Repository) | [uml-clases-dominio.mmd](uml-clases-dominio.mmd) | [SVG](uml-clases-dominio.svg) · [JPG](uml-clases-dominio.jpg) | Bravo, Agustín · 2026-11-19 · 1.0 |
+| UML Secuencia — Reserva de cancha con pago | [uml-secuencia-reserva-cancha-pago.mmd](uml-secuencia-reserva-cancha-pago.mmd) | [SVG](uml-secuencia-reserva-cancha-pago.svg) · [JPG](uml-secuencia-reserva-cancha-pago.jpg) | Bravo, Agustín · 2026-11-19 · 1.0 |
+| UML Secuencia — Reserva concurrente (RN-02) | [uml-secuencia-reserva-concurrente.mmd](uml-secuencia-reserva-concurrente.mmd) | [SVG](uml-secuencia-reserva-concurrente.svg) · [JPG](uml-secuencia-reserva-concurrente.jpg) | Bravo, Agustín · 2026-11-19 · 1.0 |
+| UML Secuencia — Validación de acceso offline (RNF-01) | [uml-secuencia-acceso-offline.mmd](uml-secuencia-acceso-offline.mmd) | [SVG](uml-secuencia-acceso-offline.svg) · [JPG](uml-secuencia-acceso-offline.jpg) | Bravo, Agustín · 2026-11-19 · 1.0 |
+| UML Estados — Membresía | [uml-estados-membresia.mmd](uml-estados-membresia.mmd) | [SVG](uml-estados-membresia.svg) · [JPG](uml-estados-membresia.jpg) | Bravo, Agustín · 2026-11-19 · 1.0 |
+| UML Estados — Reserva de cancha y de clase | [uml-estados-reserva.mmd](uml-estados-reserva.mmd) | [SVG](uml-estados-reserva.svg) · [JPG](uml-estados-reserva.jpg) | Bravo, Agustín · 2026-11-19 · 1.0 |
+| UML Actividad — Lista de espera (Observer) | [uml-actividad-lista-espera.mmd](uml-actividad-lista-espera.mmd) | [SVG](uml-actividad-lista-espera.svg) · [JPG](uml-actividad-lista-espera.jpg) | Bravo, Agustín · 2026-11-19 · 1.0 |
+
+Los siete UML describen el código de `main` al 2026-11-19. Se exportaron con Mermaid 11.4.1 desde el navegador, con `htmlLabels` desactivado para que el texto quede como texto del SVG.
 
 ## Notación
 

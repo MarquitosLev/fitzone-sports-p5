@@ -1,0 +1,36 @@
+---
+title: UML Estados — Reserva de cancha y de clase (v1.0, 2026-11-19, Bravo)
+---
+%% Estados de la reserva desde pendiente de pago hasta cumplida o cancelada (RF-07, RF-10)
+%% Autor: Bravo, Agustín · Fecha: 2026-11-19 · Versión: 1.0
+%% Refleja main al 2026-11-19. La reserva de cancha no guarda estado: se deriva de sus pagos y fechas (ADR-012, ADR-019).
+stateDiagram-v2
+  direction TB
+
+  state "Reserva de cancha" as RC {
+    [*] --> PENDIENTE_PAGO : POST /canchas/{id}/reservas<br/>/ precio congelado, retiene el turno
+    PENDIENTE_PAGO --> PENDIENTE_PAGO : pago RECHAZADO<br/>[dentro de los 5 min]
+    PENDIENTE_PAGO --> CONFIRMADA : pago CONFIRMADO<br/>[dentro de los 5 min] / genera comprobante
+    PENDIENTE_PAGO --> VENCIDA : pasan 5 min sin pago<br/>/ el turno vuelve a la grilla
+    CONFIRMADA --> FINALIZADA : [ya pasó fechaHoraFin]
+    VENCIDA --> [*]
+    FINALIZADA --> [*]
+  }
+
+  state "Reserva de clase" as RCL {
+    state "CONFIRMADA" as CONFIRMADA_CLASE
+    [*] --> CONFIRMADA_CLASE : POST /clases/{id}/reservas<br/>[socio activo, hay cupo, hasta 48 h antes]
+    CONFIRMADA_CLASE --> CANCELADA : PATCH /reservas-clase/{id}/cancelar<br/>[hasta 2 h antes del inicio] / sin penalidad, libera cupo
+    CONFIRMADA_CLASE --> CONFIRMADA_CLASE : cancelar a menos de 2 h<br/>/ se rechaza con 422
+    CONFIRMADA_CLASE --> [*] : se dicta la clase (cumplida)
+    CANCELADA --> [*]
+  }
+
+  note right of RC
+    La cancelación de turnos de cancha no está habilitada en la API:
+    un turno confirmado no se cancela. No hay penalidad implementada.
+  end note
+  note right of RCL
+    La cancelación tardía no se cobra: se impide.
+    ASISTIO y NO_ASISTIO existen en el enum pero ningún flujo los asigna.
+  end note

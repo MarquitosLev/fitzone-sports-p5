@@ -1,0 +1,62 @@
+---
+title: UML Secuencia — Validación de acceso offline (v1.0, 2026-11-19, Bravo)
+---
+%% QR rotativo generado en el celular del socio, validado en el terminal de sede con el servidor caído
+%% y sincronizado al reconectar (RNF-01, RF-04, RN-01)
+%% Autor: Bravo, Agustín · Fecha: 2026-11-19 · Versión: 1.0
+%% Refleja el código de main al 2026-11-19 (PR #102 y #103).
+sequenceDiagram
+  autonumber
+  actor S as Socio
+  participant P as Portal del socio — Mi QR
+  participant T as Terminal de sede — Recepción
+  participant L as Lista local y cola (navegador del terminal)
+  participant API as API — TerminalSedeService / AccesoService
+  participant DB as PostgreSQL
+
+  rect rgb(235, 245, 255)
+  Note over P,DB: Con conexión: preparación
+  P->>P: Genera el par de claves ECDSA P-256 (WebCrypto). La privada no sale del navegador
+  P->>API: PUT /usuarios/me/clave-qr (clave pública)
+  API->>DB: UPDATE usuario.qr_clave_publica
+  T->>API: GET /accesos/terminal/habilitados?idSede
+  API->>DB: socios con membresía vigente, accesos abiertos y aforo
+  API-->>T: lista de habilitados (con claves públicas) y hora del servidor
+  T->>L: Guarda la lista y el desfase de reloj
+  end
+
+  Note over T,API: Se cae la conexión con el servidor central
+
+  S->>P: Abre Mi QR
+  P->>P: Firma idUsuario + ventana de 60 s + nonce con la clave privada
+  P-->>S: Muestra el QR (se renueva cada 60 s)
+  S->>T: Presenta el QR
+  T-xAPI: POST /accesos/ingreso
+  Note right of T: Falla de red o timeout:<br/>pasa a modo sin conexión.<br/>Un rechazo 409/422 del servidor no.
+  T->>L: validarLocal(token)
+  L->>L: Ventana vigente (±1) con la hora corregida
+  L->>L: Socio en la lista y membresía vigente
+  L->>L: Firma válida con su clave pública
+  L->>L: No está adentro (RN-01) y hay aforo
+  alt Aprobado
+    L->>L: Encola el ingreso con la hora del escaneo y lo suma a "adentro"
+    T-->>S: Ingreso aprobado sin conexión (pendiente de confirmar)
+  else Rechazado
+    T-->>S: Motivo: QR vencido, firma inválida, membresía, ya ingresado o aforo
+  end
+
+  Note over T,API: Vuelve la conexión
+
+  T->>API: POST /accesos/sincronizacion (hasta 50 eventos)
+  loop Por cada evento, en su propia transacción
+    API->>DB: ¿existe un acceso con ese tokenQr?
+    alt Ya registrado
+      API-->>T: DUPLICADO (ok)
+    else Nuevo
+      API->>DB: Revalida firma y ventana con la hora del escaneo, RN-01 y aforo con bloqueo
+      API->>DB: INSERT acceso
+      API-->>T: ok con idAcceso
+    end
+  end
+  T->>L: Marca cada ingreso como confirmado o rechazado
+  T-->>T: Muestra los rechazados en "Ingresos sin confirmar"
