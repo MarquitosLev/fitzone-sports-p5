@@ -12,7 +12,7 @@
  * - Al confirmar, lleva al checkout de pago (M5) o Mis Reservas.
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
@@ -105,12 +105,27 @@ export function ReservaCanchaView({
   const [confirmando, setConfirmando] = useState(false);
   const [errorConflicto, setErrorConflicto] = useState<string | null>(null);
 
+  // Referencia a la sede activa para evitar race conditions al cambiar de sede
+  const sedeActivaRef = useRef(sedeActiva);
+  useEffect(() => {
+    sedeActivaRef.current = sedeActiva;
+  }, [sedeActiva]);
+
   // Cargar Canchas de la Sede
   const cargarCanchas = useCallback(async () => {
-    if (!sedeActiva) return;
+    if (!sedeActiva) {
+      setCanchas([]);
+      setCanchaSeleccionada(null);
+      return;
+    }
+    const targetIdSede = sedeActiva.idSede;
     setLoadingCanchas(true);
     try {
-      const data = await listarCanchas(sedeActiva.idSede);
+      const data = await listarCanchas(targetIdSede);
+      // Evitar sobreescritura si la sede activa cambió mientras la petición estaba en vuelo
+      if (sedeActivaRef.current?.idSede !== targetIdSede) {
+        return;
+      }
       setCanchas(data);
 
       // Si no hay cancha seleccionada o la actual ya no está, elegir la primera disponible
@@ -125,13 +140,16 @@ export function ReservaCanchaView({
         setCanchaSeleccionada(null);
       }
     } catch {
+      if (sedeActivaRef.current?.idSede !== targetIdSede) return;
       addToast({
         type: 'error',
         title: 'Error de carga',
         message: 'No se pudieron cargar las canchas de la sede activa.',
       });
     } finally {
-      setLoadingCanchas(false);
+      if (sedeActivaRef.current?.idSede === targetIdSede) {
+        setLoadingCanchas(false);
+      }
     }
   }, [sedeActiva, addToast]);
 

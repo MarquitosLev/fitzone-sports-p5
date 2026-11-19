@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { CanchasPage } from './CanchasPage';
-import { SedeProvider } from '../context/SedeContext';
+import { SedeProvider, useSede } from '../context/SedeContext';
 import { ToastProvider } from '../context/ToastContext';
 import * as canchasService from '../services/canchasService';
 import * as pagosService from '../services/pagosService';
@@ -395,6 +395,68 @@ describe('CanchasPage (Integración)', () => {
 
     await waitFor(() => {
       expect(spyToggle).toHaveBeenCalledWith(1, true);
+    });
+  });
+
+  it('evita race conditions descartando respuestas de sedes previas si la sede activa cambió', async () => {
+    let resolverSede1: (canchas: CanchaDTO[]) => void = () => {};
+    const promesaSede1 = new Promise<CanchaDTO[]>((resolve) => {
+      resolverSede1 = resolve;
+    });
+
+    const sede2: SedeDTO = { idSede: 2, nombre: 'FitZone Belgrano', aforoMaximo: 100 };
+    const canchasSede2: CanchaDTO[] = [
+      {
+        idCancha: 201,
+        sede: sede2,
+        nombre: 'Cancha Belgrano — Tenis',
+        tipo: 'TENIS',
+        precioBaseHora: 10000,
+        enMantenimiento: false,
+      },
+    ];
+
+    vi.spyOn(canchasService, 'listarCanchas').mockImplementation((idSede) => {
+      if (idSede === 1) return promesaSede1;
+      return Promise.resolve(canchasSede2);
+    });
+
+    let setSedeGlobal: (sede: SedeDTO) => void = () => {};
+    function SedeCambioTester() {
+      const { setSedeActiva } = useSede();
+      setSedeGlobal = setSedeActiva;
+      return <CanchasPage initialTab="admin" />;
+    }
+
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <SedeProvider sedes={[mockSede, sede2]} sedeInicial={mockSede}>
+            <SedeCambioTester />
+          </SedeProvider>
+        </ToastProvider>
+      </MemoryRouter>
+    );
+
+    // Cambiar inmediatamente a sede 2 antes de que responda sede 1
+    act(() => {
+      setSedeGlobal(sede2);
+    });
+
+    // Sede 2 debe resolverse y mostrarse
+    await waitFor(() => {
+      expect(screen.getByText('Cancha Belgrano — Tenis')).toBeInTheDocument();
+    });
+
+    // Ahora responde la promesa de la sede 1 anterior
+    act(() => {
+      resolverSede1(initialCanchas);
+    });
+
+    // Debe seguir viéndose la Cancha Belgrano de Sede 2 y NO haberse pisado con Cancha 1 de Sede 1
+    await waitFor(() => {
+      expect(screen.getByText('Cancha Belgrano — Tenis')).toBeInTheDocument();
+      expect(screen.queryByText('Cancha 1 — Pádel')).not.toBeInTheDocument();
     });
   });
 });

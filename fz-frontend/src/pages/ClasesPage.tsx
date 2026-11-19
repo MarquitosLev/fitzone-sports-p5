@@ -13,7 +13,7 @@
  * notifican los errores que no vienen del backend y se deja fijo el bloqueo del moroso.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dumbbell, CalendarDays, ClipboardList } from 'lucide-react';
 import { Spinner, Alert, Badge, Button, Modal, ConfirmDialog, EmptyState } from '../components/ui';
 import type { Column } from '../components/ui';
@@ -122,25 +122,36 @@ export function ClasesPage() {
   // ── Inscriptos y lista de espera (admin) ─────────────────────────────────
   const [claseInscriptos, setClaseInscriptos] = useState<ClaseGrupalDTO | undefined>(undefined);
 
+  // Evitar race conditions si la sede activa cambia mientras la petición de clases está en vuelo
+  const sedeActivaRef = useRef(sedeActiva);
+  useEffect(() => {
+    sedeActivaRef.current = sedeActiva;
+  }, [sedeActiva]);
+
   // ── Carga de datos: agenda + reservas/espera del socio ───────────────────
   // `silencioso` recarga sin el spinner de pantalla completa (después de una acción).
   const cargarDatos = useCallback(async (silencioso = false) => {
     if (!sedeActiva) return;
+    const targetIdSede = sedeActiva.idSede;
     if (!silencioso) setLoading(true);
     setError(null);
     try {
       const [resultClases, resultReservas, resultEspera] = await Promise.all([
-        listarClases(sedeActiva.idSede),
+        listarClases(targetIdSede),
         esSocio ? listarMisReservas() : Promise.resolve<ReservaClaseDTO[]>([]),
         esSocio ? listarMiListaEspera() : Promise.resolve<ListaEsperaDTO[]>([]),
       ]);
+      if (sedeActivaRef.current?.idSede !== targetIdSede) return;
       setClases(resultClases);
       setReservasSocio(resultReservas);
       setEsperaSocio(resultEspera);
     } catch (err: unknown) {
+      if (sedeActivaRef.current?.idSede !== targetIdSede) return;
       setError(err instanceof Error ? err.message : 'Error al cargar los datos de clases');
     } finally {
-      if (!silencioso) setLoading(false);
+      if (!silencioso && sedeActivaRef.current?.idSede === targetIdSede) {
+        setLoading(false);
+      }
     }
   }, [sedeActiva, esSocio]);
 

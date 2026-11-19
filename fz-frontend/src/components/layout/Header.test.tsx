@@ -115,4 +115,14 @@ describe('Header', () => {
       expect(screen.getByTestId('ubicacion')).toHaveTextContent('/login');
     });
   });
+
+  describe('SCRUM-141: Selector de sede unificado en Sidebar', () => {
+    it('no renderiza el selector de sede ni el dropdown en el Header', () => {
+      renderHeader(socio);
+
+      expect(screen.queryByRole('button', { name: /sede/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(screen.queryByTitle(/sede fija de operador/i)).not.toBeInTheDocument();
+    });
+  });
 });

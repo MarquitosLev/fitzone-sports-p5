@@ -7,7 +7,7 @@
  * 3. Gestión de Canchas: Administración de inventario, altas, ediciones y mantenimiento.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Layers,
   Plus,
@@ -71,18 +71,32 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Evitar race conditions si la sede activa cambia mientras la petición de canchas está en vuelo
+  const sedeActivaRef = useRef(sedeActiva);
+  useEffect(() => {
+    sedeActivaRef.current = sedeActiva;
+  }, [sedeActiva]);
+
   const cargarCanchas = async () => {
-    if (!sedeActiva) return;
+    if (!sedeActiva) {
+      setCanchas([]);
+      return;
+    }
+    const targetIdSede = sedeActiva.idSede;
     setLoading(true);
     setError(null);
     try {
-      const data = await listarCanchas(sedeActiva.idSede);
+      const data = await listarCanchas(targetIdSede);
+      if (sedeActivaRef.current?.idSede !== targetIdSede) return;
       setCanchas(data);
     } catch (err: unknown) {
+      if (sedeActivaRef.current?.idSede !== targetIdSede) return;
       const mensaje = err instanceof Error ? err.message : 'Error al cargar canchas';
       setError(mensaje);
     } finally {
-      setLoading(false);
+      if (sedeActivaRef.current?.idSede === targetIdSede) {
+        setLoading(false);
+      }
     }
   };
 
