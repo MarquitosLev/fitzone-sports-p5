@@ -73,3 +73,14 @@
 * **Problema o bloqueo:** Buscar un socio sin membresía disparaba una alerta global de "Error de servidor" por el `404` del backend, y silenciar toda la petición ocultaba otros fallos reales en pantallas como Pagos.
 * **Decisión:** Capturar específicamente el `404` en `membresiasService` para tratarlo como un estado normal de UI (`SIN_MEMBRESIA`) sin disparar toasts de error, relanzando cualquier otro error HTTP, y configurar el botón "Asociar Membresía" para abrir el modal con el socio ya precargado.
 * **Commits:** `fab8f2e` búsqueda sin membresía · `20a39b6` solo 404
+
+### 2026-11-18 · 3 h
+- **Actividad:** Resolví la falta de desplazamiento en el selector de sedes cuando hay múltiples sucursales cargadas (SCRUM-140) y añadí pruebas unitarias con 25 sedes en Vitest.
+- **Problema o bloqueo:** Al cargar 25 sedes simultáneamente, el desplegable desbordaba la pantalla sin barra de desplazamiento, impidiendo seleccionar las últimas opciones.
+- **Decisión:** Limitar la altura máxima del contenedor desplegable (`max-h-64` / `max-h-60`) con `overflow-y-auto` y `overscroll-contain`, y bloquear el cambio de sede con indicador de candado para el personal operativo asignado a una sede fija (`idSede`).
+- **Commits:** `e435c08` scroll en selector de sedes
+
+### 2026-11-19 · 4 h
+- **Actividad:** Unifiqué el selector de sede en el menú lateral (`Sidebar.tsx`) para soportar escritorio y dispositivos móviles eliminando el control duplicado de la barra superior (SCRUM-141), y blindé las vistas de canchas y clases contra *race conditions*.
+- **Problema o bloqueo:** En pantallas móviles el selector del encabezado quedaba oculto (`hidden sm:block`), impidiendo cambiar de sede desde el celular; además, al cambiar rápidamente de sede mientras había peticiones en vuelo, las respuestas tardías de la sede anterior pisaban los datos nuevos.
+- **Decisión:** Centralizar el desplegable interactivo de sedes en `Sidebar.tsx` (cerrándolo automáticamente cuando se cierra el drawer móvil), limpiar los datos previos al iniciar una carga y validar mediante contadores secuenciales (`useRef`) que solo la última petición activa actualice el estado en `ReservaCanchaView`, `CanchasPage` y `ClasesPage`.
