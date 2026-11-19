@@ -30,6 +30,7 @@ import {
 } from '../../services/canchasService';
 import { listarMisPagos } from '../../services/pagosService';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import type { ReservaCanchaDTO } from '../../types';
 import { formatearMonto, toLocalISOString } from '../../utils/formatters';
 
@@ -41,6 +42,8 @@ export interface MisReservasViewProps {
 
 export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasViewProps) {
   const { addToast } = useToast();
+  const { usuario } = useAuth();
+  const esPersonal = usuario?.tipoUsuario === 'RECEPCIONISTA' || usuario?.tipoUsuario === 'GERENTE';
   const navigate = useNavigate();
 
   const [reservas, setReservas] = useState<ReservaCanchaDTO[]>([]);
@@ -318,8 +321,8 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
                   ? 'Aún no tenés reservas de cancha. Podés consultar los turnos disponibles y reservar el tuyo al instante.'
                   : `No tenés reservas registradas bajo el filtro "${activeFilter}".`
               }
-              actionLabel={onNuevaReserva ? 'Reservar turno' : undefined}
-              onAction={onNuevaReserva}
+              actionLabel={!esPersonal && onNuevaReserva ? 'Reservar turno' : undefined}
+              onAction={!esPersonal ? onNuevaReserva : undefined}
             />
           ) : (
             reservasFiltradas.map((b) => {
