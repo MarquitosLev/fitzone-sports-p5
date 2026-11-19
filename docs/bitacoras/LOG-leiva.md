@@ -292,3 +292,21 @@ Guardar la sesión en sessionStorage.
 
 **Commits**
 `218ce09` sesión en sessionStorage
+
+---
+
+## Sprint 8 — Cierre — Semana del 2026-11-16
+
+### 2026-11-19 · ? h
+
+**Actividad**
+Cerré los dos bugs de canchas que quedaban: el invitado reserva y paga en un solo paso sin quedar guardado como usuario (SCRUM-147), y la reserva sin pagar del socio libera el turno a los 5 minutos (SCRUM-148). Atendí la revisión del PR, integré develop en la rama, la probé en local y abrí el PR de develop a main para publicar.
+
+**Problema o bloqueo**
+Al mergear SCRUM-148 primero, la rama de SCRUM-147 quedó en conflicto en el alta de usuarios, la carga de canchas y el índice de ADR. Además, un test seguía usando la firma vieja de `existsSolapamiento`, que había sumado el límite de retención.
+
+**Decisión**
+El externo no se registra: sus datos quedan solo en el comprobante (ADR-018). La reserva impaga retiene el turno 5 minutos desde su creación, sin job ni columna nueva (ADR-019). La reserva del invitado nace con el pago confirmado, así que la retención no la libera.
+
+**Commits**
+`fdcf1d8` reserva y pago del invitado · `38657f6` consulta por código · `89c6a30` foco del modal · `30b2b50` revisión del PR · `7f4bee0` retención de 5 minutos · `c1a33f5` integración con develop
