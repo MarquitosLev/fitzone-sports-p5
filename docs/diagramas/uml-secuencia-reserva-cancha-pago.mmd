@@ -1,0 +1,70 @@
+---
+title: UML Secuencia — Reserva de cancha con pago (v1.0, 2026-11-19, Bravo)
+---
+%% Secuencia de la reserva de cancha de un socio, desde la grilla hasta el comprobante (RF-09 a RF-14)
+%% Autor: Bravo, Agustín · Fecha: 2026-11-19 · Versión: 1.0
+%% Refleja el código de main al 2026-11-19. Rutas relativas a /api/v1.
+sequenceDiagram
+  autonumber
+  actor S as Socio
+  participant W as Aplicación web
+  participant CC as CanchaController
+  participant CS as CanchaService
+  participant CP as CalculadorPrecioCancha
+  participant E as EstrategiaPrecio (x3)
+  participant RR as ReservaCanchaRepository
+  participant PC as PagoController / PagoService
+  participant PG as PasarelaMock
+  participant CO as ComprobanteService
+  participant DB as PostgreSQL
+
+  S->>W: Elige cancha y fecha
+  W->>CC: GET /canchas/{id}/disponibilidad?fecha
+  CC->>CS: obtenerDisponibilidad(idCancha, fecha)
+  CS->>RR: reservas que ocupan el turno (pagas o retenidas hace menos de 5 min)
+  RR->>DB: SELECT
+  CS-->>W: franjas LIBRE / OCUPADA
+  S->>W: Elige una franja libre
+  W->>CC: GET /canchas/{id}/cotizacion?inicio&fin
+  CC->>CS: cotizar(idCancha, inicio, fin)
+  CS->>CS: esSocioActivo = SOCIO con membresía ACTIVO vigente (RN-03)
+  CS->>CP: calcular(ContextoPrecio)
+  loop Por cada estrategia, en orden
+    CP->>E: aplicar(contexto)
+    Note right of E: 1. precio base por hora<br/>2. recargo 19 a 21 h<br/>3. descuento socio 15 %
+  end
+  CP-->>CS: CotizacionDTO (base, recargo, descuento, final)
+  CS-->>W: cotización
+  S->>W: Confirma la reserva
+  W->>CC: POST /canchas/{id}/reservas
+  CC->>CS: reservar(idCancha, reserva)
+  CS->>DB: SELECT cancha FOR UPDATE (bloqueo pesimista, RN-02)
+  CS->>RR: existsSolapamiento(idCancha, inicio, fin, limiteRetencion)
+  alt El turno ya está tomado
+    CS-->>W: 409 Conflicto
+  else Turno libre
+    CS->>CP: calcular(ContextoPrecio)
+    CS->>RR: save(reserva con precioFinal congelado)
+    CS-->>W: 201 reserva pendiente de pago (retiene el turno 5 min)
+  end
+  W->>W: Navega a Pagos con la reserva
+  S->>W: Paga con el token de la pasarela
+  W->>PC: POST /pagos {concepto: RESERVA_CANCHA, idReservaCancha}
+  PC->>PC: valida que la reserva sea propia, no esté paga ni vencida
+  PC->>PG: cobrar(monto, concepto)
+  PG-->>PC: RespuestaPasarela (aprobado / rechazado)
+  alt Aprobado
+    PC->>DB: INSERT transacción CONFIRMADO
+    PC->>CO: generarComprobante(transacción)
+    CO->>DB: INSERT comprobante (numeroFactura)
+    PC-->>W: 201 transacción CONFIRMADO
+    W->>PC: GET /pagos/{id}/comprobante
+    PC-->>W: datos del comprobante
+    W->>CO: GET /comprobantes/{id}/pdf
+    CO-->>W: PDF del comprobante (RF-14)
+    W-->>S: Descarga el comprobante
+  else Rechazado
+    PC->>DB: INSERT transacción RECHAZADO
+    PC-->>W: 201 transacción RECHAZADO
+    W-->>S: Ofrece reintentar mientras dure la retención
+  end

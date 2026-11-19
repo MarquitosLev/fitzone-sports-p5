@@ -1,0 +1,31 @@
+---
+title: UML Estados — Membresía (v1.0, 2026-11-19, Bravo)
+---
+%% Estados de la membresía y sus disparadores (RF-02, RN-03)
+%% Autor: Bravo, Agustín · Fecha: 2026-11-19 · Versión: 1.0
+%% Refleja MembresiaService en main al 2026-11-19.
+stateDiagram-v2
+  direction LR
+
+  [*] --> ACTIVO : POST /membresias (personal)<br/>o alta de socio online con pago aprobado
+
+  ACTIVO --> ACTIVO : renovar con pago confirmado<br/>/ suma la duración del plan al vencimiento
+  ACTIVO --> SUSPENDIDO : PATCH estado SUSPENDIDO<br/>(recepcionista o gerente)
+  SUSPENDIDO --> ACTIVO : PATCH estado ACTIVO (reactivar)<br/>o renovar con pago confirmado
+
+  ACTIVO --> VENCIDO : tarea diaria de medianoche<br/>[venció fechaVencimiento]
+  SUSPENDIDO --> VENCIDO : tarea diaria de medianoche<br/>[venció fechaVencimiento]
+  VENCIDO --> ACTIVO : renovar con pago confirmado<br/>/ nuevo período desde hoy
+
+  ACTIVO --> CANCELADO : PATCH estado CANCELADO<br/>/ registra fechaCancelacion
+  SUSPENDIDO --> CANCELADO : PATCH estado CANCELADO<br/>/ registra fechaCancelacion
+  CANCELADO --> [*]
+
+  note right of VENCIDO
+    No puede ingresar ni reservar clases.
+    En canchas paga la tarifa de externo (RN-03).
+  end note
+  note right of CANCELADO
+    Estado final: no se puede renovar.
+    Para volver, se da de alta una membresía nueva.
+  end note

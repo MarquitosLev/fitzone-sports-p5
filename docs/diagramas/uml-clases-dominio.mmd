@@ -1,0 +1,230 @@
+---
+title: UML Clases del dominio — FitZone Sports (v1.0, 2026-11-19, Bravo)
+---
+%% UML de clases del dominio, con Strategy, Observer y Repository visibles como estructura
+%% Autor: Bravo, Agustín · Fecha: 2026-11-19 · Versión: 1.0
+%% Refleja el código de main al 2026-11-19. Todas las entidades heredan de BaseEntity (auditoría y borrado lógico).
+classDiagram
+  direction LR
+
+  class BaseEntity {
+    <<abstract>>
+    -LocalDateTime createdAt
+    -LocalDateTime updatedAt
+    -String createdBy
+    -boolean isDeleted
+  }
+
+  class Sede {
+    -Long idSede
+    -String nombre
+    -Integer aforoMaximo
+  }
+  class Usuario {
+    -Long idUsuario
+    -UUID authId
+    -String dni
+    -String nombre
+    -String apellido
+    -String email
+    -TipoUsuario tipoUsuario
+    -String qrClavePublica
+  }
+  class Plan {
+    -Integer idPlan
+    -String nombre
+    -BigDecimal precioBase
+    -Integer duracionMeses
+  }
+  class Membresia {
+    -Long idMembresia
+    -LocalDate fechaInicio
+    -LocalDate fechaVencimiento
+    -LocalDate fechaCancelacion
+    -EstadoMembresia estado
+  }
+  class Acceso {
+    -Long idAcceso
+    -LocalDateTime fechaHoraIngreso
+    -LocalDateTime fechaHoraEgreso
+    -String tokenQr
+  }
+  class ClaseGrupal {
+    -Long idClase
+    -String nombreActividad
+    -LocalDateTime fechaHoraInicio
+    -Integer duracionMinutos
+    -Integer cupoMaximo
+    -Integer cupoDisponible
+  }
+  class ReservaClase {
+    -Long idReservaClase
+    -EstadoReservaClase estado
+  }
+  class ListaEspera {
+    -Long idEspera
+    -Integer ordenPosicion
+  }
+  class Cancha {
+    -Long idCancha
+    -String nombre
+    -String tipo
+    -BigDecimal precioBaseHora
+    -boolean enMantenimiento
+  }
+  class ReservaCancha {
+    -Long idReservaCancha
+    -LocalDateTime fechaHoraInicio
+    -LocalDateTime fechaHoraFin
+    -BigDecimal precioFinal
+    -UUID codigoReserva
+    +retencionVencida() boolean
+  }
+  class Transaccion {
+    -Long idTransaccion
+    -TipoOrigenTransaccion concepto
+    -BigDecimal monto
+    -EstadoPago estadoPago
+    -String tokenTransaccionPasarela
+    -LocalDateTime fechaHoraConfirmacion
+  }
+  class Comprobante {
+    -Long idComprobante
+    -String numeroFactura
+    -String clienteNombre
+    -String clienteDni
+  }
+
+  class TipoUsuario {
+    <<enumeration>>
+    SOCIO
+    EXTERNO
+    RECEPCIONISTA
+    GERENTE
+  }
+  class EstadoMembresia {
+    <<enumeration>>
+    ACTIVO
+    VENCIDO
+    SUSPENDIDO
+    CANCELADO
+  }
+  class EstadoPago {
+    <<enumeration>>
+    PENDIENTE
+    CONFIRMADO
+    RECHAZADO
+    REEMBOLSADO
+  }
+
+  BaseEntity <|-- Usuario
+  BaseEntity <|-- Membresia
+  BaseEntity <|-- ReservaCancha
+  BaseEntity <|-- Transaccion
+
+  Sede "0..1" <-- "0..*" Usuario : sede fija del personal
+  Usuario "1" <-- "0..*" Membresia : titular
+  Plan "1" <-- "0..*" Membresia
+  Usuario "1" <-- "0..*" Acceso
+  Sede "1" <-- "0..*" Acceso
+  Sede "1" <-- "0..*" ClaseGrupal
+  ClaseGrupal "1" <-- "0..*" ReservaClase
+  Usuario "1" <-- "0..*" ReservaClase
+  ClaseGrupal "1" <-- "0..*" ListaEspera
+  Usuario "1" <-- "0..*" ListaEspera
+  Sede "1" <-- "0..*" Cancha
+  Cancha "1" <-- "0..*" ReservaCancha
+  Usuario "0..1" <-- "0..*" ReservaCancha : null si es invitado
+  Usuario "0..1" <-- "0..*" Transaccion
+  Membresia "0..1" <-- "0..*" Transaccion
+  ReservaCancha "0..1" <-- "0..*" Transaccion
+  Transaccion "1" <-- "0..1" Comprobante
+
+  %% ── Strategy: precio dinámico de canchas (RF-11, RN-03) ──
+  class EstrategiaPrecio {
+    <<interface>>
+    +aplicar(ContextoPrecio contexto) void
+  }
+  class PrecioBaseEstrategia {
+    +aplicar(ContextoPrecio contexto) void
+  }
+  class RecargoHorarioPicoEstrategia {
+    -BigDecimal porcentajeRecargo
+    +aplicar(ContextoPrecio contexto) void
+  }
+  class DescuentoSocioEstrategia {
+    +aplicar(ContextoPrecio contexto) void
+  }
+  class ContextoPrecio {
+    -Cancha cancha
+    -LocalDateTime inicio
+    -LocalDateTime fin
+    -boolean esSocioActivo
+    -BigDecimal precioBase
+    -BigDecimal descuento
+    -BigDecimal recargo
+  }
+  class CalculadorPrecioCancha {
+    -List~EstrategiaPrecio~ estrategias
+    +calcular(ContextoPrecio contexto) CotizacionDTO
+  }
+  EstrategiaPrecio <|.. PrecioBaseEstrategia : Order 1
+  EstrategiaPrecio <|.. RecargoHorarioPicoEstrategia : Order 2
+  EstrategiaPrecio <|.. DescuentoSocioEstrategia : Order 3
+  CalculadorPrecioCancha o-- "1..*" EstrategiaPrecio
+  CalculadorPrecioCancha ..> ContextoPrecio
+  ContextoPrecio --> Cancha
+
+  %% ── Observer: lista de espera de clases (RF-08) ──
+  class ReservaClaseService {
+    -ApplicationEventPublisher eventPublisher
+    +reservar(Long idClase) ReservaClase
+    +cancelar(Long idReservaClase) ReservaClase
+  }
+  class CupoLiberadoEvent {
+    <<record>>
+    +Long idClase
+  }
+  class CupoLiberadoListener {
+    +onCupoLiberado(CupoLiberadoEvent event) void
+  }
+  class Notificador {
+    <<interface>>
+    +notificar(Usuario usuario, String mensaje) void
+  }
+  class LogNotificador {
+    +notificar(Usuario usuario, String mensaje) void
+  }
+  ReservaClaseService ..> CupoLiberadoEvent : publica
+  CupoLiberadoListener ..> CupoLiberadoEvent : escucha
+  CupoLiberadoListener --> Notificador
+  Notificador <|.. LogNotificador
+  CupoLiberadoListener --> ListaEsperaRepository
+
+  %% ── Repository: abstracción de la persistencia (Spring Data JPA) ──
+  class JpaRepository~T, ID~ {
+    <<interface>>
+    +findById(ID id) Optional~T~
+    +save(T entidad) T
+    +findAll() List~T~
+  }
+  class CanchaRepository {
+    <<interface>>
+    +findByIdForUpdate(Long id) Optional~Cancha~
+  }
+  class ReservaCanchaRepository {
+    <<interface>>
+    +existsSolapamiento(idCancha, inicio, fin, limiteRetencion) boolean
+  }
+  class ListaEsperaRepository {
+    <<interface>>
+    +findByClase_IdClaseOrderByOrdenPosicionAsc(Long idClase) List~ListaEspera~
+  }
+  class MembresiaRepository {
+    <<interface>>
+    +findByEstadoInAndFechaVencimientoBefore(estados, fecha) List~Membresia~
+  }
+  JpaRepository <|-- CanchaRepository
+  JpaRepository <|-- ReservaCanchaRepository
+  JpaRepository <|-- ListaEsperaRepository
+  JpaRepository <|-- MembresiaRepository
