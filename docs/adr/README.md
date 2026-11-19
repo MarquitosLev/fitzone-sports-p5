@@ -17,9 +17,11 @@ Los ADR-001 a ADR-009 son los obligatorios de la cátedra, con su numeración. D
 | [ADR-009](ADR-009-medios-de-pago.md) | Pasarela externa sin guardar datos de tarjeta | Aceptado |
 | [ADR-010](ADR-010-supabase-auth.md) | Autenticación con Supabase Auth, autorización en el backend | Aceptado |
 | [ADR-011](ADR-011-rls-multisede.md) | Aislamiento multisede con Row Level Security | Reemplazado por ADR-015 |
-| [ADR-012](ADR-012-vinculo-pagos-reservas.md) | La transacción apunta a la reserva | Aceptado |
+| [ADR-012](ADR-012-vinculo-pagos-reservas.md) | La transacción apunta a la reserva | Aceptado; el caso del invitado lo modifica ADR-018 |
 | [ADR-013](ADR-013-uuid-como-clave-primaria.md) | UUID como clave primaria | Reemplazado por ADR-016 |
 | [ADR-014](ADR-014-trazabilidad-accesos-reservas.md) | Vincular el acceso físico con la reserva | Aceptado |
 | [ADR-015](ADR-015-aislamiento-por-sede-en-servicios.md) | Aislamiento por sede en la capa de servicio | Aceptado |
 | [ADR-016](ADR-016-esquema-generado-por-jpa.md) | Esquema generado por JPA: ids `Long` y enums como texto | Aceptado |
 | [ADR-017](ADR-017-enum-nativos-postgresql.md) | ENUM nativos de PostgreSQL | Reemplazado por ADR-016 |
+| [ADR-018](ADR-018-cliente-externo-sin-registro.md) | El cliente externo no se registra: reserva y paga en un paso | Aceptado |
+| [ADR-019](ADR-019-retencion-reservas-sin-pagar.md) | Una reserva de socio sin pagar retiene el turno 5 minutos | Aceptado |

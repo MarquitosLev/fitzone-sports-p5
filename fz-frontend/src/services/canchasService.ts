@@ -735,11 +735,41 @@ function mapearReservaInvitado(api: ReservaInvitadoApi): ReservaInvitadoDTO {
   };
 }
 
-/** Reserva un turno sin cuenta (POST /v1/invitados/reservas). Devuelve el código para pagarlo. */
+// Reservas de invitado del modo mock, por código
+const MOCK_RESERVAS_INVITADO = new Map<string, ReservaInvitadoDTO>();
+
+/**
+ * Reserva y paga un turno sin cuenta, en un solo paso (POST /v1/invitados/reservas, ADR-018).
+ * Si la pasarela rechaza, el backend responde 422 y no guarda nada; si el turno se ocupó, 409.
+ */
 export async function reservarComoInvitado(
   payload: CrearReservaPayload,
   datos: DatosInvitado
 ): Promise<ReservaInvitadoDTO> {
+  if (USE_MOCK) {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const cancha = MOCK_CANCHAS.find((c) => c.idCancha === payload.idCancha);
+    if (!cancha) throw new Error('Cancha no encontrada');
+    const cotizacion = await cotizarTurno(payload.idCancha, payload.horaInicio, false, payload.fecha, payload.horaFin);
+    const reserva: ReservaInvitadoDTO = {
+      codigoReserva: crypto.randomUUID(),
+      idReservaCancha: Date.now(),
+      idCancha: cancha.idCancha,
+      cancha: cancha.nombre,
+      tipoCancha: cancha.tipo ?? null,
+      idSede: cancha.sede.idSede,
+      sede: cancha.sede.nombre,
+      fechaHoraInicio: `${payload.fecha}T${payload.horaInicio}:00`,
+      fechaHoraFin: `${payload.fecha}T${payload.horaFin}:00`,
+      precioFinal: cotizacion.total,
+      cotizacion,
+      pagada: true,
+      numeroFactura: `FZ-MOCK-${MOCK_RESERVAS_INVITADO.size + 1}`,
+    };
+    MOCK_RESERVAS_INVITADO.set(reserva.codigoReserva, reserva);
+    return reserva;
+  }
+
   const api = await httpClient.post<ReservaInvitadoApi>('/v1/invitados/reservas', {
     body: JSON.stringify({
       idCancha: payload.idCancha,
@@ -752,6 +782,11 @@ export async function reservarComoInvitado(
 }
 
 export async function obtenerReservaInvitado(codigo: string): Promise<ReservaInvitadoDTO> {
+  if (USE_MOCK) {
+    const reserva = MOCK_RESERVAS_INVITADO.get(codigo);
+    if (!reserva) throw new Error('No existe una reserva de invitado con ese código');
+    return reserva;
+  }
   const api = await httpClient.get<ReservaInvitadoApi>(`/v1/invitados/reservas/${encodeURIComponent(codigo)}`);
   return mapearReservaInvitado(api);
 }

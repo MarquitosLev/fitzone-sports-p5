@@ -77,7 +77,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .email("gerente@fitzone.com")
                                         .telefono("+5491100000000")
                                         .tipoUsuario(TipoUsuario.GERENTE)
-                                        .idSede(idSedeCentral)
+                                        .idSede(null)
                                         .authId(null)
                                         .build();
                         usuarioRepository.save(gerente);
@@ -127,21 +127,6 @@ public class DataInitializer implements CommandLineRunner {
                                         .build();
                         usuarioRepository.save(socioVencido);
                         log.info("[DEV SEED] Creado Socio con cuota vencida (socio.vencido@fitzone.com)");
-                }
-
-                if (usuarioRepository.findByEmail("externo@fitzone.com").isEmpty() && usuarioRepository.findByDni("00000004").isEmpty()) {
-                        Usuario externo = Usuario.builder()
-                                        .dni("00000004")
-                                        .nombre("Laura")
-                                        .apellido("Externo")
-                                        .email("externo@fitzone.com")
-                                        .telefono("+5491100000003")
-                                        .tipoUsuario(TipoUsuario.EXTERNO)
-                                        .idSede(null)
-                                        .authId(null)
-                                        .build();
-                        usuarioRepository.save(externo);
-                        log.info("[DEV SEED] Creado Externo inicial (externo@fitzone.com)");
                 }
 
                 // 3. Planes (idempotente por nombre)

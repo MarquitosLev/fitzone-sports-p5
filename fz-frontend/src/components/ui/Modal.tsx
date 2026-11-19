@@ -47,6 +47,14 @@ export function Modal({
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const modalContentRef = useRef<HTMLDivElement | null>(null);
 
+  // onClose suele llegar como función nueva en cada render del padre. Si fuera dependencia del efecto,
+  // cada render (por ejemplo, una cuenta regresiva) volvería a mover el foco al primer elemento.
+  // La ref guarda la última versión, como un campo que se actualiza en lugar de reconstruir el listener.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -71,7 +79,7 @@ export function Modal({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (closeOnEsc && e.key === 'Escape') {
         e.stopPropagation();
-        onClose?.();
+        onCloseRef.current?.();
         return;
       }
 
@@ -116,7 +124,7 @@ export function Modal({
         previousFocusRef.current.focus();
       }
     };
-  }, [isOpen, onClose, closeOnEsc, initialFocusRef]);
+  }, [isOpen, closeOnEsc, initialFocusRef]);
 
   if (!isOpen) return null;
 

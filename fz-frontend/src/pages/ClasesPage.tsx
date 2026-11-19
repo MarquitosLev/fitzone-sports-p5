@@ -13,7 +13,7 @@
  * notifican los errores que no vienen del backend y se deja fijo el bloqueo del moroso.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dumbbell, CalendarDays, ClipboardList } from 'lucide-react';
 import { Spinner, Alert, Badge, Button, Modal, ConfirmDialog, EmptyState } from '../components/ui';
 import type { Column } from '../components/ui';
@@ -122,10 +122,20 @@ export function ClasesPage() {
   // ── Inscriptos y lista de espera (admin) ─────────────────────────────────
   const [claseInscriptos, setClaseInscriptos] = useState<ClaseGrupalDTO | undefined>(undefined);
 
+  // Contador de secuencia para evitar race conditions al cambiar de sede
+  const loadSeqRef = useRef(0);
+
   // ── Carga de datos: agenda + reservas/espera del socio ───────────────────
   // `silencioso` recarga sin el spinner de pantalla completa (después de una acción).
   const cargarDatos = useCallback(async (silencioso = false) => {
     if (!sedeActiva) return;
+    // Limpiar datos de la sede anterior antes de iniciar la carga (solo en carga no silenciosa)
+    if (!silencioso) {
+      setClases([]);
+      setReservasSocio([]);
+      setEsperaSocio([]);
+    }
+    const mySeq = ++loadSeqRef.current;
     if (!silencioso) setLoading(true);
     setError(null);
     try {
@@ -134,13 +144,20 @@ export function ClasesPage() {
         esSocio ? listarMisReservas() : Promise.resolve<ReservaClaseDTO[]>([]),
         esSocio ? listarMiListaEspera() : Promise.resolve<ListaEsperaDTO[]>([]),
       ]);
+      // Descartar respuestas de peticiones antiguas (A→B→A race condition)
+      if (loadSeqRef.current !== mySeq) return;
       setClases(resultClases);
       setReservasSocio(resultReservas);
       setEsperaSocio(resultEspera);
     } catch (err: unknown) {
+      if (loadSeqRef.current !== mySeq) return;
       setError(err instanceof Error ? err.message : 'Error al cargar los datos de clases');
     } finally {
-      if (!silencioso) setLoading(false);
+      // Lo apaga la última carga, aunque sea silenciosa: si no, una recarga silenciosa que pisa
+      // a la carga inicial deja el spinner trabado
+      if (loadSeqRef.current === mySeq) {
+        setLoading(false);
+      }
     }
   }, [sedeActiva, esSocio]);
 

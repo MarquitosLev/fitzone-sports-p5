@@ -47,7 +47,7 @@ export interface CotizacionReservaDTO {
   total: number;
 }
 
-export type EstadoReservaCancha = 'PENDIENTE_PAGO' | 'CONFIRMADA' | 'CANCELADA' | 'FINALIZADA';
+export type EstadoReservaCancha = 'PENDIENTE_PAGO' | 'VENCIDA' | 'CONFIRMADA' | 'CANCELADA' | 'FINALIZADA';
 
 /**
  * DTO de Reserva de Cancha.
@@ -62,6 +62,8 @@ export interface ReservaCanchaDTO {
   fechaHoraFin: string;
   precioFinal: number;
   estado?: EstadoReservaCancha;
+  /** Sin pagar y pasados los 5 minutos de retención: el turno quedó libre (ADR-019). Lo calcula el backend. */
+  retencionVencida?: boolean;
   cotizacion?: CotizacionReservaDTO;
   fechaCreacion?: string;
   comprobanteUrl?: string;
@@ -83,10 +85,12 @@ export interface DatosInvitado {
   apellido: string;
   dni: string;
   email: string;
-  telefono: string;
 }
 
-/** Reserva de invitado: `codigoReserva` permite pagarla y descargar el comprobante; `cotizacion` es null si ya no explica el precio. */
+/**
+ * Reserva de invitado, ya pagada (ADR-018): `codigoReserva` da acceso al comprobante.
+ * `cotizacion` es null si ya no explica el precio. `pagada` es false solo en reservas anteriores al cambio.
+ */
 export interface ReservaInvitadoDTO {
   codigoReserva: string;
   idReservaCancha: number;
@@ -100,4 +104,5 @@ export interface ReservaInvitadoDTO {
   precioFinal: number;
   cotizacion: CotizacionReservaDTO | null;
   pagada: boolean;
+  numeroFactura: string | null;
 }

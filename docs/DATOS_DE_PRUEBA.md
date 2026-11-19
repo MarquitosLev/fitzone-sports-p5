@@ -11,11 +11,11 @@ Todos los usuarios de prueba comparten la contraseña inicial: `password123`.
 
 | Rol | Correo Electrónico | Contraseña | DNI | Sede Asignada | Estado de Membresía | Caso de Prueba Principal |
 |---|---|---|---|---|---|---|
-| **GERENTE** | `gerente@fitzone.com` | `password123` | `00000001` | Sede Central (1) | — | ABM de personal, planes, roles y canchas |
+| **GERENTE** | `gerente@fitzone.com` | `password123` | `00000001` | *Global (null)*: gerente central, opera en todas las sedes | — | ABM de personal, planes, roles y canchas |
 | **RECEPCIONISTA** | `recepcionista@fitzone.com` | `password123` | `00000002` | Sede Central (1) | — | Alta de socios, cobros, validación de ingresos QR y aforo |
 | **SOCIO (Al día)** | `socio@fitzone.com` | `password123` | `00000003` | *Global (null)* | **ACTIVO** (vence en 25 días) | Reserva de clases, descuento -15% en canchas, pase QR |
 | **SOCIO (Moroso)** | `socio.vencido@fitzone.com` | `password123` | `00000005` | *Global (null)* | **VENCIDO** (vencida hace 10 días) | **RN-03**: Bloqueo de clases/descuentos; flujo de renovación |
-| **EXTERNO (invitado)** | `externo@fitzone.com` | — (sin cuenta, no inicia sesión) | `00000004` | *Global (null)* | — | Invitado sin cuenta: reserva y paga canchas en `/canchas` sin sesión. Para probar que se reutiliza por DNI, reservá como invitado con el DNI `00000004`. |
+| **EXTERNO (invitado)** | — | — (sin cuenta, no inicia sesión) | cualquiera que no sea de una cuenta | — | — | No se siembra: desde ADR-018 el externo no se guarda como usuario. Se prueba en `/canchas` sin sesión, cargando sus datos al pagar. |
 
 ---
 

@@ -195,3 +195,69 @@
 **Decisión** El reintento usa un código UUID guardado con la transacción en lugar del número de factura, que es correlativo y se podía adivinar.
 
 **Commits** `5984c00` merge de develop · `204248b` correcciones de la revisión del alta de socio
+
+### 2026-11-13 · ? h
+
+**Actividad** Reescribí mi bitácora cruzándola con los commits, los PR y Jira (PR #99, revisado y mergeado por Benja). Revisé y mergeé la bitácora de Benja (#100).
+
+**Commits** `c737ddc` bitácora individual
+
+### 2026-11-14 · ? h
+
+**Actividad** Hice el control de acceso sin conexión del terminal de sede (RNF-01, SCRUM-139, PR #102). El back expone la lista de socios habilitados con el aforo de la sede y un endpoint que sincroniza hasta 50 ingresos aprobados sin conexión. El front valida contra esa lista cuando el servidor no responde, guarda los ingresos en una cola y los manda al reconectar.
+
+**Decisión** Solo una falla de red activa el modo sin conexión: si el servidor responde con un rechazo (409 o 422), el rechazo se respeta. Al sincronizar, el QR se valida contra el minuto en que se escaneó y no contra la hora del envío, y reenviar el mismo ingreso devuelve DUPLICADO en vez de contarlo dos veces.
+
+**Problema o bloqueo** Probando con el back apagado, "Mi Pase QR" mostraba "Sin membresía" y el socio no podía generar un QR nuevo, porque las dos cosas se piden al servidor. Además, sin conexión pasaba un QR armado a mano con el id de un socio habilitado. Lo dejé como límite conocido del PR y lo resolví en el siguiente (#103).
+
+**Commits** `352f6f0` lista de habilitados y sincronización · `4201056` validación sin conexión y cola en recepción
+
+---
+
+## Sprint 8 — Cierre — Semana del 2026-11-16
+
+### 2026-11-17 · ? h
+
+**Actividad** Corregí lo que marcó Marcos en la revisión del PR #102 y agregué el QR firmado por el celular del socio (PR #103), para que el código también se genere sin conexión. Marcos mergeó los dos PR el 18/11.
+
+**Problema o bloqueo** El terminal validaba con la hora corregida según el reloj del servidor, pero encolaba la hora cruda de la PC. Con la PC atrasada uno o dos minutos, el ingreso se aprobaba sin conexión y después la sincronización lo rechazaba como QR vencido. Ahora validar, encolar y contar a la gente adentro usan la misma hora. También agregué tiempos de espera al arrancar y al sincronizar, porque con el servidor colgado la app se quedaba esperando para siempre.
+
+**Decisión** Cada socio tiene un par de claves ECDSA P-256 en su navegador: el celular firma el QR de cada minuto y el terminal lo verifica con la clave pública que viene en la lista de habilitados. Descarté los tokens HMAC precalculados porque obligaban a guardar secretos en el terminal. Con claves públicas, aunque se filtre la lista nadie puede falsificar un QR, y deja de pasar el QR armado a mano. El costo es una columna nueva (`qr_clave_publica`): en producción hay que correr `docs/sql/acceso-offline-clave-qr.sql` antes de desplegar.
+
+**Commits** `66bbf65` hora del escaneo corregida · `043224b` QR firmado por el dispositivo
+
+### 2026-11-18 · ? h
+
+**Actividad** A la noche, antes de la entrega, probé en el navegador los flujos de toda la aplicación con cada rol. En paralelo el equipo cargó en Jira las tarjetas de corrección SCRUM-140 a SCRUM-148, y me tocaron la SCRUM-143 y la SCRUM-144.
+
+**Problema o bloqueo** Además de lo que ya cubrían las tarjetas, quedaron hallazgos sin tarjeta: la zona horaria del back en Render, el aviso "Error de servidor" que sale duplicado, el precio de horario pico mal mostrado en la grilla y el cliente externo, que no puede ver sus reservas porque el back solo se las devuelve al socio.
+
+**Commits** Sin commits: pruebas manuales.
+
+### 2026-11-19 · ? h
+
+**Actividad** Resolví la SCRUM-143 (PR #106): un gerente sin sede es ahora gerente central y opera en todas las sedes. Resolví la SCRUM-144 (PR #112): el personal ya no puede contratar ni renovar un plan propio. Benja revisó y mergeó los dos. Mergeé el PR #105 de Matías (SCRUM-140) y después arreglé su rama SRUM-141 (PR #111), que había quedado con marcadores de conflicto en seis archivos.
+
+**Decisión** En la SCRUM-143, solo otro gerente central puede crear un gerente sin sede, y el recepcionista sigue necesitando una sede. En el seed, gerente@fitzone.com pasó a ser gerente central; en producción ese usuario necesita un UPDATE que le quite la sede. En la SCRUM-144 cerré la regla en el back: la renovación se rechaza si el dueño de la membresía no es SOCIO. En el front, Pagos pasó a ser exclusivo del socio y el buscador de Membresías solo selecciona socios.
+
+**Problema o bloqueo** El CI del PR #112 falló en los tests del back. No lo pude reproducir: pasó en Windows, con la zona horaria en UTC y en un contenedor Linux con Java 21. Al relanzarlo pasó, así que fue una falla del entorno de CI y no del cambio. En la SRUM-141 tomé la versión de develop de los seis archivos y volví a aplicar los arreglos de la tarjeta: cerrar la lista de sedes al cerrar el menú móvil y vaciar las canchas de la sede anterior al cambiar de sede. De paso encontré que en Clases el spinner quedaba trabado si una recarga silenciosa pisaba a la carga inicial, y lo corregí.
+
+**Commits** `5a172f6` gerente central sin sede · `28de8d7` personal sin plan propio · `b220c6c` conflictos de SRUM-141
+
+### 2026-11-19 · ? h
+
+**Actividad** Antes del congelamiento revisé todos los PR abiertos del equipo (#107 a #113): si cumplían su tarjeta, si entraban limpios en develop y si los tests pasaban con el merge simulado. Mergeé el #107 de Benja (SCRUM-146) y el #113 de Marcos (SCRUM-148).
+
+**Problema o bloqueo** Varios PR tocaban los mismos archivos de canchas y chocaban entre sí, así que propuse un orden de merge para resolver un conflicto a la vez. El #109 (SCRUM-147) tenía conflictos con develop y necesita correr `docs/sql/SCRUM-147-externo-sin-usuario.sql` antes de desplegar el back; Marcos los resolvió y lo mergeó a la tarde. Al #113 le faltó sacar de Pagos las reservas con la retención vencida: el socio todavía puede intentar pagarlas y el back le responde con un error.
+
+**Commits** Sin commits: revisión y merge de PR.
+
+### 2026-11-19 · ? h
+
+**Actividad** Revisé toda la entrega contra la versión nueva de los lineamientos, casilla por casilla del checklist del Anexo G, y actualicé esta bitácora (SCRUM-150).
+
+**Problema o bloqueo** La versión nueva cambió la consigna: pide diez ADR, con uno nuevo sobre la sincronización del terminal, catorce diagramas y una carpeta de planificación con cronograma, trazabilidad, seguimiento y riesgos. Faltan la planificación, siete diagramas UML y el seed de 25 sedes. Además, el ADR-003, dos diagramas y los tres manuales todavía dicen que el acceso sin conexión no existe, cuando ya lo implementé en los PR #102 y #103. Mientras revisaba, el CI del back falló en develop después del merge del #113. En mi máquina la suite pasaba completa, también con la zona horaria en UTC como en el runner, y en el siguiente commit de develop volvió a pasar: fue una falla intermitente del CI, igual que la del #112.
+
+**Decisión** Ordené lo que falta según las condiciones de admisibilidad del punto 6.1, para repartirlo con el equipo empezando por lo que impide que la entrega sea admitida.
+
+**Commits** Sin commits: revisión de la entrega.

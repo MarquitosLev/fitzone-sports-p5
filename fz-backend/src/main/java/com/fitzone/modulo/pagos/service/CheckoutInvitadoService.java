@@ -10,30 +10,27 @@ import com.fitzone.modulo.canchas.models.ReservaCancha;
 import com.fitzone.modulo.canchas.repository.ReservaCanchaRepository;
 import com.fitzone.modulo.canchas.service.CanchaService;
 import com.fitzone.modulo.pagos.models.Comprobante;
-import com.fitzone.modulo.pagos.models.PagoInvitadoResponse;
 import com.fitzone.modulo.pagos.models.ReservaInvitadoRequest;
 import com.fitzone.modulo.pagos.models.ReservaInvitadoResponse;
 import com.fitzone.modulo.pagos.models.Transaccion;
 import com.fitzone.modulo.pagos.repository.ComprobanteRepository;
 import com.fitzone.modulo.pagos.repository.TransaccionRepository;
-import com.fitzone.modulo.usuarios.models.Usuario;
 import com.fitzone.modulo.usuarios.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Reserva, pago y comprobante de una cancha sin cuenta. El invitado es un usuario EXTERNO sin auth_id,
- * identificado por su DNI; el código no adivinable de la reserva es lo único que da acceso a ella.
+ * Reserva y pago de una cancha por un cliente externo, en un solo paso (ADR-018).
+ * El externo no es usuario del sistema: no se guarda en fz_usr_usuarios y sus datos quedan solo en el comprobante.
+ * La retención del turno mientras completa el pago vive en su navegador; acá recién se ocupa el turno si el pago se aprueba.
  */
 @Service
 @RequiredArgsConstructor
 public class CheckoutInvitadoService {
-
-    public static final int MAX_RESERVAS_PENDIENTES = 3;
 
     private static final String MENSAJE_TIENE_CUENTA =
             "Esos datos pertenecen a una cuenta de FitZone. Iniciá sesión para reservar con tus beneficios.";
@@ -48,86 +45,77 @@ public class CheckoutInvitadoService {
 
     public record ComprobantePdf(String numeroFactura, byte[] contenido) {}
 
+    /**
+     * Ocupa el turno con bloqueo pesimista sobre la cancha (RN-02), cobra y deja todo guardado solo si el pago se aprueba.
+     * Si la pasarela rechaza, la excepción revierte la transacción: no queda reserva, ni pago, ni datos del cliente.
+     * Como en un Java EE con JTA: el rollback deshace el INSERT de la reserva hecho antes del cobro.
+     */
     @Transactional
-    public ReservaInvitadoResponse reservar(ReservaInvitadoRequest request) {
-        Usuario invitado = resolverInvitado(request);
-
-        long pendientes = reservaCanchaRepository.contarPendientesDePago(invitado.getIdUsuario(), LocalDateTime.now());
-        if (pendientes >= MAX_RESERVAS_PENDIENTES) {
-            throw new ReglaNegocioException("Ya tenés " + MAX_RESERVAS_PENDIENTES
-                    + " reservas sin pagar. Pagá alguna antes de reservar otro turno.");
-        }
+    public ReservaInvitadoResponse reservarYPagar(ReservaInvitadoRequest request) {
+        String dni = request.getDni().trim();
+        String email = request.getEmail().trim().toLowerCase();
+        validarQueNoTengaCuenta(dni, email);
 
         ReservaCancha reserva = ReservaCancha.builder()
                 .fechaHoraInicio(request.getFechaHoraInicio())
                 .fechaHoraFin(request.getFechaHoraFin())
                 .build();
-        ReservaCancha guardada = canchaService.reservarComoInvitado(request.getIdCancha(), invitado, reserva);
-        return respuestaDe(guardada, false);
+        ReservaCancha guardada = canchaService.reservarComoInvitado(request.getIdCancha(), reserva);
+
+        Transaccion pago = pagoService.procesarPagoInvitado(guardada, Boolean.TRUE.equals(request.getForzarRechazo()));
+        if (pago.getEstadoPago() != EstadoPago.CONFIRMADO) {
+            throw new ReglaNegocioException("El pago fue rechazado. Podés intentarlo de nuevo mientras el turno siga retenido.");
+        }
+
+        Comprobante comprobante = comprobanteRepository.findByTransaccion_IdTransaccion(pago.getIdTransaccion())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Comprobante para la transacción", pago.getIdTransaccion()));
+        comprobante.setClienteNombre(request.getNombre().trim() + " " + request.getApellido().trim());
+        comprobante.setClienteDni(dni);
+        comprobante.setClienteEmail(email);
+        comprobanteRepository.save(comprobante);
+
+        return respuestaDe(guardada, Optional.of(comprobante));
     }
 
     @Transactional(readOnly = true)
     public ReservaInvitadoResponse obtener(UUID codigo) {
         ReservaCancha reserva = buscarPorCodigo(codigo);
-        return respuestaDe(reserva, estaPagada(reserva));
-    }
-
-    @Transactional
-    public PagoInvitadoResponse pagar(UUID codigo, boolean forzarRechazo) {
-        ReservaCancha reserva = buscarPorCodigo(codigo);
-        Transaccion transaccion = pagoService.procesarPagoInvitado(reserva, forzarRechazo);
-        Comprobante comprobante = comprobanteRepository
-                .findByTransaccion_IdTransaccion(transaccion.getIdTransaccion())
-                .orElse(null);
-        return PagoInvitadoResponse.desde(transaccion, comprobante);
+        return respuestaDe(reserva, comprobanteDe(reserva));
     }
 
     @Transactional(readOnly = true)
     public ComprobantePdf comprobantePdf(UUID codigo) {
-        ReservaCancha reserva = buscarPorCodigo(codigo);
-        Transaccion pago = transaccionRepository
-                .findFirstByReservaCancha_IdReservaCanchaAndEstadoPago(reserva.getIdReservaCancha(), EstadoPago.CONFIRMADO)
+        Comprobante comprobante = comprobanteDe(buscarPorCodigo(codigo))
                 .orElseThrow(() -> new ReglaNegocioException("La reserva todavía no está pagada y no tiene comprobante"));
-        Comprobante comprobante = comprobanteRepository.findByTransaccion_IdTransaccion(pago.getIdTransaccion())
-                .orElseThrow(() -> new RecursoNoEncontradoException("Comprobante para la transacción", pago.getIdTransaccion()));
         return new ComprobantePdf(comprobante.getNumeroFactura(), comprobanteService.generarPdf(comprobante));
     }
 
-    private Usuario resolverInvitado(ReservaInvitadoRequest request) {
-        String dni = request.getDni().trim();
-        String email = request.getEmail().trim().toLowerCase();
-
-        Usuario invitado = usuarioRepository.findByDni(dni).orElse(null);
-        boolean dniDeCuenta = invitado != null && invitado.getTipoUsuario() != TipoUsuario.EXTERNO;
+    // Un socio o un empleado reserva con sesión: así el socio recibe su descuento y no queda una reserva anónima suya
+    private void validarQueNoTengaCuenta(String dni, String email) {
+        boolean dniDeCuenta = usuarioRepository.findByDni(dni)
+                .map(u -> u.getTipoUsuario() != TipoUsuario.EXTERNO)
+                .orElse(false);
         if (dniDeCuenta || usuarioRepository.existsByEmailIgnoreCaseAndTipoUsuarioNot(email, TipoUsuario.EXTERNO)) {
             throw new RequiereInicioSesionException(MENSAJE_TIENE_CUENTA);
         }
-
-        if (invitado == null) {
-            invitado = Usuario.builder().dni(dni).tipoUsuario(TipoUsuario.EXTERNO).build();
-        }
-        invitado.setNombre(request.getNombre().trim());
-        invitado.setApellido(request.getApellido().trim());
-        invitado.setEmail(email);
-        invitado.setTelefono(request.getTelefono().trim());
-        invitado.setIdSede(null);
-        return usuarioRepository.save(invitado);
     }
 
+    // Reservas de invitado: las nuevas no tienen usuario; las anteriores a ADR-018 apuntan a un usuario EXTERNO
     private ReservaCancha buscarPorCodigo(UUID codigo) {
         return reservaCanchaRepository.findConDetalleByCodigoReserva(codigo)
-                .filter(r -> r.getUsuario().getTipoUsuario() == TipoUsuario.EXTERNO)
+                .filter(r -> r.getUsuario() == null || r.getUsuario().getTipoUsuario() == TipoUsuario.EXTERNO)
                 .orElseThrow(() -> new RecursoNoEncontradoException("No existe una reserva de invitado con ese código"));
     }
 
-    private boolean estaPagada(ReservaCancha reserva) {
-        return transaccionRepository.existsByReservaCancha_IdReservaCanchaAndEstadoPago(
-                reserva.getIdReservaCancha(), EstadoPago.CONFIRMADO);
+    private Optional<Comprobante> comprobanteDe(ReservaCancha reserva) {
+        return transaccionRepository
+                .findFirstByReservaCancha_IdReservaCanchaAndEstadoPago(reserva.getIdReservaCancha(), EstadoPago.CONFIRMADO)
+                .flatMap(pago -> comprobanteRepository.findByTransaccion_IdTransaccion(pago.getIdTransaccion()));
     }
 
-    private ReservaInvitadoResponse respuestaDe(ReservaCancha reserva, boolean pagada) {
-        CotizacionDTO cotizacion = canchaService.cotizarPara(reserva.getCancha().getIdCancha(), reserva.getUsuario(),
+    private ReservaInvitadoResponse respuestaDe(ReservaCancha reserva, Optional<Comprobante> comprobante) {
+        CotizacionDTO cotizacion = canchaService.cotizarPara(reserva.getCancha().getIdCancha(), null,
                 reserva.getFechaHoraInicio(), reserva.getFechaHoraFin());
-        return ReservaInvitadoResponse.desde(reserva, cotizacion, pagada);
+        return ReservaInvitadoResponse.desde(reserva, cotizacion, comprobante.orElse(null));
     }
 }

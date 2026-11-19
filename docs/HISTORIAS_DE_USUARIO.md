@@ -13,7 +13,7 @@ Guía de pruebas por rol. Cada historia dice qué debe poder hacer el usuario, y
 | :-- | :-- | :-- |
 | Socio activo | `socio@fitzone.com` | SOC |
 | Socio con cuota vencida | `socio.vencido@fitzone.com` | MOR |
-| Cliente externo | `externo@fitzone.com` (sin login) | EXT |
+| Cliente externo | sin cuenta ni datos en la base: reserva como invitado (ADR-018) | EXT |
 | Recepcionista | `recepcionista@fitzone.com` | REC |
 | Gerente | `gerente@fitzone.com` | GER |
 
@@ -250,14 +250,15 @@ Como cliente externo, quiero ver canchas y turnos para elegir dónde jugar.
 - [ ] Veo turnos libres y ocupados.
 - [ ] No veo funciones de socio ni de personal.
 
-### EXT-02 — Registrarme
+### EXT-02 — Cargar mis datos al reservar
 
-Como cliente externo, quiero cargar mis datos para usar la plataforma.
+Como cliente externo, quiero cargar mis datos solo para el comprobante, sin crear una cuenta.
 
-- [ ] Completo nombre, apellido, DNI, contacto y foto.
-- [ ] Quedo registrado como `EXTERNO`, no como socio.
-- [ ] Un DNI o email repetido muestra error.
+- [ ] Completo nombre, apellido, DNI y email al confirmar el turno.
+- [ ] No quedo registrado como usuario: mis datos figuran solo en el comprobante (ADR-018).
+- [ ] Si el DNI o el email son de una cuenta, se me pide iniciar sesión.
 - [ ] Los campos obligatorios se validan.
+- [ ] El turno se me guarda 5 minutos con cuenta regresiva; al vencer, se cierra la ventana y se borra lo cargado.
 
 ### EXT-03 — Ver precio
 
@@ -272,7 +273,8 @@ Como cliente externo, quiero ver el precio para decidir si reservo.
 Como cliente externo, quiero reservar sin membresía para jugar pagando por uso.
 
 - [ ] Reservo un turno libre sin membresía.
-- [ ] El turno queda bloqueado para los demás.
+- [ ] El turno queda bloqueado para los demás recién cuando el pago se aprueba.
+- [ ] Una reserva sin pagar no ocupa el turno.
 - [ ] No puedo reservar una cancha en mantenimiento.
 - [ ] No puedo reservar un turno ocupado.
 
@@ -281,8 +283,9 @@ Como cliente externo, quiero reservar sin membresía para jugar pagando por uso.
 Como cliente externo, quiero pagar al reservar para confirmar el turno.
 
 - [ ] Veo el resumen de cancha, horario y monto.
-- [ ] Con pago aprobado se confirma el cobro.
-- [ ] Con pago rechazado veo el motivo y puedo reintentar.
+- [ ] Con pago aprobado se confirman el cobro y la reserva en un solo paso.
+- [ ] Con pago rechazado no queda reserva, veo el motivo y puedo reintentar mientras dure la retención.
+- [ ] Si otro pagó el turno antes, veo el aviso y no se me cobra.
 
 ### EXT-06 — Recibir comprobante
 
@@ -324,9 +327,9 @@ Como recepcionista, quiero buscar usuarios para atenderlos rápido.
 Como recepcionista, quiero registrar clientes en mostrador.
 
 - [ ] Doy de alta un socio con DNI, contacto y foto.
-- [ ] Doy de alta un cliente externo.
+- [ ] No se da de alta un cliente externo: reserva como invitado (ADR-018).
 - [ ] Un DNI repetido muestra error.
-- [ ] Puedo editar los datos de ambos.
+- [ ] Puedo editar los datos de los socios.
 
 ### REC-04 — Límite sobre personal
 
@@ -525,7 +528,7 @@ Como responsable del sistema, quiero que cada rol use solo lo suyo para proteger
 
 Estas reglas necesitan respuesta del equipo antes de dar el resultado por válido:
 
-1. El externo: ¿se registra o reserva como invitado?
+1. ~~El externo: ¿se registra o reserva como invitado?~~ Reserva como invitado y no se registra (ADR-018).
 2. El 15%: ¿se calcula sobre la tarifa base o con recargo?
 3. El recargo pico: ¿cuál es el porcentaje?
 4. Los reportes: ¿qué datos debe mostrar el gerente?

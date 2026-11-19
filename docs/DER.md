@@ -49,7 +49,7 @@ erDiagram
     fz_cch_reservas {
         bigint id_reserva_cancha PK
         bigint id_cancha FK
-        bigint id_usuario FK
+        bigint id_usuario FK "nullable: cliente externo (ADR-018)"
         timestamp fecha_hora_inicio
         timestamp fecha_hora_fin
         numeric precio_final
@@ -87,7 +87,7 @@ erDiagram
     }
     fz_pag_transacciones {
         bigint id_transaccion PK
-        bigint id_usuario FK
+        bigint id_usuario FK "nullable: cliente externo (ADR-018)"
         bigint id_sede FK
         bigint id_membresia FK "nullable"
         bigint id_reserva_cancha FK "nullable"
@@ -102,6 +102,9 @@ erDiagram
         bigint id_comprobante PK
         bigint id_transaccion FK
         varchar numero_factura
+        varchar cliente_nombre "solo cliente externo (ADR-018)"
+        varchar cliente_dni "solo cliente externo"
+        varchar cliente_email "solo cliente externo"
     }
 
     fz_sedes ||--o{ fz_usr_usuarios : "personal asignado"
@@ -111,7 +114,7 @@ erDiagram
     fz_sedes ||--o{ fz_pag_transacciones : cobra
     fz_usr_usuarios ||--o{ fz_pag_membresias : contrata
     fz_pag_planes ||--o{ fz_pag_membresias : define
-    fz_usr_usuarios ||--o{ fz_cch_reservas : reserva
+    fz_usr_usuarios |o--o{ fz_cch_reservas : reserva
     fz_cch_canchas ||--o{ fz_cch_reservas : "se reserva"
     fz_usr_usuarios ||--o{ fz_cls_reservas : reserva
     fz_cls_clases_grupales ||--o{ fz_cls_reservas : "se reserva"
@@ -120,7 +123,7 @@ erDiagram
     fz_usr_usuarios ||--o{ fz_gym_accesos : ingresa
     fz_cls_reservas |o--o{ fz_gym_accesos : "valida ingreso"
     fz_cch_reservas |o--o{ fz_gym_accesos : "valida ingreso"
-    fz_usr_usuarios ||--o{ fz_pag_transacciones : paga
+    fz_usr_usuarios |o--o{ fz_pag_transacciones : paga
     fz_pag_membresias |o--o{ fz_pag_transacciones : "se paga con"
     fz_cch_reservas |o--o{ fz_pag_transacciones : "se paga con"
     fz_pag_transacciones ||--o{ fz_pag_comprobantes : emite

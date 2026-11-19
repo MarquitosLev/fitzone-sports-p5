@@ -48,7 +48,6 @@ public class ReservaInvitadoRequest {
     @Size(max = 255, message = "El email no puede superar los 255 caracteres")
     private String email;
 
-    @NotBlank(message = "El teléfono es obligatorio")
-    @Size(max = 50, message = "El teléfono no puede superar los 50 caracteres")
-    private String telefono;
+    /** Solo para probar el rechazo de la pasarela simulada. */
+    private Boolean forzarRechazo;
 }

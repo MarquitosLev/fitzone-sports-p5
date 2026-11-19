@@ -125,7 +125,17 @@ export function MembresiasPage() {
     setCargandoSocio(true);
     try {
       const usuarios = await buscarUsuariosPorDni(dni);
-      const socioEncontrado = usuarios.find((u) => u.dni.trim() === dni.trim()) || usuarios[0];
+      const coincidenciaExacta = usuarios.find((u) => u.dni.trim() === dni.trim());
+      // Solo los socios tienen membresía: el personal y los externos no pueden contratar un plan
+      if (coincidenciaExacta && coincidenciaExacta.tipoUsuario !== 'SOCIO') {
+        addToast({
+          type: 'warning',
+          title: 'No es socio',
+          message: `${coincidenciaExacta.nombre} ${coincidenciaExacta.apellido} no es socio: solo los socios tienen membresía.`,
+        });
+        return;
+      }
+      const socioEncontrado = coincidenciaExacta ?? usuarios.find((u) => u.tipoUsuario === 'SOCIO');
       if (socioEncontrado) {
         handleSeleccionarSocio(socioEncontrado);
         addToast({
@@ -215,7 +225,7 @@ export function MembresiasPage() {
     setBuscandoSociosModal(true);
     try {
       const resultados = await buscarUsuariosPorDni(dni);
-      setBusquedaModalSocios(resultados);
+      setBusquedaModalSocios(resultados.filter((u) => u.tipoUsuario === 'SOCIO'));
     } catch {
       setBusquedaModalSocios([]);
     } finally {

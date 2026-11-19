@@ -21,27 +21,35 @@ public interface ReservaCanchaRepository extends JpaRepository<ReservaCancha, Lo
     List<ReservaCancha> findByUsuario_IdUsuario(Long idUsuario);
 
     // Reservas propias con cancha y sede ya cargadas, de la más próxima a la más lejana
-    @Query("SELECT r FROM ReservaCancha r JOIN FETCH r.cancha c JOIN FETCH c.sede JOIN FETCH r.usuario " +
+    @Query("SELECT r FROM ReservaCancha r JOIN FETCH r.cancha c JOIN FETCH c.sede LEFT JOIN FETCH r.usuario " +
            "WHERE r.usuario.idUsuario = :idUsuario ORDER BY r.fechaHoraInicio DESC")
     List<ReservaCancha> findConCanchaYSedeByUsuario(@Param("idUsuario") Long idUsuario);
 
-    // Consulta para validar disponibilidad o agenda de turnos en un rango horario (RN-02)
-    List<ReservaCancha> findByCancha_IdCanchaAndFechaHoraInicioBetween(Long idCancha, LocalDateTime inicio, LocalDateTime fin);
+    // Una reserva ocupa el turno si tiene un pago confirmado o si todavía está dentro de la retención sin pago
+    // (ADR-019). Las impagas vencidas no bloquean: el turno vuelve a estar libre para otro.
+    String OCUPA_EL_TURNO = "(EXISTS (SELECT t.idTransaccion FROM Transaccion t WHERE t.reservaCancha = r "
+            + "AND t.estadoPago = com.fitzone.core.domain.enums.EstadoPago.CONFIRMADO) "
+            + "OR r.createdAt IS NULL OR r.createdAt > :limiteRetencion)";
+
+    // Reservas que ocupan turnos de una cancha en un rango horario, para la grilla de disponibilidad (RN-02)
+    @Query("SELECT r FROM ReservaCancha r WHERE r.cancha.idCancha = :idCancha "
+           + "AND r.fechaHoraInicio BETWEEN :inicio AND :fin AND " + OCUPA_EL_TURNO)
+    List<ReservaCancha> findQueOcupanTurno(@Param("idCancha") Long idCancha,
+                                           @Param("inicio") LocalDateTime inicio,
+                                           @Param("fin") LocalDateTime fin,
+                                           @Param("limiteRetencion") LocalDateTime limiteRetencion);
 
     @Query("SELECT COUNT(r) > 0 FROM ReservaCancha r " +
            "WHERE r.cancha.idCancha = :idCancha " +
            "AND r.fechaHoraInicio < :fin " +
-           "AND r.fechaHoraFin > :inicio")
+           "AND r.fechaHoraFin > :inicio AND " + OCUPA_EL_TURNO)
     boolean existsSolapamiento(@Param("idCancha") Long idCancha,
                               @Param("inicio") LocalDateTime inicio,
-                              @Param("fin") LocalDateTime fin);
+                              @Param("fin") LocalDateTime fin,
+                              @Param("limiteRetencion") LocalDateTime limiteRetencion);
 
-    @Query("SELECT r FROM ReservaCancha r JOIN FETCH r.cancha c JOIN FETCH c.sede JOIN FETCH r.usuario " +
+    @Query("SELECT r FROM ReservaCancha r JOIN FETCH r.cancha c JOIN FETCH c.sede LEFT JOIN FETCH r.usuario " +
            "WHERE r.codigoReserva = :codigo")
     Optional<ReservaCancha> findConDetalleByCodigoReserva(@Param("codigo") UUID codigo);
 
-    @Query("SELECT COUNT(r) FROM ReservaCancha r WHERE r.usuario.idUsuario = :idUsuario " +
-           "AND r.fechaHoraInicio > :ahora AND NOT EXISTS (SELECT t.idTransaccion FROM Transaccion t " +
-           "WHERE t.reservaCancha = r AND t.estadoPago = com.fitzone.core.domain.enums.EstadoPago.CONFIRMADO)")
-    long contarPendientesDePago(@Param("idUsuario") Long idUsuario, @Param("ahora") LocalDateTime ahora);
 }

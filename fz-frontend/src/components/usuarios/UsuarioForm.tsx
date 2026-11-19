@@ -8,6 +8,9 @@ import type { UsuarioDTO, UsuarioFormData, TipoUsuario, SedeDTO } from '../../ty
 import { AppError } from '../../services/httpClient';
 import { listarRoles } from '../../services/rolesService';
 
+// Valor del selector para el gerente sin sede (central); se envía como idSede null
+const SEDE_CENTRAL = 'CENTRAL';
+
 export interface UsuarioFormProps {
   modo: 'alta' | 'edicion';
   valoresIniciales?: Partial<UsuarioDTO> | null;
@@ -37,10 +40,14 @@ export function UsuarioForm({
   const { usuario: operador } = useAuth();
   const sedesList = sedesDisponibles || sedesContexto || [];
   const esGerente = !operador || operador.tipoUsuario === 'GERENTE';
-  const rolesDelCatalogo: SelectOption[] = listarRoles().map((r) => ({
-    value: r.codigo,
-    label: `${r.nombre} (${r.codigo})`,
-  }));
+  // El cliente externo no se da de alta: reserva como invitado y sus datos quedan en el comprobante (ADR-018).
+  // Se sigue mostrando al editar los EXTERNO anteriores al cambio.
+  const rolesDelCatalogo: SelectOption[] = listarRoles()
+    .filter((r) => modo !== 'alta' || r.codigo !== 'EXTERNO')
+    .map((r) => ({
+      value: r.codigo,
+      label: `${r.nombre} (${r.codigo})`,
+    }));
   const rolesDisponibles = esGerente
     ? rolesDelCatalogo
     : rolesDelCatalogo.filter((r) => r.value === 'SOCIO' || r.value === 'EXTERNO');
@@ -74,7 +81,10 @@ export function UsuarioForm({
         telefono: valoresIniciales.telefono || '',
         fotoUrl: valoresIniciales.fotoUrl || '',
         tipoUsuario: valoresIniciales.tipoUsuario || 'SOCIO',
-        idSede: valoresIniciales.idSede ?? sedeActiva?.idSede ?? null,
+        // El gerente central no tiene sede: no se le completa con la sede activa
+        idSede: valoresIniciales.tipoUsuario === 'GERENTE'
+          ? (valoresIniciales.idSede ?? null)
+          : (valoresIniciales.idSede ?? sedeActiva?.idSede ?? null),
         password: '',
       });
     } else {
@@ -98,11 +108,20 @@ export function UsuarioForm({
   const requiereAsignacionSede =
     formData.tipoUsuario === 'RECEPCIONISTA' || formData.tipoUsuario === 'GERENTE';
 
+  // El gerente sin sede es el gerente central: opera en todas las sedes. Solo otro gerente central puede asignarlo.
+  const esRolGerente = formData.tipoUsuario === 'GERENTE';
+  const operadorEsGerenteCentral = operador?.tipoUsuario === 'GERENTE' && !operador.idSede;
+
   // Opciones de sedes para el Select
-  const sedesOptions: SelectOption[] = sedesList.map((s) => ({
-    value: s.idSede,
-    label: s.nombre,
-  }));
+  const sedesOptions: SelectOption[] = [
+    ...(esRolGerente
+      ? [{ value: SEDE_CENTRAL, label: 'Todas las sedes (gerente central)', disabled: !operadorEsGerenteCentral }]
+      : []),
+    ...sedesList.map((s) => ({
+      value: s.idSede,
+      label: s.nombre,
+    })),
+  ];
 
   // Handlers de cambio
   const handleChange = (campo: keyof UsuarioFormData, valor: any) => {
@@ -150,7 +169,7 @@ export function UsuarioForm({
       newErrors.email = 'Ingrese un formato de email válido';
     }
 
-    if (requiereAsignacionSede && !formData.idSede) {
+    if (requiereAsignacionSede && !formData.idSede && !esRolGerente) {
       newErrors.idSede = 'Debe seleccionar una sede asignada para este rol';
     }
 
@@ -169,7 +188,7 @@ export function UsuarioForm({
       const payload: UsuarioFormData = {
         ...formData,
         idSede: requiereAsignacionSede
-          ? Number(formData.idSede)
+          ? (formData.idSede ? Number(formData.idSede) : null)
           : (formData.idSede ? Number(formData.idSede) : (sedeActiva?.idSede ?? null)),
       };
 
@@ -328,13 +347,19 @@ export function UsuarioForm({
               id="usuario-sede"
               label="Asignación de Sede Operativa"
               options={sedesOptions}
-              value={formData.idSede ?? ''}
-              onChange={(e) => handleChange('idSede', Number(e.target.value))}
+              value={formData.idSede ?? (esRolGerente ? SEDE_CENTRAL : '')}
+              onChange={(e) =>
+                handleChange('idSede', e.target.value === SEDE_CENTRAL ? null : Number(e.target.value))
+              }
               error={errors.idSede}
               leftIcon={Building2}
               required
               disabled={loading}
-              helperText="El personal administrativo debe tener una sede física asignada para el control de operaciones."
+              helperText={
+                esRolGerente
+                  ? 'Sin sede es el gerente central y opera en todas las sedes; con sede, solo en la asignada.'
+                  : 'El personal administrativo debe tener una sede física asignada para el control de operaciones.'
+              }
             />
           </div>
         ) : (

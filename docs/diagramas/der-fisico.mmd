@@ -13,7 +13,7 @@ erDiagram
   }
   fz_usr_usuarios {
     bigint id_usuario PK "IDENTITY"
-    uuid auth_id UK "Supabase Auth; NULL en cliente externo"
+    uuid auth_id UK "Supabase Auth; NULL en EXTERNO anteriores a ADR-018"
     varchar dni UK "NOT NULL, len 20"
     varchar nombre "NOT NULL"
     varchar apellido "NOT NULL"
@@ -80,7 +80,7 @@ erDiagram
   fz_cch_reservas {
     bigint id_reserva_cancha PK "IDENTITY"
     bigint id_cancha FK "NOT NULL"
-    bigint id_usuario FK "NOT NULL"
+    bigint id_usuario FK "NULL = cliente externo (ADR-018)"
     timestamp fecha_hora_inicio "NOT NULL"
     timestamp fecha_hora_fin "NOT NULL; no solapamiento: SELECT FOR UPDATE + existsSolapamiento (ADR-004); EXCLUDE gist pendiente"
     numeric precio_final "NOT NULL, (10,2)"
@@ -88,7 +88,7 @@ erDiagram
   }
   fz_pag_transacciones {
     bigint id_transaccion PK "IDENTITY"
-    bigint id_usuario FK "NOT NULL"
+    bigint id_usuario FK "NULL = cliente externo (ADR-018)"
     bigint id_sede FK "NOT NULL"
     bigint id_membresia FK "NULL"
     bigint id_reserva_cancha FK "NULL; ck_pag_transacciones_origen: destino según concepto"
@@ -103,6 +103,9 @@ erDiagram
     bigint id_comprobante PK "IDENTITY"
     bigint id_transaccion FK "NOT NULL"
     varchar numero_factura "NOT NULL"
+    varchar cliente_nombre "NULL; solo cliente externo (ADR-018)"
+    varchar cliente_dni "NULL; solo cliente externo"
+    varchar cliente_email "NULL; solo cliente externo"
   }
 
   fz_sedes ||--o{ fz_usr_usuarios : "personal asignado"
@@ -119,8 +122,8 @@ erDiagram
   fz_usr_usuarios ||--o{ fz_cls_lista_espera : "fk_cls_lista_espera_usuarios"
   fz_sedes ||--o{ fz_cch_canchas : "fk_cch_canchas_sedes"
   fz_cch_canchas ||--o{ fz_cch_reservas : "fk_cch_reservas_canchas"
-  fz_usr_usuarios ||--o{ fz_cch_reservas : "fk_cch_reservas_usuarios"
-  fz_usr_usuarios ||--o{ fz_pag_transacciones : "fk_pag_transacciones_usuarios"
+  fz_usr_usuarios |o--o{ fz_cch_reservas : "fk_cch_reservas_usuarios"
+  fz_usr_usuarios |o--o{ fz_pag_transacciones : "fk_pag_transacciones_usuarios"
   fz_sedes ||--o{ fz_pag_transacciones : "fk_pag_transacciones_sedes"
   fz_pag_membresias |o--o{ fz_pag_transacciones : "fk_pag_transacciones_membresias"
   fz_cch_reservas |o--o{ fz_pag_transacciones : "fk_pag_transacciones_reservas_cancha"

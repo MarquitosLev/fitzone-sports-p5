@@ -1,5 +1,5 @@
 meta {
-  name: 02 - Crear Externo (Invitado)
+  name: 02 - Error Alta de Externo (422)
   type: http
   seq: 2
 }
@@ -19,4 +19,8 @@ body:json {
     "telefono": "+5491188887777",
     "tipoUsuario": "EXTERNO"
   }
+}
+
+docs {
+  El cliente externo no se da de alta: responde 422 (ADR-018). Reserva como invitado en 06-invitado.
 }

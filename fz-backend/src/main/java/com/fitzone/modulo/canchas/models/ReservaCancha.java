@@ -23,6 +23,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -35,6 +36,20 @@ import java.util.UUID;
 @Builder
 public class ReservaCancha extends BaseEntity {
 
+    /** Una reserva sin pagar retiene el turno este tiempo desde que se creó; después lo libera (ADR-019). */
+    public static final Duration RETENCION_SIN_PAGO = Duration.ofMinutes(5);
+
+    /** Las reservas creadas antes de este momento ya no retienen el turno si no tienen pago confirmado. */
+    public static LocalDateTime limiteRetencion() {
+        return LocalDateTime.now().minus(RETENCION_SIN_PAGO);
+    }
+
+    /** Sin fecha de creación se la considera vigente, igual que en las consultas del repositorio. */
+    @JsonProperty("retencionVencida")
+    public boolean retencionVencida() {
+        return getCreatedAt() != null && getCreatedAt().isBefore(limiteRetencion());
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_reserva_cancha", updatable = false, nullable = false)
@@ -45,8 +60,9 @@ public class ReservaCancha extends BaseEntity {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Cancha cancha;
 
+    // Nulo en la reserva del cliente externo: no se lo guarda como usuario, sus datos quedan en el comprobante (ADR-018)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_usuario", nullable = false, foreignKey = @ForeignKey(name = "fk_cch_reservas_usuarios"))
+    @JoinColumn(name = "id_usuario", foreignKey = @ForeignKey(name = "fk_cch_reservas_usuarios"))
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Usuario usuario;
 

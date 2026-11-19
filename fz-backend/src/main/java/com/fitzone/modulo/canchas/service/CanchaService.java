@@ -165,7 +165,7 @@ public class CanchaService {
         LocalDateTime inicioDia = fechaConsulta.atTime(HORA_APERTURA, 0);
         LocalDateTime finDia = fechaConsulta.atTime(HORA_CIERRE, 0);
         List<ReservaCancha> reservasDelDia = reservaCanchaRepository
-                .findByCancha_IdCanchaAndFechaHoraInicioBetween(idCancha, inicioDia, finDia);
+                .findQueOcupanTurno(idCancha, inicioDia, finDia, ReservaCancha.limiteRetencion());
 
         List<FranjaDisponibilidad> franjas = new ArrayList<>();
         for (int hora = HORA_APERTURA; hora < HORA_CIERRE; hora++) {
@@ -204,12 +204,10 @@ public class CanchaService {
     }
 
     @Transactional
-    public ReservaCancha reservarComoInvitado(Long idCancha, Usuario invitado, ReservaCancha reserva) {
+    // El cliente externo no es usuario del sistema: la reserva queda sin usuario y paga precio de lista (ADR-018)
+    public ReservaCancha reservarComoInvitado(Long idCancha, ReservaCancha reserva) {
         validarTurno(reserva);
-        if (invitado.getTipoUsuario() != TipoUsuario.EXTERNO) {
-            throw new ReglaNegocioException("El checkout de invitado es solo para usuarios sin cuenta");
-        }
-        return guardarReserva(idCancha, invitado, reserva);
+        return guardarReserva(idCancha, null, reserva);
     }
 
     private void validarTurno(ReservaCancha reserva) {
@@ -247,7 +245,7 @@ public class CanchaService {
             throw new ReglaNegocioException("La cancha se encuentra en mantenimiento");
         }
 
-        if (reservaCanchaRepository.existsSolapamiento(idCancha, inicio, fin)) {
+        if (reservaCanchaRepository.existsSolapamiento(idCancha, inicio, fin, ReservaCancha.limiteRetencion())) {
             throw new ConflictoException("La cancha ya se encuentra reservada en el horario solicitado");
         }
 

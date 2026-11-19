@@ -16,7 +16,7 @@ describe('FormularioInvitado', () => {
     const onSubmit = vi.fn();
     renderForm({ onSubmit });
 
-    fireEvent.click(screen.getByRole('button', { name: /reservar e ir a pagar/i }));
+    fireEvent.click(screen.getByRole('button', { name: /pagar y reservar/i }));
 
     expect(onSubmit).not.toHaveBeenCalled();
     expect(screen.getByText(/el dni debe tener/i)).toBeInTheDocument();
@@ -29,16 +29,14 @@ describe('FormularioInvitado', () => {
     fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Ana' } });
     fireEvent.change(screen.getByLabelText('Apellido'), { target: { value: 'Pérez' } });
     fireEvent.change(screen.getByLabelText('DNI'), { target: { value: '30.111.222' } });
-    fireEvent.change(screen.getByLabelText('Teléfono'), { target: { value: '11 5555 0000' } });
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'Ana@Mail.com' } });
-    fireEvent.click(screen.getByRole('button', { name: /reservar e ir a pagar/i }));
+    fireEvent.click(screen.getByRole('button', { name: /pagar y reservar/i }));
 
     expect(onSubmit).toHaveBeenCalledWith({
       nombre: 'Ana',
       apellido: 'Pérez',
       dni: '30111222',
       email: 'ana@mail.com',
-      telefono: '11 5555 0000',
     });
   });
 
@@ -47,6 +45,13 @@ describe('FormularioInvitado', () => {
 
     expect(screen.getByText(/pertenecen a una cuenta/i)).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: /inici[aá] sesión/i }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('muestra el monto en el botón y la cuenta regresiva de la retención', () => {
+    renderForm({ montoTotal: 12000, segundosRestantes: 125 });
+
+    expect(screen.getByRole('button', { name: /pagar \$12\.000 y reservar/i })).toBeInTheDocument();
+    expect(screen.getByRole('timer')).toHaveTextContent('2:05');
   });
 
   it('Volver cancela sin enviar', () => {

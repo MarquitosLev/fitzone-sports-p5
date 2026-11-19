@@ -33,7 +33,7 @@ Todo el backend está en `fz-backend/src/main/java/com/fitzone/`.
 | M2 Gimnasio y Acceso | `modulo/gimnasio` | Sedes, aforo, ingreso y egreso con QR (RN-01, RF-05) | `fz_sedes`, `fz_gym_accesos` |
 | M3 Clases | `modulo/clases` | Clases grupales, cupos, reservas, lista de espera (Observer) | `fz_cls_clases_grupales`, `fz_cls_reservas`, `fz_cls_lista_espera` |
 | M4 Canchas | `modulo/canchas` | Canchas por tipo, disponibilidad, cotización (Strategy), reservas (RN-02), mantenimiento | `fz_cch_canchas`, `fz_cch_reservas` |
-| M5 Pagos | `modulo/pagos` | Pagos con pasarela simulada, comprobantes PDF, checkout de invitados sin cuenta | `fz_pag_transacciones`, `fz_pag_comprobantes` |
+| M5 Pagos | `modulo/pagos` | Pagos con pasarela simulada, comprobantes PDF, checkout de invitados sin cuenta (reserva y pago en una transacción, sin guardar al externo como usuario: ADR-018) | `fz_pag_transacciones`, `fz_pag_comprobantes` |
 
 Ubicaciones que sorprenden: `Plan` y `Membresia` están en `usuarios`, y `Sede` en `gimnasio`.
 

@@ -14,6 +14,8 @@ import com.fitzone.modulo.pagos.repository.TransaccionRepository;
 import com.fitzone.modulo.usuarios.models.Membresia;
 import com.fitzone.modulo.usuarios.models.Plan;
 import com.fitzone.modulo.usuarios.models.Usuario;
+import com.lowagie.text.pdf.PdfReader;
+import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -268,6 +270,24 @@ class ComprobanteServiceTest {
         // Validar firma mágica de archivo PDF (%PDF)
         String cabecera = new String(pdfBytes, 0, 4);
         assertThat(cabecera).isEqualTo("%PDF");
+    }
+
+    @Test
+    @DisplayName("generarPdf de un cliente externo muestra el nombre, el DNI y el email guardados en el comprobante")
+    void generarPdf_clienteExterno_muestraSusDatos() throws Exception {
+        transaccionCancha.setUsuario(null);
+        Comprobante comprobante = Comprobante.builder()
+                .idComprobante(3L)
+                .transaccion(transaccionCancha)
+                .numeroFactura("0001-00000003")
+                .clienteNombre("Ana Invitada")
+                .clienteDni("30111222")
+                .clienteEmail("ana@test.com")
+                .build();
+
+        String texto = new PdfTextExtractor(new PdfReader(comprobanteService.generarPdf(comprobante))).getTextFromPage(1);
+
+        assertThat(texto).contains("Ana Invitada", "30111222", "ana@test.com");
     }
 
     @Test

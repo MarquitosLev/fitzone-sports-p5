@@ -136,12 +136,13 @@ describe('canchasService con la API real', () => {
       fechaHoraFin: '2026-12-10T20:00:00',
       precioFinal: '12000.00',
       cotizacion: { precioBase: 10000, descuento: 0, recargo: 2000, precioFinal: 12000 },
-      pagada: false,
+      pagada: true,
+      numeroFactura: '0001-00000008',
     };
 
     it('reservarComoInvitado envía el turno y los datos a /v1/invitados/reservas', async () => {
       post.mockResolvedValue(reservaApi);
-      const datos = { nombre: 'Ana', apellido: 'Pérez', dni: '30111222', email: 'ana@mail.com', telefono: '1155550000' };
+      const datos = { nombre: 'Ana', apellido: 'Pérez', dni: '30111222', email: 'ana@mail.com' };
 
       const r = await reservarComoInvitado({ idCancha: 1, fecha: '2026-12-10', horaInicio: '19:00', horaFin: '20:00' }, datos);
 
