@@ -137,20 +137,35 @@ Priorizar la acción de confirmación de reserva directa sobre la lista de esper
 **Commits**
 `93002a6` priorización de reserva sobre lista de espera ante cupo libre · `a56126a` test de habilitación de reserva con cupo liberado · `2cd2f5f` corrección de cálculo de días restantes de membresía · `e82ac6b` sincronización de pestaña activa por rol · `9d4eef1` restricción de pestañas de reserva a rol socio · `1a54fe1` renderizado condicional de vistas de reserva · `2cb72c4` tests de visibilidad y accesos por rol
 
+---
+
+## Sprint 7 — Cierre — Semana del 2026-11-09
+
 ### 2026-11-13 · ? h
 
-**Actividad** Armé mi bitácora de frontend y vinculé las decisiones del stack técnico con el ADR-006.
+**Actividad**
+Armé mi bitácora de frontend y vinculé las decisiones del stack técnico con el ADR-006.
 
-**Problema o bloqueo** El socio en lista de espera no podía tomar el cupo liberado desde la pantalla, y el gerente veía las pestañas de reserva del socio.
+**Problema o bloqueo**
+El socio en lista de espera no podía tomar el cupo liberado desde la pantalla, y el gerente veía las pestañas de reserva del socio.
 
-**Commits** `6732006` bitácora Chang · `62fc5616` vínculo ADR-006
+**Commits**
+`6732006` bitácora Chang · `2fc5616` vínculo ADR-006
+
+---
+
+## Sprint 7 — Cierre — Semana del 2026-11-16
 
 ### 2026-11-19 · ? h
 
-**Actividad** Oculté las pestañas de reserva de socio al gerente en canchas, dejé fija la sede para el personal en el layout y resolví el conflicto con develop en CanchasPage.
+**Actividad**
+Oculté las pestañas de reserva de socio al gerente en canchas, dejé fija la sede para el personal en el layout y resolví el conflicto con develop en CanchasPage.
 
-**Problema o bloqueo** Al cambiar rápido de sede se cruzaban las peticiones y quedaban canchas de otra sede en la grilla. Además, el gerente veía solapas de reserva y al mergear develop chocó la función de carga con sedeEfectiva.
+**Problema o bloqueo**
+Al cambiar rápido de sede se cruzaban las peticiones y quedaban canchas de otra sede en la grilla. Además, el gerente veía solapas de reserva y al mergear develop chocó la función de carga con sedeEfectiva.
 
-**Decisión** Descartar respuestas viejas con una bandera de cancelación en el useEffect y combinarla con sedeEfectiva.
+**Decisión**
+Descartar respuestas viejas con una bandera de cancelación en el useEffect y combinarla con sedeEfectiva.
 
-**Commits** `8828cd6` respuestas obsoletas · `34b3dcc` sede asignada · `e9e0974` sidebar estático · `67c3402` tests layout · `f2f4700` · `f6b3b34` permisos de canchas · `40f6c7a` conflicto CanchasPage
+**Commits**
+`8828cd6` respuestas obsoletas · `34b3dcc` sede asignada · `e9e0974` sidebar estático · `67c3402` tests layout · `f2f4700` · `f6b3b34` permisos de canchas · `40f6c7a` conflicto CanchasPage
