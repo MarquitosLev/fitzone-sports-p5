@@ -33,6 +33,12 @@ describe('SCRUM-107: rolesService (RBAC por prestaciones dinámicas)', () => {
     expect(prestacionesSocio).not.toContain('ACCESO_ESCANEAR');
   });
 
+  it('SCRUM-144: el checkout e historial de pagos propios es solo del socio, no del personal', () => {
+    expect(obtenerPrestacionesPorRol('SOCIO')).toContain('PAGOS_VER_HISTORIAL');
+    expect(obtenerPrestacionesPorRol('GERENTE')).not.toContain('PAGOS_VER_HISTORIAL');
+    expect(obtenerPrestacionesPorRol('RECEPCIONISTA')).not.toContain('PAGOS_VER_HISTORIAL');
+  });
+
   it('solo existen los cuatro roles del backend', () => {
     expect(listarRoles().map((r) => r.codigo)).toEqual(['GERENTE', 'RECEPCIONISTA', 'SOCIO', 'EXTERNO']);
     expect(obtenerRolPorCodigo('INSTRUCTOR')).toBeUndefined();

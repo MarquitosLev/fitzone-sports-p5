@@ -29,14 +29,16 @@ export const CATALOGO_PRESTACIONES: MetadataPrestacion[] = [
 
 /**
  * Prestaciones que el backend reserva al socio (`@PreAuthorize("hasRole('SOCIO')")`):
- * pase QR propio (GET /v1/usuarios/me/qr), reservas/lista de espera de clases y el
- * descuento de socio. El gerente no las tiene para que el menú no le ofrezca
- * pantallas que el backend le rechazaría con 403 (SCRUM-92).
+ * pase QR propio (GET /v1/usuarios/me/qr), reservas/lista de espera de clases, el
+ * descuento de socio y el checkout/historial de pagos propios (POST /v1/pagos y
+ * GET /v1/usuarios/me/pagos). El personal no las tiene para que el menú no le ofrezca
+ * pantallas que el backend le rechazaría con 403 (SCRUM-92, SCRUM-144).
  */
 export const PRESTACIONES_EXCLUSIVAS_SOCIO: Prestacion[] = [
   PRESTACIONES.ACCESO_MI_QR,
   PRESTACIONES.CLASES_RESERVAR,
   PRESTACIONES.CANCHAS_DESCUENTO_SOCIO,
+  PRESTACIONES.PAGOS_VER_HISTORIAL,
 ];
 
 export const ROLES_BASE_SISTEMA: RolDTO[] = [
@@ -64,7 +66,6 @@ export const ROLES_BASE_SISTEMA: RolDTO[] = [
       PRESTACIONES.USUARIOS_ALTA_SOCIO,
       PRESTACIONES.USUARIOS_ADMIN,
       PRESTACIONES.PAGOS_COBRAR_MOSTRADOR,
-      PRESTACIONES.PAGOS_VER_HISTORIAL,
     ],
   },
   {
