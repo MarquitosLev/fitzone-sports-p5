@@ -103,7 +103,7 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
               <div
                 role="listbox"
                 aria-label="Selector de sede"
-                className="absolute left-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-modal border border-slate-100 py-2 z-50 animate-slide-up"
+                className="absolute left-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-modal border border-slate-100 py-2 z-50 animate-slide-up max-h-64 overflow-y-auto overscroll-contain"
               >
                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-4 pt-1 pb-2">
                   Sedes disponibles
