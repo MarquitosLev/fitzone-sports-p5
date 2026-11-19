@@ -81,6 +81,15 @@ public class Usuario extends BaseEntity {
     @Column(name = "foto_url")
     private String fotoUrl;
 
+    /**
+     * Clave pública ECDSA P-256 (SPKI en base64) con la que el dispositivo del socio firma su QR.
+     * La privada nunca sale del navegador. No se expone en las respuestas: viaja solo en la lista
+     * de habilitados del terminal de sede.
+     */
+    @JsonIgnore
+    @Column(name = "qr_clave_publica", length = 200)
+    private String qrClavePublica;
+
     @NotNull(message = "El tipo de usuario es obligatorio")
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_usuario", nullable = false, length = 30)

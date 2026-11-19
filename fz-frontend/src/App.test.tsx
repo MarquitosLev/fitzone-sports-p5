@@ -13,6 +13,7 @@ vi.mock('./services/httpClient', () => ({
 describe('App Component — Inicialización', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('consulta /v1/sedes y provee los datos reales', async () => {
@@ -24,7 +25,11 @@ describe('App Component — Inicialización', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(httpClient.get).toHaveBeenCalledWith('/v1/sedes');
+      expect(httpClient.get).toHaveBeenCalledWith('/v1/sedes', expect.any(Object));
+    });
+    // Se guardan para poder arrancar si después el servidor no responde
+    await waitFor(() => {
+      expect(JSON.parse(localStorage.getItem('fitzone.sedes') ?? '[]')).toEqual(mockSedesReales);
     });
   });
 
@@ -32,11 +37,25 @@ describe('App Component — Inicialización', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(httpClient.get).mockRejectedValueOnce(new Error('Network error 500'));
 
-    render(<App />);
+    const { queryByText } = render(<App />);
 
     await waitFor(() => {
-      expect(httpClient.get).toHaveBeenCalledWith('/v1/sedes');
+      expect(httpClient.get).toHaveBeenCalledWith('/v1/sedes', expect.any(Object));
     });
+    await waitFor(() => expect(queryByText('Cargando sedes...')).toBeNull());
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('sin servidor, arranca con las últimas sedes guardadas', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    localStorage.setItem('fitzone.sedes', JSON.stringify([{ idSede: 1, nombre: 'Sede Guardada', aforoMaximo: 80 }]));
+    vi.mocked(httpClient.get).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const { queryByText } = render(<App />);
+
+    await waitFor(() => expect(queryByText('Cargando sedes...')).toBeNull());
+    expect(JSON.parse(localStorage.getItem('fitzone.sedes') ?? '[]')).toHaveLength(1);
 
     consoleErrorSpy.mockRestore();
   });

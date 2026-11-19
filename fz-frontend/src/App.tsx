@@ -32,9 +32,30 @@ import { RolesPage } from './pages/RolesPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { RoleMiddleware } from './components/auth';
 import { httpClient, registerHttpErrorHandler } from './services/httpClient';
+import { senalConTimeout } from './services/offline/conectividad';
 import { Spinner } from './components/ui';
 import type { SedeDTO } from './types';
 import './App.css';
+
+const CLAVE_SEDES = 'fitzone.sedes';
+
+function guardarSedesLocal(sedes: SedeDTO[]): void {
+  try {
+    localStorage.setItem(CLAVE_SEDES, JSON.stringify(sedes));
+  } catch {
+    // Sin storage, sin respaldo offline de las sedes
+  }
+}
+
+function sedesLocal(): SedeDTO[] {
+  try {
+    const crudo = localStorage.getItem(CLAVE_SEDES);
+    const sedes: unknown = crudo ? JSON.parse(crudo) : [];
+    return Array.isArray(sedes) ? (sedes as SedeDTO[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 /**
  * Componente interno que conecta el httpClient con el ToastContext.
@@ -81,16 +102,19 @@ export default function App() {
     let isMounted = true;
     setLoading(true);
     httpClient
-      .get<SedeDTO[]>('/v1/sedes')
+      .get<SedeDTO[]>('/v1/sedes', { signal: senalConTimeout() })
       .then((data) => {
+        const lista = Array.isArray(data) ? data : [];
+        guardarSedesLocal(lista);
         if (isMounted) {
-          setSedes(Array.isArray(data) ? data : []);
+          setSedes(lista);
         }
       })
       .catch((err) => {
         console.error('Error cargando sedes', err);
+        // Sin servidor, la app arranca con las últimas sedes conocidas (RNF-01: pase y terminal offline)
         if (isMounted) {
-          setSedes([]);
+          setSedes(sedesLocal());
         }
       })
       .finally(() => {

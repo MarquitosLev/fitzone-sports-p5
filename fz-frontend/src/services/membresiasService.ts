@@ -1,6 +1,7 @@
 import { httpClient, AppError } from './httpClient';
 import type { MembresiaDTO, PlanDTO, EstadoMembresia, MembresiaFormData, UsuarioDTO } from '../types';
 import { USE_MOCK } from '../config';
+import { senalConTimeout } from './offline/conectividad';
 
 // ─── CATÁLOGO DE PLANES MOCK ──────────────────────────────────────────────────
 export const MOCK_PLANES: PlanDTO[] = [
@@ -207,7 +208,9 @@ export async function obtenerMembresiaPorUsuario(idUsuario: number): Promise<Mem
     return { ...membresiasUsuario[membresiasUsuario.length - 1] };
   }
   try {
-    return await httpClient.get<MembresiaDTO>(`/v1/usuarios/${idUsuario}/membresia`);
+    return await httpClient.get<MembresiaDTO>(`/v1/usuarios/${idUsuario}/membresia`, {
+      signal: senalConTimeout(),
+    });
   } catch (err: unknown) {
     if (err instanceof AppError && err.status === 404) {
       return null;

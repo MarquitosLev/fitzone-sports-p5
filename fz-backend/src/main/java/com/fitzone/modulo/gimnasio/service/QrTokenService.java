@@ -27,18 +27,26 @@ public class QrTokenService {
 
     private final String secretKey;
     private final Clock clock;
+    /** Validador de los QR firmados por el dispositivo del socio (F2.). Sin él, esos QR se rechazan. */
+    private final QrFirmadoService qrFirmadoService;
 
     @Autowired
-    public QrTokenService(@Value("${fitzone.qr.secret:fitzone-sports-qr-secret-key-32bytes-secure!}") String secretKey) {
-        this(secretKey, Clock.systemUTC());
+    public QrTokenService(@Value("${fitzone.qr.secret:fitzone-sports-qr-secret-key-32bytes-secure!}") String secretKey,
+                          QrFirmadoService qrFirmadoService) {
+        this(secretKey, Clock.systemUTC(), qrFirmadoService);
     }
 
     public QrTokenService(String secretKey, Clock clock) {
+        this(secretKey, clock, null);
+    }
+
+    public QrTokenService(String secretKey, Clock clock, QrFirmadoService qrFirmadoService) {
         if (secretKey == null || secretKey.trim().isEmpty()) {
             throw new IllegalArgumentException("La clave secreta para QR (fitzone.qr.secret) no puede estar vacía");
         }
         this.secretKey = secretKey;
         this.clock = clock;
+        this.qrFirmadoService = qrFirmadoService;
     }
 
     public QrTokenResponse generarToken(Long idUsuario) {
@@ -60,6 +68,22 @@ public class QrTokenService {
     }
 
     public Long validarYObtenerUsuario(String tokenQr) {
+        return validarYObtenerUsuario(tokenQr, clock.instant());
+    }
+
+    /**
+     * Valida el token contra la ventana de {@code momento} en lugar de la hora actual. Lo usa la
+     * sincronización de ingresos offline: el QR se escaneó antes y hay que juzgarlo con esa hora.
+     */
+    public Long validarYObtenerUsuario(String tokenQr, Instant momento) {
+        // Strategy por formato: el QR firmado por el dispositivo (F2.) o el HMAC del servidor (v1)
+        if (QrFirmadoService.esTokenFirmado(tokenQr)) {
+            if (qrFirmadoService == null) {
+                throw new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.QR_VENCIDO,
+                        "Este servidor no acepta QR firmados por el dispositivo");
+            }
+            return qrFirmadoService.validar(tokenQr.trim(), momento);
+        }
         if (tokenQr == null || tokenQr.trim().isEmpty() || tokenQr.length() > MAX_TOKEN_LENGTH) {
             throw new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.QR_VENCIDO,
                     "El token QR es obligatorio y no debe superar " + MAX_TOKEN_LENGTH + " caracteres");
@@ -92,8 +116,7 @@ public class QrTokenService {
         }
 
         // Tolerancia de reloj en ambas direcciones (ventana anterior, actual y siguiente)
-        long epochSecond = clock.instant().getEpochSecond();
-        long ventanaActual = epochSecond / 60;
+        long ventanaActual = momento.getEpochSecond() / 60;
 
         if (ventanaToken < ventanaActual - 1 || ventanaToken > ventanaActual + 1) {
             throw new AccesoException(HttpStatus.UNPROCESSABLE_ENTITY, CodigoError.QR_VENCIDO,
