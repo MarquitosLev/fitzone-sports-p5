@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { CanchasPage } from './CanchasPage';
 import { SedeProvider } from '../context/SedeContext';
 import { ToastProvider } from '../context/ToastContext';
@@ -103,10 +103,22 @@ const sesionSocio: AuthContextType = {
   logout: () => {},
 };
 
+/** Componente espía para registrar cambios de ruta dentro del MemoryRouter */
+function LocationWatcher({ onLocationChange }: { onLocationChange: (pathname: string) => void }) {
+  const location = useLocation();
+  onLocationChange(location.pathname);
+  return null;
+}
+
 /** Reservar exige la sesión de un socio o externo: el turno queda a su nombre. */
-function renderWithProviders(ui: React.ReactElement, conSesionSocio = false) {
+function renderWithProviders(
+  ui: React.ReactElement,
+  conSesionSocio = false,
+  onLocationChange?: (pathname: string) => void
+) {
   const pagina = (
-    <MemoryRouter>
+    <MemoryRouter initialEntries={['/canchas']}>
+      {onLocationChange && <LocationWatcher onLocationChange={onLocationChange} />}
       <ToastProvider>
         <SedeProvider sedes={[mockSede]} sedeInicial={mockSede}>
           {ui}
@@ -305,7 +317,10 @@ describe('CanchasPage (Integración)', () => {
     const spyDescargarPdf = vi.spyOn(pagosService, 'descargarComprobantePdf').mockResolvedValueOnce(fakeBlob);
     const spyDescargarBlob = vi.spyOn(pagosService, 'descargarBlobEnNavegador').mockImplementation(() => {});
 
-    renderWithProviders(<CanchasPage initialTab="mis-reservas" />);
+    const rutasVisitadas: string[] = [];
+    renderWithProviders(<CanchasPage initialTab="mis-reservas" />, false, (path) => {
+      rutasVisitadas.push(path);
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/3050/)).toBeInTheDocument();
@@ -319,6 +334,10 @@ describe('CanchasPage (Integración)', () => {
       expect(spyDescargarPdf).toHaveBeenCalledWith(15);
       expect(spyDescargarBlob).toHaveBeenCalledWith(fakeBlob, 'comprobante-FAC-0001-00000015.pdf');
     });
+
+    // Verifica explícitamente que no se navegó a /pagos
+    expect(rutasVisitadas).not.toContain('/pagos');
+    expect(rutasVisitadas[rutasVisitadas.length - 1]).toBe('/canchas');
   });
 
   // ── RF-09 / RF-12: Gestión de Canchas (Admin) ──────────────────────────────

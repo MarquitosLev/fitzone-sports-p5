@@ -50,7 +50,7 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
 
   const [reservas, setReservas] = useState<ReservaCanchaDTO[]>([]);
   const [pagosConfirmadosMap, setPagosConfirmadosMap] = useState<Record<number, TransaccionDTO>>({});
-  const [descargandoComprobanteId, setDescargandoComprobanteId] = useState<number | null>(null);
+  const [descargandoComprobanteIds, setDescargandoComprobanteIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,7 +72,7 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
       const confirmados = pagos.filter((p) => p.estadoPago === 'CONFIRMADO' && p.reservaCanchaId != null);
       const pagosMap: Record<number, TransaccionDTO> = {};
       confirmados.forEach((p) => {
-        if (p.reservaCanchaId != null) {
+        if (p.reservaCanchaId != null && !pagosMap[p.reservaCanchaId]) {
           pagosMap[p.reservaCanchaId] = p;
         }
       });
@@ -145,11 +145,19 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
       return;
     }
 
-    setDescargandoComprobanteId(reserva.idReservaCancha);
+    setDescargandoComprobanteIds((prev) => new Set(prev).add(reserva.idReservaCancha));
     try {
       const comp = await obtenerComprobantePorTransaccion(transaccion.idTransaccion);
-      const idComp = comp?.idComprobante || transaccion.idTransaccion;
-      const numFactura = comp?.numeroFactura || `FAC-${transaccion.idTransaccion}`;
+      if (!comp || !comp.idComprobante) {
+        addToast({
+          type: 'error',
+          title: 'Comprobante no disponible',
+          message: 'El comprobante fiscal todavía no fue emitido para este pago.',
+        });
+        return;
+      }
+
+      const numFactura = comp.numeroFactura || `FAC-${transaccion.idTransaccion}`;
 
       addToast({
         type: 'info',
@@ -157,7 +165,7 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
         message: `Generando PDF oficial ${numFactura}...`,
       });
 
-      const blob = await descargarComprobantePdf(idComp);
+      const blob = await descargarComprobantePdf(comp.idComprobante);
       descargarBlobEnNavegador(blob, `comprobante-${numFactura}.pdf`);
     } catch (err: unknown) {
       addToast({
@@ -169,7 +177,11 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
             : 'No se pudo descargar el comprobante en PDF.',
       });
     } finally {
-      setDescargandoComprobanteId(null);
+      setDescargandoComprobanteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(reserva.idReservaCancha);
+        return next;
+      });
     }
   };
 
@@ -490,7 +502,7 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
                             size="sm"
                             leftIcon={FileText}
                             onClick={() => void handleDescargarComprobante(b)}
-                            isLoading={descargandoComprobanteId === b.idReservaCancha}
+                            isLoading={descargandoComprobanteIds.has(b.idReservaCancha)}
                           >
                             Ver comprobante
                           </Button>
