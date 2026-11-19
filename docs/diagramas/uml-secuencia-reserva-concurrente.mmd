@@ -1,0 +1,47 @@
+---
+title: UML Secuencia — Reserva concurrente de cancha, RN-02 (v1.0, 2026-11-19, Bravo)
+---
+%% Dos socios reservan la misma cancha, fecha y horario en el mismo instante (RN-02, ADR-004)
+%% Autor: Bravo, Agustín · Fecha: 2026-11-19 · Versión: 1.0
+%% Refleja el código de main al 2026-11-19. La garantía está en el bloqueo pesimista del servicio;
+%% la restricción EXCLUDE en la base sigue pendiente (ver DER).
+sequenceDiagram
+  autonumber
+  actor A as Socio A
+  actor B as Socio B
+  participant CS as CanchaService.guardarReserva
+  participant CR as CanchaRepository
+  participant RR as ReservaCanchaRepository
+  participant DB as PostgreSQL
+
+  par Mismo turno, mismo instante
+    A->>CS: POST /canchas/7/reservas (19:00 a 20:00)
+  and
+    B->>CS: POST /canchas/7/reservas (19:00 a 20:00)
+  end
+
+  Note over CS,DB: Cada pedido abre su propia transacción (@Transactional)
+
+  CS->>CR: findByIdForUpdate(7) — transacción de A
+  CR->>DB: SELECT ... FROM fz_cch_canchas WHERE id = 7 FOR UPDATE
+  DB-->>CR: fila bloqueada para A
+  CS->>CR: findByIdForUpdate(7) — transacción de B
+  CR->>DB: SELECT ... FOR UPDATE
+  Note right of DB: B queda esperando:<br/>la fila de la cancha 7 está bloqueada por A
+
+  CS->>RR: existsSolapamiento(7, 19:00, 20:00) — A
+  RR->>DB: SELECT COUNT(*) reservas pagas o retenidas que se superponen
+  DB-->>RR: false
+  CS->>RR: save(reserva de A)
+  RR->>DB: INSERT reserva de A
+  CS->>DB: COMMIT de A (libera el bloqueo)
+  CS-->>A: 201 Created — reserva confirmada, pendiente de pago
+
+  DB-->>CR: fila desbloqueada, ahora para B
+  CS->>RR: existsSolapamiento(7, 19:00, 20:00) — B
+  RR->>DB: SELECT COUNT(*) (ya ve la reserva de A)
+  DB-->>RR: true
+  CS->>DB: ROLLBACK de B
+  CS-->>B: 409 Conflicto — "La cancha ya se encuentra reservada en el horario solicitado"
+
+  Note over A,DB: Exactamente una confirmación. Si A no paga en 5 minutos,<br/>el turno vuelve a quedar libre (ADR-019)

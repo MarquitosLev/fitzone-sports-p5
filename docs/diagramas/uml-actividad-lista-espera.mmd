@@ -1,0 +1,37 @@
+---
+title: UML Actividad — Lista de espera de clases (v1.0, 2026-11-19, Bravo)
+---
+%% Liberación de cupo por cancelación y notificación en orden a los socios en espera (RF-08, patrón Observer)
+%% Autor: Bravo, Agustín · Fecha: 2026-11-19 · Versión: 1.0
+%% Refleja ReservaClaseService, CupoLiberadoListener y ListaEsperaService en main al 2026-11-19.
+flowchart TB
+  inicio(("●")) --> pedir["Socio pide cancelar su reserva de clase"]
+  pedir --> lock["Bloquear reserva y clase<br/>(SELECT ... FOR UPDATE)"]
+  lock --> plazo{"¿Faltan más de 2 h<br/>para el inicio?"}
+  plazo -- No --> rechazo["Rechazar con 422"] --> finR(("◉"))
+  plazo -- Sí --> cancelar["Marcar la reserva CANCELADA"]
+  cancelar --> recalcular["Recalcular cupoDisponible"]
+  recalcular --> publicar["Publicar CupoLiberadoEvent<br/>(sujeto del Observer)"]
+
+  subgraph obs["Observer: CupoLiberadoListener"]
+    leer["Leer la cola ordenada<br/>por ordenPosicion"]
+    hay{"¿Hay socios<br/>en espera?"}
+    log["Registrar que no hay espera"]
+    notificar["Notificador.notificar<br/>(primero de la cola)"]
+  end
+  publicar --> leer
+  leer --> hay
+  hay -- No --> log
+  hay -- Sí --> notificar
+
+  log --> fin1(("◉"))
+  notificar --> ve["El socio ve el aviso y el cupo libre<br/>en Clases grupales"]
+  ve --> reserva{"¿Reserva el cupo<br/>antes que otro?"}
+  reserva -- Sí --> reservar["POST /clases/{id}/reservas"]
+  reservar --> quitar["Quitarlo de la lista de espera<br/>y reacomodar las posiciones"]
+  quitar --> fin2(("◉"))
+  reserva -- No --> sigue["El cupo queda libre para cualquier socio;<br/>sigue en la cola con su posición"]
+  sigue --> fin3(("◉"))
+
+  classDef nota fill:#fff8e1,stroke:#c9a227
+  class sigue nota
