@@ -6,14 +6,14 @@ Licenciatura en Sistemas — Programación V — Año 2026
 
 ## Equipo {EQUIPO}
 
-| Integrante | Legajo | Rol | Usuario de Git |
-| :-- | :-- | :-- | :-- |
-| Leiva, Marcos Joel | {LEGAJO_LEIVA} | P1 | MarquitosLev |
-| Aquino, Benjamín | {LEGAJO_AQUINO} | P2 | Benjamim023 |
-| Bravo, Agustín | {LEGAJO_BRAVO} | P2 | agusbravo09 |
-| Chang, Maximiliano | {LEGAJO_CHANG} | P3 | MaxiTonoto |
-| Coppes, Matías | {LEGAJO_COPPES} | P3 | maticoppes |
-| Pérez, Luciano | {LEGAJO_PEREZ} | P3 | cirez7 |
+| Integrante | Rol | Usuario de Git |
+| :-- | :-- | :-- |
+| Leiva, Marcos Joel | P1 | MarquitosLev |
+| Aquino, Benjamín | P2 | Benjamim023 |
+| Bravo, Agustín | P2 | agusbravo09 |
+| Chang, Maximiliano | P3 | MaxiTonoto |
+| Coppes, Matías | P3 | maticoppes |
+| Pérez, Luciano | P3 | cirez7 |
 
 | | |
 | :-- | :-- |

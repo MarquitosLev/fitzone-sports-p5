@@ -6,9 +6,8 @@ las bitácoras y el tablero exportado, tal como están en el repo. Así el PDF s
 
 Uso (desde la raíz del repo, después de crear el tag):
     pip install markdown
-    python docs/entregables/generar_dossier.py --hash "$(git rev-parse v1.0-entrega)" --legajos legajos.txt
+    python docs/entregables/generar_dossier.py --hash "$(git rev-parse v1.0-entrega)"
 
-legajos.txt (opcional, fuera del repo) tiene una línea por integrante: APELLIDO=legajo, por ejemplo LEIVA=12345.
 Necesita Chrome o Edge instalado para imprimir el HTML a PDF.
 """
 import argparse
@@ -111,8 +110,6 @@ def html_dossier(valores: dict) -> str:
     portada = leer(SALIDA / "dossier.md")
     for clave, valor in valores.items():
         portada = portada.replace("{" + clave + "}", valor)
-    # Los legajos que no se pasaron quedan visibles para completarlos a mano
-    portada = re.sub(r"\{LEGAJO_[A-Z]+\}", "a completar", portada)
     tapa, resto = portada.split("<!-- fin-portada -->", 1)
     partes.append(f"<div class='portada'>{md(tapa)}</div><div class='salto'></div>{md(resto)}")
 
@@ -193,15 +190,9 @@ def main() -> None:
     p.add_argument("--hash", default="a completar: git rev-parse v1.0-entrega", help="hash completo del commit etiquetado")
     p.add_argument("--tag", default="v1.0-entrega")
     p.add_argument("--equipo", default="05")
-    p.add_argument("--legajos", type=Path, help="archivo APELLIDO=legajo, uno por línea")
     args = p.parse_args()
 
     valores = {"HASH": args.hash, "TAG": args.tag, "EQUIPO": args.equipo}
-    if args.legajos:
-        for linea in args.legajos.read_text(encoding="utf-8").splitlines():
-            if "=" in linea:
-                apellido, legajo = linea.split("=", 1)
-                valores["LEGAJO_" + apellido.strip().upper()] = legajo.strip()
 
     # El dossier completo y la planificación como archivo aparte, con los nombres del punto 3.3
     plan = ("<h1 class='sin-salto'>Planificación del proyecto — FitZone Sports — Equipo " + args.equipo + "</h1>"

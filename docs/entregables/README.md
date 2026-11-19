@@ -16,10 +16,9 @@ Después de crear el tag `v1.0-entrega`, desde la raíz del repo:
 
 ```bash
 pip install markdown
-python docs/entregables/generar_dossier.py --hash "$(git rev-parse v1.0-entrega)" --legajos legajos.txt
+python docs/entregables/generar_dossier.py --hash "$(git rev-parse v1.0-entrega)"
 ```
 
-- `legajos.txt` es opcional y va fuera del repo: una línea por integrante con `APELLIDO=legajo` (por ejemplo, `LEIVA=12345`). Los legajos que falten salen como «a completar».
 - Hace falta Chrome o Edge para imprimir a PDF.
 
 ## Qué se sube a Moodle
