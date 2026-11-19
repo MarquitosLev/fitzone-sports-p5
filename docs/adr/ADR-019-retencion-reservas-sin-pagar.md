@@ -3,6 +3,7 @@
 - **Estado:** Aceptado
 - **Fecha:** 2026-11-19
 - **Autor:** Equipo Grupo 5
+- **Sprint:** 8
 - **Ticket:** SCRUM-148
 
 ## Contexto

@@ -74,6 +74,10 @@
 * **Decisión:** Capturar específicamente el `404` en `membresiasService` para tratarlo como un estado normal de UI (`SIN_MEMBRESIA`) sin disparar toasts de error, relanzando cualquier otro error HTTP, y configurar el botón "Asociar Membresía" para abrir el modal con el socio ya precargado.
 * **Commits:** `fab8f2e` búsqueda sin membresía · `20a39b6` solo 404
 
+---
+
+## Sprint 8 — Cierre — Semana del 2026-11-16
+
 ### 2026-11-18 · 3 h
 - **Actividad:** Resolví la falta de desplazamiento en el selector de sedes cuando hay múltiples sucursales cargadas (SCRUM-140) y añadí pruebas unitarias con 25 sedes en Vitest.
 - **Problema o bloqueo:** Al cargar 25 sedes simultáneamente, el desplegable desbordaba la pantalla sin barra de desplazamiento, impidiendo seleccionar las últimas opciones.

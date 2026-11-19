@@ -1,0 +1,43 @@
+%% Cronograma real del proyecto por sprint (cátedra y Jira), módulos e hitos
+%% Autor: Bravo, Agustín · Fecha: 2026-11-19 · Versión: 1.0
+%% Fechas de Jira (listJiraBoardSprints) y calendario de los lineamientos.
+gantt
+  title FitZone Sports — Cronograma real por sprint (Equipo 05)
+  dateFormat YYYY-MM-DD
+  axisFormat %d/%m
+  todayMarker off
+
+  section Sprints de la cátedra
+  S1 Análisis                     :c1, 2026-08-10, 2026-08-23
+  S2 Diagramas iniciales          :c2, 2026-08-24, 2026-09-06
+  S3 Documentos y repositorio     :c3, 2026-09-07, 2026-09-20
+  S4 Modelos y prototipo          :c4, 2026-09-21, 2026-10-04
+  S5 API y pantallas              :c5, 2026-10-05, 2026-10-18
+  S6 Integración                  :c6, 2026-10-19, 2026-11-01
+  S7 Correcciones y documentación :c7, 2026-11-02, 2026-11-15
+  S8 Cierre                       :c8, 2026-11-16, 2026-11-29
+
+  section Sprints de Jira (fecha real de cierre)
+  Sprint 0                        :j0, 2026-08-28, 2026-09-04
+  Sprint 1                        :j1, 2026-09-16, 2026-09-20
+  Sprint 2 (+5 días)              :crit, j2, 2026-09-20, 2026-10-10
+  Sprint 3 (+3 días)              :crit, j3, 2026-10-05, 2026-10-22
+  Sprint 4 (+4 días)              :crit, j4, 2026-10-19, 2026-11-06
+  Sprint 5                        :j5, 2026-11-06, 2026-11-13
+  Sprint 6                        :active, j6, 2026-11-17, 2026-11-19
+
+  section Módulos
+  Arquitectura y documentación    :m0, 2026-08-28, 2026-11-19
+  M1 Usuarios y membresías        :m1, 2026-09-16, 2026-11-19
+  M2 Gimnasio y acceso            :m2, 2026-09-16, 2026-11-19
+  M3 Clases grupales              :m3, 2026-09-16, 2026-11-19
+  M4 Canchas                      :m4, 2026-09-16, 2026-11-19
+  M5 Pagos                        :m5, 2026-09-16, 2026-11-19
+
+  section Hitos
+  Épicas M1 a M5 en Jira          :milestone, 2026-09-03, 0d
+  API con lógica de negocio       :milestone, 2026-10-22, 0d
+  Sistema integrado               :milestone, 2026-11-06, 0d
+  Release Sprint 5 en main        :milestone, 2026-11-13, 0d
+  Congelamiento y tag             :milestone, 2026-11-19, 0d
+  Demo Day y defensa              :milestone, 2026-11-23, 0d

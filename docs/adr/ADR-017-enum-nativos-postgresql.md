@@ -19,6 +19,11 @@ Varios atributos tienen un conjunto cerrado de valores: tipo de usuario, estado 
 ## Decisión
 Migrar esos campos a tipos ENUM nativos de PostgreSQL, uno por dominio, con la nomenclatura `fz_enum_<dominio>`.
 
+## Consecuencias
+- **Positivas:** la base rechazaría cualquier valor fuera del dominio, aunque se escribiera sin pasar por la aplicación.
+- **Negativas:** cada valor nuevo exigiría un `ALTER TYPE` y un tipo personalizado de Hibernate en cada entidad.
+- **Deuda asumida:** ninguna, porque la decisión no llegó a implementarse: la reemplazó ADR-016 al construir las entidades.
+
 ## Por qué se reemplazó
 Hibernate no genera tipos ENUM nativos con `ddl-auto`, y mapearlos requería tipos personalizados en cada entidad. Por eso el equipo usó `@Enumerated(EnumType.STRING)` sobre columnas de texto (ADR-016). Lo que se quería proteger se cubrió en parte con los CHECK que Hibernate agrega al crear cada tabla, y con el script `docs/sql/SCRUM-93-restricciones.sql`, que actualiza el CHECK de `concepto` en bases ya existentes. Para RF-09 (sumar tenis u otros tipos de cancha), un tipo nuevo es un valor más del enum en Java, sin `ALTER TYPE`.
 

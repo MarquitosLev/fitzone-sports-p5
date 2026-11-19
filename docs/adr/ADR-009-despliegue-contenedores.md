@@ -1,4 +1,4 @@
-# ADR-008 — Despliegue con Docker, Render y Vercel, y reversión por Git
+# ADR-009 — Despliegue con Docker, Render y Vercel, y reversión por Git
 
 - **Estado:** Aceptado
 - **Fecha:** 2026-09-14
@@ -7,7 +7,7 @@
 - **Sprint:** 3
 
 ## Contexto
-Necesitábamos tres cosas: (1) que cualquier integrante, y la cátedra, levantara el sistema en local con un comando; (2) un entorno en la nube para probar integrado; (3) poder volver atrás si un despliegue rompía algo. El presupuesto era cero, así que solo entraban planes gratuitos. La rama `develop` integra el trabajo diario, y `main` se reservó para publicar cuando hubiera un MVP. Base y autenticación ya estaban en Supabase (ADR-002, ADR-010).
+Necesitábamos tres cosas: (1) que cualquier integrante, y la cátedra, levantara el sistema en local con un comando; (2) un entorno en la nube para probar integrado; (3) poder volver atrás si un despliegue rompía algo. El presupuesto era cero, así que solo entraban planes gratuitos. La rama `develop` integra el trabajo diario, y `main` se reservó para publicar cuando hubiera un MVP. Base y autenticación ya estaban en Supabase (ADR-002, ADR-020).
 
 ## Alternativas consideradas
 | Alternativa | A favor | En contra | Por qué se descartó |
@@ -24,7 +24,7 @@ Vamos a contenerizar con Docker: el backend tiene un `Dockerfile` multi-etapa (b
 ## Consecuencias
 - **Positivas:** un `git push` despliega solo. Cada PR tiene su preview en Vercel. Las configuraciones van por variables de entorno (`SUPABASE_*`, `QR_SECRET`, `ROOT_API_KEY`) y no hay secretos en el repositorio (solo `.env.example`). Revertir un despliegue no requiere herramientas extra.
 - **Negativas:** el primer pedido después de un rato de inactividad tarda más de un minuto (cold start de Render free). La reversión de código no revierte el esquema de base: un cambio de entidad desplegado con `ddl-auto=update` queda aplicado (ADR-016).
-- **Deuda asumida:** falta el `Dockerfile` del frontend y sumar backend y frontend a `docker-compose.yml` para cumplir `docker compose up --build` (ticket aparte). El pipeline de CI (ADR-007) valida pero no despliega: el despliegue lo hacen Render y Vercel al detectar el push.
+- **Deuda asumida:** falta el `Dockerfile` del frontend y sumar backend y frontend a `docker-compose.yml` para cumplir `docker compose up --build` (ticket aparte). El pipeline de CI (ADR-008) valida pero no despliega: el despliegue lo hacen Render y Vercel al detectar el push.
 
 ## Requisitos relacionados
 Unidad V

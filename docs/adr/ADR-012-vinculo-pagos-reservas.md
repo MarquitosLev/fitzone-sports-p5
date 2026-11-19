@@ -7,7 +7,7 @@
 - **Sprint:** 3
 
 ## Contexto
-Una reserva de cancha tiene que quedar asociada a su pago, procesado por la pasarela externa (ADR-009). La pasarela puede rechazar un intento (fondos insuficientes, timeout, datos inválidos), y en un flujo real la confirmación llega de forma asincrónica. El modelo tenía que permitir varios intentos de pago sobre el mismo turno sin bloquear de nuevo ni duplicar la reserva. Lo mismo pasa con la renovación de una membresía.
+Una reserva de cancha tiene que quedar asociada a su pago, procesado por la pasarela externa (ADR-010). La pasarela puede rechazar un intento (fondos insuficientes, timeout, datos inválidos), y en un flujo real la confirmación llega de forma asincrónica. El modelo tenía que permitir varios intentos de pago sobre el mismo turno sin bloquear de nuevo ni duplicar la reserva. Lo mismo pasa con la renovación de una membresía.
 
 ## Alternativas consideradas
 | Alternativa | A favor | En contra | Por qué se descartó |

@@ -1,4 +1,4 @@
-# ADR-009 — Delegar el cobro en una pasarela externa, sin guardar datos de tarjeta
+# ADR-010 — Delegar el cobro en una pasarela externa, sin guardar datos de tarjeta
 
 - **Estado:** Aceptado
 - **Fecha:** 2026-09-06

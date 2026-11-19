@@ -8,7 +8,7 @@
 - **Reemplaza a:** ADR-011
 
 ## Contexto
-El ADR-011 proponía aislar las sedes con RLS de PostgreSQL. Al integrar la autenticación (ADR-010), el backend quedó conectado a la base con un único usuario técnico a través de JPA, así que el JWT de cada usuario nunca llega al motor. Había que resolver igual que un recepcionista solo opere su sede, que el gerente vea todas y que un socio pueda entrar en cualquiera (RF-03).
+El ADR-011 proponía aislar las sedes con RLS de PostgreSQL. Al integrar la autenticación (ADR-020), el backend quedó conectado a la base con un único usuario técnico a través de JPA, así que el JWT de cada usuario nunca llega al motor. Había que resolver igual que un recepcionista solo opere su sede, que el gerente vea todas y que un socio pueda entrar en cualquiera (RF-03).
 
 ## Alternativas consideradas
 | Alternativa | A favor | En contra | Por qué se descartó |
