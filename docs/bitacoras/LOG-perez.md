@@ -94,10 +94,43 @@
 
 **Commits** `dd0cd67` textos de la interfaz 
 
+### 2026-11-08 · ? h
+
+**Actividad** Completé el backend de seguridad del login (SCRUM-130): implementé la vinculación del `auth_id` real de Supabase en `JwtAuthConverter`, `UsuarioActual` y `AuthController`, con fallback por email insensible a mayúsculas. También alineé el nombre `"Plan Anual VIP"` en `DataInitializer.java`, protegí los `setval` de las secuencias en el SQL de seed y documenté el procedimiento de reseteo de volúmenes de Docker.
+
+**Problema o bloqueo** Los usuarios del seed se creaban con UUIDs aleatorios que nunca coincidían con los que Supabase emitía al hacer login real. La solución fue no guardar ningún `auth_id` en el seed y vincular el UUID real de Supabase de forma automática en el primer login (patrón TOFU), solo si el campo estaba vacío.
+
+**Commits** `18663ba` sincronización auth\_id en backend, seed y documentación
+
 ### 2026-11-11 · ? h
 
-**Actividad** Implementé la sincronización automática del auth\_id con Supabase Auth en el primer login (TOFU).  
-**Problema o bloqueo** Los usuarios se creaban con UUIDs aleatorios que no coincidían con los de Supabase Auth e impedían iniciar sesión.
+**Actividad** Integré los cambios de `develop` en la rama `SCRUM-130`, resolví los conflictos con `SCRUM-134` (donde `EXTERNO` pasó a ser un invitado sin cuenta) y aplicé la corrección final de seguridad: rechazar el login si `tipoUsuario == EXTERNO`, y bloquear la sobreescritura del `auth_id` si el usuario encontrado por email ya tenía uno distinto de `null`.
 
-**Commits** `7c3e24c` sincronización de auth\_id con Supabase (TOFU)
+**Problema o bloqueo** Sourcery detectó que el `auth_id` podía sobrescribirse con el UUID de otro usuario que tuviera el mismo email, lo que habilitaba un takeover de cuenta. Se corrigió con la validación TOFU estricta.
+
+**Commits** `7c3e24c` guard TOFU estricto y resolución de conflictos con develop
+
+---
+
+## Sprint 8 — Cierre Final — Semana del 2026-11-13
+
+### 2026-11-13 · ? h
+
+**Actividad** Documenté la bitácora personal y abrí el PR de entrega (SCRUM-138).
+
+**Commits** `e31c76f` bitácora de Pérez · `3ffc3b7` merge PR #95
+
+### 2026-11-19 · ? h
+
+**Actividad** Implementé SCRUM-142: agregué en `LoginPage.tsx` el logo como enlace a `/canchas` y el texto explícito "Continuar sin iniciar sesión" para que los usuarios invitados puedan navegar al inicio sin tener cuenta.
+
+**Commits** `8e85cd3` enlace al inicio desde LoginPage para usuarios invitados
+
+### 2026-11-19 · ? h
+
+**Actividad** Resolví un hallazgo bloqueante de code review (Sourcery) en `LoginPage.tsx`: mientras el login estaba en progreso, el usuario podía navegar con los enlaces de salida y, al resolverse la promesa en segundo plano, `navigate()` sobreescribía la ruta nueva. Apliqué dos barreras: bloqueo visual y funcional de los tres enlaces de salida (`aria-disabled`, `pointer-events-none`, `onClick` con `preventDefault`) y una referencia `useRef` (`montado`) para que si el componente se desmontó antes de que resuelva el login, no se dispare ningún `navigate` ni actualización de estado tardíos. Agregué tres pruebas unitarias de regresión que cubren los tres escenarios: enlace "Continuar" bloqueado, logo y botón de registro bloqueados, y desmontaje antes de la resolución.
+
+**Problema o bloqueo** Race condition: el usuario clickeaba "Continuar sin iniciar sesión" durante la promesa de login, navegaba a `/canchas`, y al resolverse el `await login()` se ejecutaba `navigate('/mi-qr', { replace: true })`, pisando la ruta a la que ya había llegado el usuario.
+
+**Commits** `c1cdbeb` guard de desmontaje y bloqueo de enlaces durante login en progreso
 
