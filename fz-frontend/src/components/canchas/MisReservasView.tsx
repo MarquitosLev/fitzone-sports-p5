@@ -4,7 +4,7 @@
  * Características:
  * - Listado de reservas del usuario socio o cliente externo.
  * - Banner destacado con el próximo turno confirmado.
- * - Filtros rápidos: Todas, Próximas (CONFIRMADA, PENDIENTE_PAGO), Historial (CANCELADA, FINALIZADA).
+ * - Filtros rápidos: Todas, Próximas (CONFIRMADA, PENDIENTE_PAGO), Historial (CANCELADA, FINALIZADA, VENCIDA).
  * - Cancelación de reservas con ConfirmDialog y actualización inmediata.
  * - Enlace directo al checkout de pago (/pagos) para turnos en PENDIENTE_PAGO.
  */
@@ -74,7 +74,9 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
             ? r.fechaHoraFin < ahora
               ? 'FINALIZADA'
               : 'CONFIRMADA'
-            : 'PENDIENTE_PAGO',
+            : r.retencionVencida
+              ? 'VENCIDA'
+              : 'PENDIENTE_PAGO',
         }))
       );
     } catch (err: unknown) {
@@ -132,7 +134,7 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
         return st === 'CONFIRMADA' || st === 'PENDIENTE_PAGO';
       }
       if (activeFilter === 'Historial') {
-        return st === 'FINALIZADA' || st === 'CANCELADA';
+        return st === 'FINALIZADA' || st === 'CANCELADA' || st === 'VENCIDA';
       }
       return true;
     });
@@ -144,7 +146,7 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
       (r) => (r.estado ?? 'CONFIRMADA') === 'CONFIRMADA' || r.estado === 'PENDIENTE_PAGO'
     ).length;
     const historial = reservas.filter(
-      (r) => r.estado === 'FINALIZADA' || r.estado === 'CANCELADA'
+      (r) => r.estado === 'FINALIZADA' || r.estado === 'CANCELADA' || r.estado === 'VENCIDA'
     ).length;
     return {
       Todas: reservas.length,
@@ -327,6 +329,7 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
               const isConfirmed = b.estado === 'CONFIRMADA' || !b.estado;
               const isCancelled = b.estado === 'CANCELADA';
               const isFinished = b.estado === 'FINALIZADA';
+              const isExpired = b.estado === 'VENCIDA';
 
               return (
                 <div
@@ -383,6 +386,11 @@ export function MisReservasView({ onNuevaReserva, className = '' }: MisReservasV
                       {isFinished && (
                         <span className="text-slate-400 font-semibold">
                           Turno finalizado
+                        </span>
+                      )}
+                      {isExpired && (
+                        <span className="text-fitzone-red font-bold">
+                          No se pagó en 5 minutos · El turno se liberó, volvé a reservarlo
                         </span>
                       )}
                     </div>
