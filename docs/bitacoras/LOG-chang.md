@@ -146,9 +146,6 @@ Priorizar la acción de confirmación de reserva directa sobre la lista de esper
 **Actividad**
 Armé mi bitácora de frontend y vinculé las decisiones del stack técnico con el ADR-006.
 
-**Problema o bloqueo**
-El socio en lista de espera no podía tomar el cupo liberado desde la pantalla, y el gerente veía las pestañas de reserva del socio.
-
 **Commits**
 `6732006` bitácora Chang · `2fc5616` vínculo ADR-006
 
