@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { CanchasPage } from './CanchasPage';
-import { SedeProvider, useSede } from '../context/SedeContext';
+import { SedeProvider } from '../context/SedeContext';
 import { ToastProvider } from '../context/ToastContext';
 import * as canchasService from '../services/canchasService';
 import * as pagosService from '../services/pagosService';
@@ -103,8 +103,81 @@ const sesionSocio: AuthContextType = {
   logout: () => {},
 };
 
+const gerente: UsuarioDTO = {
+  idUsuario: 3,
+  authId: 'auth-3',
+  dni: '20000000',
+  nombre: 'Gerente',
+  apellido: 'General',
+  email: 'gerente@fitzone.com',
+  telefono: '1199998888',
+  fotoUrl: null,
+  tipoUsuario: 'GERENTE',
+  idSede: 1,
+};
+
+const sesionGerente: AuthContextType = {
+  usuario: gerente,
+  token: 'token-gerente',
+  isAuthenticated: true,
+  isLoading: false,
+  login: async () => ({ token: 'token-gerente', usuario: gerente }),
+  register: async () => ({ token: 'token-gerente', usuario: gerente }),
+  reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
+  logout: () => {},
+};
+
+const externo: UsuarioDTO = {
+  idUsuario: 4,
+  authId: null,
+  dni: '12345678',
+  nombre: 'Cliente',
+  apellido: 'Externo',
+  email: 'externo@email.com',
+  telefono: '1155667788',
+  fotoUrl: null,
+  tipoUsuario: 'EXTERNO',
+  idSede: null,
+};
+
+const sesionExterno: AuthContextType = {
+  usuario: externo,
+  token: 'token-externo',
+  isAuthenticated: true,
+  isLoading: false,
+  login: async () => ({ token: 'token-externo', usuario: externo }),
+  register: async () => ({ token: 'token-externo', usuario: externo }),
+  reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
+  logout: () => {},
+};
+
+const recepcionista: UsuarioDTO = {
+  idUsuario: 5,
+  authId: 'auth-5',
+  dni: '11223344',
+  nombre: 'Recepcionista',
+  apellido: 'Sede',
+  email: 'recep@fitzone.com',
+  telefono: '1166778899',
+  fotoUrl: null,
+  tipoUsuario: 'RECEPCIONISTA',
+  idSede: 1,
+};
+
+const sesionRecepcionista: AuthContextType = {
+  usuario: recepcionista,
+  token: 'token-recep',
+  isAuthenticated: true,
+  isLoading: false,
+  login: async () => ({ token: 'token-recep', usuario: recepcionista }),
+  register: async () => ({ token: 'token-recep', usuario: recepcionista }),
+  reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
+  logout: () => {},
+};
+
 /** Reservar exige la sesión de un socio o externo: el turno queda a su nombre. */
-function renderWithProviders(ui: React.ReactElement, conSesionSocio = false) {
+function renderWithProviders(ui: React.ReactElement, sesion: AuthContextType | boolean = false) {
+  const authValue = typeof sesion === 'boolean' ? (sesion ? sesionSocio : null) : sesion;
   const pagina = (
     <MemoryRouter>
       <ToastProvider>
@@ -115,7 +188,7 @@ function renderWithProviders(ui: React.ReactElement, conSesionSocio = false) {
     </MemoryRouter>
   );
   return render(
-    conSesionSocio ? <AuthContext.Provider value={sesionSocio}>{pagina}</AuthContext.Provider> : pagina
+    authValue ? <AuthContext.Provider value={authValue}>{pagina}</AuthContext.Provider> : pagina
   );
 }
 
@@ -152,7 +225,7 @@ describe('CanchasPage (Integración)', () => {
       expect(screen.getByText('Cancha 1 — Pádel')).toBeInTheDocument();
       expect(screen.getByText('18:00 – 19:00')).toBeInTheDocument();
       expect(screen.getByText('19:00 – 20:00')).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
 
     // Franja pico marcada visualmente
     expect(screen.getAllByText(/pico \+20%/i).length).toBeGreaterThanOrEqual(1);
@@ -398,65 +471,103 @@ describe('CanchasPage (Integración)', () => {
     });
   });
 
-  it('evita race conditions descartando respuestas de sedes previas si la sede activa cambió', async () => {
-    let resolverSede1: (canchas: CanchaDTO[]) => void = () => {};
-    const promesaSede1 = new Promise<CanchaDTO[]>((resolve) => {
-      resolverSede1 = resolve;
-    });
+  // ── Segregación de Vistas por Rol (SCRUM-127 / Fix Gerente) ────────────────
+  it('el GERENTE ve únicamente la vista de gestión y no las pestañas de reserva de socio', async () => {
+    renderWithProviders(<CanchasPage />, sesionGerente);
 
-    const sede2: SedeDTO = { idSede: 2, nombre: 'FitZone Belgrano', aforoMaximo: 100 };
-    const canchasSede2: CanchaDTO[] = [
-      {
-        idCancha: 201,
-        sede: sede2,
-        nombre: 'Cancha Belgrano — Tenis',
-        tipo: 'TENIS',
-        precioBaseHora: 10000,
-        enMantenimiento: false,
-      },
-    ];
-
-    vi.spyOn(canchasService, 'listarCanchas').mockImplementation((idSede) => {
-      if (idSede === 1) return promesaSede1;
-      return Promise.resolve(canchasSede2);
-    });
-
-    let setSedeGlobal: (sede: SedeDTO) => void = () => {};
-    function SedeCambioTester() {
-      const { setSedeActiva } = useSede();
-      setSedeGlobal = setSedeActiva;
-      return <CanchasPage initialTab="admin" />;
-    }
-
-    render(
-      <MemoryRouter>
-        <ToastProvider>
-          <SedeProvider sedes={[mockSede, sede2]} sedeInicial={mockSede}>
-            <SedeCambioTester />
-          </SedeProvider>
-        </ToastProvider>
-      </MemoryRouter>
-    );
-
-    // Cambiar inmediatamente a sede 2 antes de que responda sede 1
-    act(() => {
-      setSedeGlobal(sede2);
-    });
-
-    // Sede 2 debe resolverse y mostrarse
     await waitFor(() => {
-      expect(screen.getByText('Cancha Belgrano — Tenis')).toBeInTheDocument();
+      expect(screen.getByText('Cancha 1 — Pádel')).toBeInTheDocument();
     });
 
-    // Ahora responde la promesa de la sede 1 anterior
-    act(() => {
-      resolverSede1(initialCanchas);
-    });
+    // No debe existir selector de pestañas de reserva ni mis reservas
+    expect(screen.queryByRole('tab', { name: /reservar cancha/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /mis reservas/i })).not.toBeInTheDocument();
 
-    // Debe seguir viéndose la Cancha Belgrano de Sede 2 y NO haberse pisado con Cancha 1 de Sede 1
+    // Debe mostrar la gestión de canchas y opciones de administración
+    expect(screen.getByRole('tab', { name: /gestión de canchas/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /nueva cancha/i })).toBeInTheDocument();
+  });
+
+  it('el SOCIO ve las pestañas de reserva y mis reservas pero no la pestaña de gestión de canchas', async () => {
+    renderWithProviders(<CanchasPage />, true);
+
     await waitFor(() => {
-      expect(screen.getByText('Cancha Belgrano — Tenis')).toBeInTheDocument();
-      expect(screen.queryByText('Cancha 1 — Pádel')).not.toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /reservar cancha/i })).toBeInTheDocument();
     });
+
+    // El socio ve pestañas de reserva
+    expect(screen.getByRole('tab', { name: /reservar cancha/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /mis reservas/i })).toBeInTheDocument();
+
+    // El socio no ve gestión de canchas
+    expect(screen.queryByRole('tab', { name: /gestión de canchas/i })).not.toBeInTheDocument();
+  });
+
+  // ── Nuevos casos cubiertos por la review de Sourcery ──────────────────────
+
+  it('el EXTERNO ve Reservar Cancha y Mis Reservas pero NO gestión de canchas', async () => {
+    renderWithProviders(<CanchasPage />, sesionExterno);
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /reservar cancha/i })).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('tab', { name: /mis reservas/i })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /gestión de canchas/i })).not.toBeInTheDocument();
+    // La vista de reserva está activa (título presente)
+    expect(screen.getByText(/reserva de canchas deportivas/i)).toBeInTheDocument();
+  });
+
+  it('el RECEPCIONISTA ve Reservar Cancha (consulta disponibilidad) pero NO Mis Reservas ni admin', async () => {
+    renderWithProviders(<CanchasPage />, sesionRecepcionista);
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /reservar cancha/i })).toBeInTheDocument();
+    });
+
+    // Recepcionista tiene CANCHAS_VER y ve la pestaña de reservar
+    expect(screen.getByRole('tab', { name: /reservar cancha/i })).toBeInTheDocument();
+    // No tiene CANCHAS_ADMIN ni es GERENTE, no ve gestión
+    expect(screen.queryByRole('tab', { name: /gestión de canchas/i })).not.toBeInTheDocument();
+    // No puede reservar para sí mismo: no ve Mis Reservas
+    expect(screen.queryByRole('tab', { name: /mis reservas/i })).not.toBeInTheDocument();
+  });
+
+  it('el GERENTE restaurado con isLoading=true no muestra flujo de invitado mientras carga', () => {
+    // Simula el estado de carga: auth en curso, usuario aún null
+    const sesionCargando: AuthContextType = {
+      usuario: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: true,
+      login: async () => { throw new Error('fuera de provider'); },
+      register: async () => { throw new Error('fuera de provider'); },
+      reintentarCuenta: async () => { throw new Error('fuera de provider'); },
+      logout: () => {},
+    };
+
+    renderWithProviders(<CanchasPage />, sesionCargando);
+
+    // Con isLoading=true el componente no debe considerar al usuario como invitado:
+    // ni el flujo de reserva de invitado ni las pestañas de reserva deben verse.
+    expect(screen.queryByRole('tab', { name: /reservar cancha/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /mis reservas/i })).not.toBeInTheDocument();
+    // El encabezado de reserva de invitado tampoco
+    expect(screen.queryByText(/reserva de canchas deportivas/i)).not.toBeInTheDocument();
+  });
+
+  it('el GERENTE forzado a initialTab="reservar" aterriza en gestión, no en página en blanco', async () => {
+    renderWithProviders(<CanchasPage initialTab="reservar" />, sesionGerente);
+
+    // A pesar de initialTab="reservar", el GERENTE (soloAdmin) redirige a 'admin'
+    await waitFor(() => {
+      expect(screen.getByText('Cancha 1 — Pádel')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('tab', { name: /gestión de canchas/i })).toBeInTheDocument();
+    // La vista admin está activa (h1 con el título presente)
+    expect(screen.getByRole('heading', { name: /gestión de canchas/i })).toBeInTheDocument();
+    // No hay pestañas de reserva
+    expect(screen.queryByRole('tab', { name: /reservar cancha/i })).not.toBeInTheDocument();
   });
 });

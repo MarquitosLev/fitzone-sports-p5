@@ -36,6 +36,7 @@ import {
 } from '../services/canchasService';
 import { useSede } from '../context/SedeContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { useTienePrestacion } from '../hooks/usePrestaciones';
 import type { CanchaDTO, CanchaFormData } from '../types';
 import { formatearMonto } from '../utils/formatters';
@@ -47,13 +48,79 @@ export interface CanchasPageProps {
   fechaInicial?: string;
 }
 
-export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPageProps) {
-  const { sedeActiva } = useSede();
+export function CanchasPage({ initialTab, fechaInicial }: CanchasPageProps) {
+  const { sedeActiva, sedes, setSedeActiva } = useSede();
   const { addToast } = useToast();
+  const { usuario, isLoading: authLoading } = useAuth();
 
-  const puedeAdminCanchas = useTienePrestacion('CANCHAS_ADMIN') || initialTab === 'admin';
+  const esSocio = usuario?.tipoUsuario === 'SOCIO';
+  const esExterno = usuario?.tipoUsuario === 'EXTERNO';
+  const esInvitado = !authLoading && !usuario;
+  const esGerente = usuario?.tipoUsuario === 'GERENTE';
+  const esRecepcionista = usuario?.tipoUsuario === 'RECEPCIONISTA';
 
-  const [seccionActiva, setSeccionActiva] = useState<CanchasTab>(initialTab);
+  const tieneVerCanchas = useTienePrestacion('CANCHAS_VER');
+  const tieneAdminCanchas = useTienePrestacion('CANCHAS_ADMIN') || esGerente;
+  const puedeAdminCanchas = tieneAdminCanchas || (!usuario && initialTab === 'admin');
+
+  // El personal directivo (GERENTE o rol con administración que no es socio) solo opera 'admin'
+  const soloAdmin = puedeAdminCanchas && !esSocio;
+
+  // Quiénes pueden ver la sección de reservas (grilla de disponibilidad y turnos):
+  // Socios, invitados, clientes externos y usuarios con CANCHAS_VER que no sean solo admin (ej. recepcionistas)
+  const puedeVerReservas = (tieneVerCanchas || esSocio || esExterno || esInvitado) && !soloAdmin;
+
+  // Quiénes pueden ver "Mis Reservas": clientes (socios, externos e invitados sin sesión)
+  const puedeVerMisReservas = (esSocio || esExterno || esInvitado) && !esRecepcionista && !soloAdmin;
+
+  // Si el usuario es de gestión exclusiva de admin, forzar 'admin' aunque se proporcione initialTab="reservar"
+  const tabPorDefecto: CanchasTab = soloAdmin
+    ? 'admin'
+    : initialTab === 'admin' && !puedeAdminCanchas
+      ? 'reservar'
+      : initialTab === 'mis-reservas' && !puedeVerMisReservas
+        ? 'reservar'
+        : (initialTab ?? 'reservar');
+  const [seccionActiva, setSeccionActiva] = useState<CanchasTab>(tabPorDefecto);
+
+  // Efecto de sincronización de permisos y rol:
+  // 1. Si el rol es solo admin, forzar a 'admin'.
+  // 2. Si se pierde o revoca el permiso de administración mientras se está en 'admin', volver a 'reservar'.
+  // 3. Si se está en 'mis-reservas' sin permiso para esa pestaña, volver a 'reservar'.
+  useEffect(() => {
+    if (soloAdmin && seccionActiva !== 'admin') {
+      setSeccionActiva('admin');
+    } else if (!puedeAdminCanchas && seccionActiva === 'admin') {
+      setSeccionActiva('reservar');
+    } else if (!puedeVerMisReservas && seccionActiva === 'mis-reservas') {
+      setSeccionActiva('reservar');
+    }
+  }, [soloAdmin, puedeAdminCanchas, puedeVerMisReservas, seccionActiva]);
+
+  // Sincronizar la sede activa con la sede asignada del operador o gerente autenticado
+  useEffect(() => {
+    if (
+      usuario?.idSede &&
+      (esGerente || esRecepcionista) &&
+      sedeActiva?.idSede !== usuario.idSede
+    ) {
+      const sedeDelOperador = sedes.find((s) => s.idSede === usuario.idSede);
+      if (sedeDelOperador) {
+        setSedeActiva(sedeDelOperador);
+      }
+    }
+  }, [usuario, esGerente, esRecepcionista, sedeActiva, sedes, setSedeActiva]);
+
+  // Sede efectiva para evitar consultas a otra sede durante transiciones de estado
+  const sedeEfectiva = useMemo(() => {
+    if (
+      usuario?.idSede &&
+      (esGerente || esRecepcionista)
+    ) {
+      return sedes.find((s) => s.idSede === usuario.idSede) ?? sedeActiva;
+    }
+    return sedeActiva;
+  }, [usuario, esGerente, esRecepcionista, sedes, sedeActiva]);
 
   const [canchas, setCanchas] = useState<CanchaDTO[]>([]);
   const [loading, setLoading] = useState(false);
@@ -76,15 +143,13 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
     let cancelado = false;
 
     const cargar = async () => {
-      // Se descartan las canchas de la sede anterior para no mostrarlas mientras carga la nueva (SCRUM-141)
-      setCanchas([]);
-      if (!sedeActiva) return;
+      if (!sedeEfectiva) return;
       setLoading(true);
       setError(null);
       try {
-        const idSedePedida = sedeActiva.idSede;
+        const idSedePedida = sedeEfectiva.idSede;
         const data = await listarCanchas(idSedePedida);
-        if (!cancelado && sedeActiva.idSede === idSedePedida) {
+        if (!cancelado && sedeEfectiva.idSede === idSedePedida) {
           setCanchas(data);
         }
       } catch (err: unknown) {
@@ -104,7 +169,7 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
     return () => {
       cancelado = true;
     };
-  }, [sedeActiva?.idSede]);
+  }, [sedeEfectiva?.idSede]);
 
   // Manejo de toggle de mantenimiento
   const handleToggleMantenimiento = async (idCancha: number, nuevoEstado: boolean) => {
@@ -149,18 +214,18 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
 
   // Submit del formulario (alta o edición)
   const handleSubmitForm = async (datos: CanchaFormData) => {
-    if (!sedeActiva) return;
+    if (!sedeEfectiva) return;
     setFormLoading(true);
     setFormError(null);
 
     try {
       if (modalModo === 'alta') {
-        const nueva = await crearCancha(sedeActiva.idSede, datos, sedeActiva.nombre);
+        const nueva = await crearCancha(sedeEfectiva.idSede, datos, sedeEfectiva.nombre);
         setCanchas((prev) => [...prev, nueva]);
         addToast({
           type: 'success',
           title: 'Cancha creada',
-          message: `La cancha "${nueva.nombre}" fue creada exitosamente en ${sedeActiva.nombre}.`,
+          message: `La cancha "${nueva.nombre}" fue creada exitosamente en ${sedeEfectiva.nombre}.`,
         });
       } else if (canchaSeleccionada) {
         const actualizada = await actualizarCancha(canchaSeleccionada.idCancha, datos);
@@ -257,74 +322,96 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
 
   return (
     <div className="space-y-6">
-      {/* Pestañas Superiores de Navegación del Módulo */}
+      {/* Pestañas de Navegación del Módulo.
+          - Reservar / Mis Reservas: socios, externos e invitados (puedeVerReservas).
+          - Gestión de Canchas: roles con CANCHAS_ADMIN o GERENTE (puedeAdminCanchas, solo mientras sea true).
+          - Recepcionistas (CANCHAS_VER, sin admin): ven Reservar Cancha para consultar disponibilidad. */}
       <div className="flex items-center gap-2 border-b border-slate-200/80 pb-3 overflow-x-auto scrollbar-none">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={seccionActiva === 'reservar'}
-          onClick={() => setSeccionActiva('reservar')}
-          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
-            seccionActiva === 'reservar'
-              ? 'bg-fitzone-navy text-white shadow-xs'
-              : 'text-slate-600 hover:text-fitzone-navy hover:bg-slate-100'
-          }`}
-        >
-          <Clock className="w-4 h-4 text-fitzone-coral" />
-          <span>Reservar Cancha</span>
-        </button>
 
-        <button
-          type="button"
-          role="tab"
-          aria-selected={seccionActiva === 'mis-reservas'}
-          onClick={() => setSeccionActiva('mis-reservas')}
-          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
-            seccionActiva === 'mis-reservas'
-              ? 'bg-fitzone-navy text-white shadow-xs'
-              : 'text-slate-600 hover:text-fitzone-navy hover:bg-slate-100'
-          }`}
-        >
-          <Calendar className="w-4 h-4 text-[#F0B429]" />
-          <span>Mis Reservas</span>
-        </button>
+        {/* Pestaña Reservar — disponible cuando no es rol exclusivo de gestión */}
+        {puedeVerReservas && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={seccionActiva === 'reservar'}
+            onClick={() => setSeccionActiva('reservar')}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+              seccionActiva === 'reservar'
+                ? 'bg-fitzone-navy text-white shadow-xs'
+                : 'text-slate-600 hover:text-fitzone-navy hover:bg-slate-100'
+            }`}
+          >
+            <Clock className="w-4 h-4 text-fitzone-coral" />
+            <span>Reservar Cancha</span>
+          </button>
+        )}
 
+        {/* Pestaña Mis Reservas — solo para clientes (socios, externos e invitados) */}
+        {puedeVerMisReservas && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={seccionActiva === 'mis-reservas'}
+            onClick={() => setSeccionActiva('mis-reservas')}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+              seccionActiva === 'mis-reservas'
+                ? 'bg-fitzone-navy text-white shadow-xs'
+                : 'text-slate-600 hover:text-fitzone-navy hover:bg-slate-100'
+            }`}
+          >
+            <Calendar className="w-4 h-4 text-[#F0B429]" />
+            <span>Mis Reservas</span>
+          </button>
+        )}
+
+        {/* Pestaña Gestión — solo mientras puedeAdminCanchas sea true (revocación reactiva) */}
         {puedeAdminCanchas && (
-        <button
-          type="button"
-          role="tab"
-          aria-selected={seccionActiva === 'admin'}
-          onClick={() => setSeccionActiva('admin')}
-          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
-            seccionActiva === 'admin'
-              ? 'bg-fitzone-navy text-white shadow-xs'
-              : 'text-slate-600 hover:text-fitzone-navy hover:bg-slate-100'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          <span>Gestión de Canchas</span>
-        </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={seccionActiva === 'admin'}
+            onClick={() => setSeccionActiva('admin')}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+              seccionActiva === 'admin'
+                ? 'bg-fitzone-navy text-white shadow-xs'
+                : 'text-slate-600 hover:text-fitzone-navy hover:bg-slate-100'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Gestión de Canchas</span>
+          </button>
         )}
       </div>
 
-      {/* SECCIÓN 1: RESERVA DE CANCHA */}
-      {seccionActiva === 'reservar' && (
+      {/* SECCIÓN 1: RESERVAR CANCHA
+          Acceso: socios (con cuenta), externos (con cuenta) e invitados confirmados (!authLoading && !usuario).
+          Los recepcionistas con CANCHAS_VER también pueden ver disponibilidad (puedeVerReservas=true,
+          pero onVerMisReservas=undefined y onReservaExitosa=undefined porque no tienen 'mis-reservas'). */}
+      {seccionActiva === 'reservar' && puedeVerReservas && (
         <ReservaCanchaView
           fechaInicial={fechaInicial}
-          onVerMisReservas={() => setSeccionActiva('mis-reservas')}
-          onReservaExitosa={() => setSeccionActiva('mis-reservas')}
+          onVerMisReservas={(esSocio || esExterno) && puedeVerMisReservas
+            ? () => setSeccionActiva('mis-reservas')
+            : undefined}
+          onReservaExitosa={puedeVerMisReservas
+            ? () => setSeccionActiva('mis-reservas')
+            : undefined}
         />
       )}
 
-      {/* SECCIÓN 2: MIS RESERVAS */}
-      {seccionActiva === 'mis-reservas' && (
+      {/* SECCIÓN 2: MIS RESERVAS
+          Acceso: socios, externos e invitados confirmados. */}
+      {seccionActiva === 'mis-reservas' && puedeVerMisReservas && (
         <MisReservasView
           onNuevaReserva={() => setSeccionActiva('reservar')}
         />
       )}
 
-      {/* SECCIÓN 3: GESTIÓN DE CANCHAS Y MANTENIMIENTO (SCRUM-80) */}
-      {seccionActiva === 'admin' && (
+      {/* SECCIÓN 3: GESTIÓN DE CANCHAS Y MANTENIMIENTO (SCRUM-80)
+          Solo se renderiza si puedeAdminCanchas es TRUE y la sección activa es 'admin'.
+          Si puedeAdminCanchas se revoca, el useEffect mueve seccionActiva y este bloque
+          deja de renderizarse: controles admin desaparecen aunque la URL no cambie. */}
+      {seccionActiva === 'admin' && puedeAdminCanchas && (
         <div className="space-y-6 animate-fade-in">
           {/* Encabezado Principal */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
@@ -338,7 +425,7 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
                     Gestión de Canchas
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                    Sede activa: <strong className="text-fitzone-navy">{sedeActiva?.nombre ?? 'Sin sede'}</strong>
+                    Sede activa: <strong className="text-fitzone-navy">{sedeEfectiva?.nombre ?? 'Sin sede'}</strong>
                   </p>
                 </div>
               </div>
@@ -538,7 +625,7 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
                       cancha={cancha}
                       onEditar={handleEditarCancha}
                       onToggleMantenimiento={handleToggleMantenimiento}
-                      showAdminControls={true}
+                      showAdminControls={puedeAdminCanchas}
                     />
                   ))}
                 </div>
@@ -564,7 +651,7 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
             title={modalModo === 'alta' ? 'Nueva Cancha' : 'Editar Cancha'}
             subtitle={
               modalModo === 'alta'
-                ? `Registrar una nueva cancha para ${sedeActiva?.nombre ?? 'la sede activa'}`
+                ? `Registrar una nueva cancha para ${sedeEfectiva?.nombre ?? 'la sede activa'}`
                 : `Modificar datos de "${canchaSeleccionada?.nombre ?? ''}"`
             }
           >

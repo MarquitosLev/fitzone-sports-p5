@@ -189,6 +189,43 @@ describe('MembresiasPage (Integración)', () => {
     });
   });
 
+  it('SCRUM-144: buscar el DNI de alguien del personal avisa que no es socio y no ofrece asociar una membresía', async () => {
+    const gerente: UsuarioDTO = {
+      idUsuario: 50,
+      authId: 'uuid-gerente',
+      dni: '00000001',
+      nombre: 'Admin',
+      apellido: 'Gerente',
+      email: 'gerente@fitzone.com',
+      telefono: '11-0000-0000',
+      fotoUrl: null,
+      tipoUsuario: 'GERENTE',
+      idSede: null,
+    };
+    vi.spyOn(usuariosService, 'buscarUsuariosPorDni').mockResolvedValue([gerente]);
+    const consultaMembresia = vi.spyOn(membresiasService, 'obtenerMembresiaPorUsuario').mockResolvedValue(null);
+    const mockAddToast = vi.fn();
+
+    render(
+      <ToastContext.Provider value={{ toasts: [], addToast: mockAddToast, removeToast: vi.fn() }}>
+        <SedeProvider sedes={[mockSede]} sedeInicial={mockSede}>
+          <MembresiasPage />
+        </SedeProvider>
+      </ToastContext.Provider>
+    );
+
+    fireEvent.change(await screen.findByPlaceholderText(/Buscar socio por DNI/i), { target: { value: '00000001' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Buscar$/i }));
+
+    await waitFor(() => {
+      expect(mockAddToast).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'warning', title: 'No es socio' })
+      );
+    });
+    expect(consultaMembresia).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('btn-asociar-membresia')).not.toBeInTheDocument();
+  });
+
   it('SCRUM-125: si el backend responde con error 404 o mensaje de "sin membresía", la UI lo trata como SIN_MEMBRESIA sin disparar toast de error', async () => {
     const mockSocioSinMembresia: UsuarioDTO = {
       idUsuario: 88,

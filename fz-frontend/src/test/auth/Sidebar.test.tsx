@@ -54,7 +54,7 @@ describe('SCRUM-92: Sidebar muestra solo los módulos del rol', () => {
     ['SOCIO', ['Mi Pase QR', 'Clases Grupales', 'Canchas', 'Pagos']],
     [
       'RECEPCIONISTA',
-      ['Usuarios', 'Membresías', 'Control Acceso', 'Clases Grupales', 'Canchas', 'Pagos'],
+      ['Usuarios', 'Membresías', 'Control Acceso', 'Clases Grupales', 'Canchas'],
     ],
     [
       'GERENTE',
@@ -64,7 +64,6 @@ describe('SCRUM-92: Sidebar muestra solo los módulos del rol', () => {
         'Control Acceso',
         'Clases Grupales',
         'Canchas',
-        'Pagos',
         'Roles y Accesos',
       ],
     ],

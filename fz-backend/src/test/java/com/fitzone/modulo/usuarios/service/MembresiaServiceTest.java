@@ -248,6 +248,19 @@ class MembresiaServiceTest {
     }
 
     @Test
+    @DisplayName("renovar la membresía de alguien que pasó a ser personal lanza ReglaNegocioException (422)")
+    void renovar_duenioNoSocio_lanza422() {
+        socio.setTipoUsuario(TipoUsuario.RECEPCIONISTA);
+
+        when(membresiaRepository.findById(10L)).thenReturn(Optional.of(membresiaActiva));
+
+        assertThatThrownBy(() -> membresiaService.renovar(10L, 2))
+                .isInstanceOf(ReglaNegocioException.class)
+                .hasMessageContaining("Solo los usuarios con rol SOCIO");
+        verify(membresiaRepository, never()).save(any(Membresia.class));
+    }
+
+    @Test
     @DisplayName("cambiarEstado a SUSPENDIDO suspende membresía activa")
     void cambiarEstado_activoASuspendido_exito() {
         when(membresiaRepository.findByIdWithLock(10L)).thenReturn(Optional.of(membresiaActiva));
