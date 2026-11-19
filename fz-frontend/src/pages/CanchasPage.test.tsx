@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { CanchasPage } from './CanchasPage';
 import { SedeProvider } from '../context/SedeContext';
 import { ToastProvider } from '../context/ToastContext';
@@ -175,11 +175,23 @@ const sesionRecepcionista: AuthContextType = {
   logout: () => {},
 };
 
+/** Componente espía para registrar cambios de ruta dentro del MemoryRouter */
+function LocationWatcher({ onLocationChange }: { onLocationChange: (pathname: string) => void }) {
+  const location = useLocation();
+  onLocationChange(location.pathname);
+  return null;
+}
+
 /** Reservar exige la sesión de un socio o externo: el turno queda a su nombre. */
-function renderWithProviders(ui: React.ReactElement, sesion: AuthContextType | boolean = false) {
+function renderWithProviders(
+  ui: React.ReactElement,
+  sesion: AuthContextType | boolean = false,
+  onLocationChange?: (pathname: string) => void
+) {
   const authValue = typeof sesion === 'boolean' ? (sesion ? sesionSocio : null) : sesion;
   const pagina = (
-    <MemoryRouter>
+    <MemoryRouter initialEntries={['/canchas']}>
+      {onLocationChange && <LocationWatcher onLocationChange={onLocationChange} />}
       <ToastProvider>
         <SedeProvider sedes={[mockSede]} sedeInicial={mockSede}>
           {ui}
@@ -355,6 +367,50 @@ describe('CanchasPage (Integración)', () => {
     await waitFor(() => {
       expect(spyCancelar).toHaveBeenCalledWith(2040);
     });
+  });
+
+  it('SCRUM-146: al tocar "Ver comprobante" en una reserva confirmada descarga el PDF oficial sin navegar a /pagos', async () => {
+    const reservaConfirmada: ReservaCanchaDTO = {
+      ...mockReservas[0],
+      idReservaCancha: 3050,
+      estado: 'CONFIRMADA',
+      fechaHoraInicio: '2099-01-10T19:00:00',
+      fechaHoraFin: '2099-01-10T20:00:00',
+    };
+    vi.spyOn(canchasService, 'listarMisReservas').mockResolvedValueOnce([reservaConfirmada]);
+    vi.spyOn(pagosService, 'listarMisPagos').mockResolvedValueOnce([
+      { idTransaccion: 88, reservaCanchaId: 3050, estadoPago: 'CONFIRMADO' } as TransaccionDTO,
+    ]);
+    const spyObtenerComp = vi.spyOn(pagosService, 'obtenerComprobantePorTransaccion').mockResolvedValueOnce({
+      idComprobante: 15,
+      numeroFactura: 'FAC-0001-00000015',
+      transaccion: { idTransaccion: 88 } as TransaccionDTO,
+    });
+    const fakeBlob = new Blob(['%PDF-1.4 mock'], { type: 'application/pdf' });
+    const spyDescargarPdf = vi.spyOn(pagosService, 'descargarComprobantePdf').mockResolvedValueOnce(fakeBlob);
+    const spyDescargarBlob = vi.spyOn(pagosService, 'descargarBlobEnNavegador').mockImplementation(() => {});
+
+    const rutasVisitadas: string[] = [];
+    renderWithProviders(<CanchasPage initialTab="mis-reservas" />, false, (path) => {
+      rutasVisitadas.push(path);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/3050/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /ver comprobante/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /ver comprobante/i }));
+
+    await waitFor(() => {
+      expect(spyObtenerComp).toHaveBeenCalledWith(88);
+      expect(spyDescargarPdf).toHaveBeenCalledWith(15);
+      expect(spyDescargarBlob).toHaveBeenCalledWith(fakeBlob, 'comprobante-FAC-0001-00000015.pdf');
+    });
+
+    // Verifica explícitamente que no se navegó a /pagos
+    expect(rutasVisitadas).not.toContain('/pagos');
+    expect(rutasVisitadas[rutasVisitadas.length - 1]).toBe('/canchas');
   });
 
   // ── RF-09 / RF-12: Gestión de Canchas (Admin) ──────────────────────────────
