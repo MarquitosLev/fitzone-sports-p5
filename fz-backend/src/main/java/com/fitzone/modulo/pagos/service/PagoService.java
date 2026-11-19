@@ -126,6 +126,10 @@ public class PagoService {
         if (reserva.getPrecioFinal() == null) {
             throw new ReglaNegocioException("La reserva de cancha no tiene un precio final asignado");
         }
+        // Vencida la retención, el turno pudo tomarlo otro: pagarla ahora generaría una doble reserva (ADR-019)
+        if (reserva.retencionVencida()) {
+            throw new ReglaNegocioException("La reserva venció porque no se pagó a tiempo. Volvé a reservar el turno.");
+        }
     }
 
     // Delegar cobro a la pasarela externa o simulada (Adapter Pattern)
