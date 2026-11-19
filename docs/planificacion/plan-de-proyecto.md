@@ -165,12 +165,12 @@ Los 14 RF y las 3 RN tienen historia y prueba automática. De los RNF, RNF-03 no
 | 4 | 15 / 18 pts · 72 h | 15 / 18 pts | 28,5 | −43,5 h · **cierre 5 días tarde** | Los modelos se cerraron todos juntos el 10/10 |
 | 5 | 26 / 100 pts · 72 h | 26 / 100 pts | 55 | −17 h · **cierre 3 días tarde** | Las 26 tarjetas se crearon el 10/10, cinco días después de empezado el sprint |
 | 6 | 19 / 87 pts · 72 h | 19 / 87 pts | 62,5 | −9,5 h · **cierre 4 días tarde** | Integración: tarjetas creadas el 22/10, tres días después de empezado el sprint |
-| 7 | 20 / 56 pts · 72 h | 20 / 56 pts | 75 | +3 h · cierre 2 días antes | 15 correcciones de las pruebas de punta a punta, más funcionalidades nuevas y documentación |
-| 8 | 18 / 44 pts · 36 h | 18 / 44 pts | 23,5 | −12,5 h · cierre en fecha | Ajustes finales, acceso sin conexión y documentación de entrega |
+| 7 | 20 / 56 pts · 72 h | 20 / 56 pts | 56 | −16 h · cierre 2 días antes | 15 correcciones de las pruebas de punta a punta, más funcionalidades nuevas y documentación |
+| 8 | 18 / 44 pts · 36 h | 18 / 44 pts | 42,5 | +6,5 h · cierre en fecha | Ajustes finales, acceso sin conexión y documentación de entrega |
 | **Total** | **107 / 323 pts · 540 h** | **107 / 323 pts** | **288** | **−252 h** | |
 
 - **Velocidad:** 16 y 18 puntos en los sprints de diseño y modelos; 100, 87 y 56 en los de API, integración y correcciones. Velocidad media de los sprints 5 a 7: **81 puntos por sprint**.
-- **Desvío acumulado:** ninguna tarjeta pasó de un sprint al siguiente. El desvío aparece en fechas (12 días de atraso sumando los sprints 4, 5 y 6) y en horas: el equipo trabajó el 53 % de lo comprometido, con muy poca dedicación en los primeros cuatro sprints y cerca de lo comprometido recién en los sprints 6 y 7.
+- **Desvío acumulado:** ninguna tarjeta pasó de un sprint al siguiente. El desvío aparece en fechas (12 días de atraso sumando los sprints 4, 5 y 6) y en horas: el equipo trabajó el 53 % de lo comprometido, con muy poca dedicación en los primeros cuatro sprints y cerca de lo comprometido recién desde el sprint 6, hasta superarlo en la semana de entrega.
 - **Tarjetas fuera de sprint:** SCRUM-57, 89, 113, 114, 115, 116, 133 y 137 nunca entraron a un sprint; SCRUM-89 se resolvió igual (login) y el resto quedó en el backlog o fuera de alcance.
 
 **Cómo se registraron las horas:** las entradas en las que el integrante cargó sus horas se respetan tal cual. Las que estaban sin cargar se estimaron con el historial de Git de ese integrante en ese día (tiempo entre su primer y su último commit, más 1,5 h), con un mínimo de 1,5 h para sesiones sin commits (revisión de PR o pruebas) y un máximo de 6 h; si ese día tiene varias entradas, la jornada se reparte entre ellas. Esas entradas figuran en la bitácora como `≈ N h`.
@@ -183,7 +183,7 @@ Los 14 RF y las 3 RN tienen historia y prueba automática. De los RNF, RNF-03 no
 - **La integración costó tanto como construir la API.** Los sprints 5 y 6 concentraron 187 de los 340 puntos (55 %). Cada módulo se pensó como «endpoints más pantalla», sin ver que conectar el frontend con la API real iba a exigir autenticación con roles, datos de prueba consistentes y relaciones en la base que todavía no existían: el sprint 6 tuvo 87 puntos y cerró 4 días tarde.
 - **No se previó el trabajo de corregir lo integrado.** La prueba de punta a punta (SCRUM-105) generó 15 tarjetas de corrección (SCRUM-118 a 132) que ocuparon la mayor parte del sprint 7.
 - **Se sobreestimó el acceso sin conexión.** El 10/11 se descartó por caro (ADR-003, «un tercer cliente completo»). Implementado en la web con firma en el dispositivo, llevó dos sesiones (14 y 17/11). Se estimó la solución con app móvil sin evaluar una más chica.
-- **Las horas de los primeros sprints quedaron muy por debajo de lo comprometido** (de 12 a 28,5 h contra 72 h por sprint) y recién se acercaron a lo comprometido en los sprints 6 y 7: el esfuerzo se concentró en la segunda mitad.
+- **Las horas de los primeros sprints quedaron muy por debajo de lo comprometido** (de 12 a 28,5 h contra 72 h por sprint) y recién se acercaron a lo comprometido desde el sprint 6, hasta superarlo en la semana de entrega: el esfuerzo se concentró en la segunda mitad.
 
 **Qué riesgo se materializó y cómo se absorbió.** Ver el registro de riesgos: se materializaron la integración tardía (R3), el acceso sin conexión (R2), los conflictos de merge (R4), el desbalance de carga (R6), el plazo de entrega (R7), los cambios de esquema manuales (R8), el CI intermitente (R10) y la falta de registro de horas (R11).
 

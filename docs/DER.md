@@ -22,6 +22,7 @@ erDiagram
         varchar foto_url
         varchar tipo_usuario "SOCIO, EXTERNO, RECEPCIONISTA, GERENTE"
         bigint id_sede FK "nullable: solo personal"
+        varchar qr_clave_publica "clave pública del QR firmado (ADR-007)"
     }
     fz_pag_planes {
         int id_plan PK
@@ -97,6 +98,7 @@ erDiagram
         varchar token_transaccion_pasarela
         timestamp fecha_hora_creacion
         timestamp fecha_hora_confirmacion
+        uuid codigo_reintento UK "reintento del alta de socio online"
     }
     fz_pag_comprobantes {
         bigint id_comprobante PK

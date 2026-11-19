@@ -8,7 +8,7 @@ Cada diagrama tiene su fuente editable en Mermaid (`.mmd`) y su exportación en 
 | C4-2 Contenedores | [c4-2-contenedores.mmd](c4-2-contenedores.mmd) | [SVG](c4-2-contenedores.svg) | Leiva, Marcos Joel · 2026-11-10 · 1.0 |
 | C4-3 Componentes — Canchas | [c4-3-componentes-canchas.mmd](c4-3-componentes-canchas.mmd) | [SVG](c4-3-componentes-canchas.svg) | Leiva, Marcos Joel · 2026-11-10 · 1.0 |
 | C4-3 Componentes — Acceso | [c4-3-componentes-acceso.mmd](c4-3-componentes-acceso.mmd) | [SVG](c4-3-componentes-acceso.svg) | Leiva, Marcos Joel · 2026-11-19 · 1.1 |
-| DER físico | [der-fisico.mmd](der-fisico.mmd) | [SVG](der-fisico.svg) | Leiva, Marcos Joel · 2026-11-10 · 1.0 |
+| DER físico | [der-fisico.mmd](der-fisico.mmd) | [SVG](der-fisico.svg) | Leiva, Marcos Joel · 2026-11-10 · 1.0; Bravo, Agustín · 2026-11-19 · 1.1 |
 | Despliegue | [despliegue.mmd](despliegue.mmd) | [SVG](despliegue.svg) | Leiva, Marcos Joel · 2026-11-19 · 1.1 |
 | Pipeline CI/CD | [pipeline-ci-cd.mmd](pipeline-ci-cd.mmd) | [SVG](pipeline-ci-cd.svg) | Leiva, Marcos Joel · 2026-11-10 · 1.0 |
 | UML Clases del dominio (Strategy, Observer y Repository) | [uml-clases-dominio.mmd](uml-clases-dominio.mmd) | [SVG](uml-clases-dominio.svg) · [JPG](uml-clases-dominio.jpg) | Bravo, Agustín · 2026-11-19 · 1.0 |

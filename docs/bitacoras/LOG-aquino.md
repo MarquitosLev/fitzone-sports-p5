@@ -238,7 +238,7 @@
 
 ---
 
-## Sprint 7 — Cierre — Semana del 2026-11-16
+## Sprint 8 — Cierre — Semana del 2026-11-16
 
 ### 2026-11-19 · ≈ 6 h
 

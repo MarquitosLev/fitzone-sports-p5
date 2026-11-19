@@ -71,7 +71,7 @@ Con el perfil `prod`, Hibernate solo valida el esquema (`ddl-auto=validate`): un
 
 Hoy el entorno publicado es de desarrollo (`fitzone-backend-dev` sigue `develop`). En el plan gratuito de Render el servicio se duerme y tarda más de un minuto en responder al primer pedido.
 
-**No implementado:** no hay `Dockerfile` del frontend, así que `docker compose up --build` no levanta el sistema completo; solo la base.
+El frontend tiene su `Dockerfile` (SCRUM-112), así que `docker compose up --build` levanta el sistema completo: base, API y web.
 
 ## 4. Variables de entorno
 
