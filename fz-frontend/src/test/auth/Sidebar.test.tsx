@@ -217,5 +217,39 @@ describe('SCRUM-92: Sidebar muestra solo los módulos del rol', () => {
       expect(screen.getAllByTitle(/sede fija de operador/i)[0]).toBeInTheDocument();
       expect(screen.getAllByText('Sede #5')[0]).toBeInTheDocument();
     });
+
+    it('SCRUM-141: al cerrar el menú móvil se cierra la lista de sedes y no reaparece al volver a abrirlo', () => {
+      const auth: AuthContextType = {
+        usuario: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        login: async () => ({ token: 'x', usuario: {} as UsuarioDTO }),
+        register: async () => ({ token: 'x', usuario: {} as UsuarioDTO }),
+        reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
+        logout: () => {},
+      };
+      const sidebarCon = (mobileOpen: boolean) => (
+        <MemoryRouter>
+          <AuthContext.Provider value={auth}>
+            <SedeProvider sedes={muchasSedes}>
+              <Sidebar mobileOpen={mobileOpen} />
+            </SedeProvider>
+          </AuthContext.Provider>
+        </MemoryRouter>
+      );
+
+      const { rerender } = render(sidebarCon(true));
+      const drawer = within(screen.getByRole('complementary', { name: 'Menú móvil' }));
+      fireEvent.click(drawer.getByRole('button', { name: /selector de sede en navegación/i }));
+      expect(drawer.getByRole('listbox', { name: /sedes disponibles/i })).toBeInTheDocument();
+
+      rerender(sidebarCon(false));
+      expect(screen.queryByRole('complementary', { name: 'Menú móvil' })).toBeNull();
+
+      rerender(sidebarCon(true));
+      expect(screen.getByRole('complementary', { name: 'Menú móvil' })).toBeInTheDocument();
+      expect(screen.queryByRole('listbox')).toBeNull();
+    });
   });
 });

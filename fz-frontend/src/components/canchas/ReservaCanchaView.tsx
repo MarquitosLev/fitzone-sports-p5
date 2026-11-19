@@ -110,6 +110,9 @@ export function ReservaCanchaView({
     let cancelado = false;
 
     const cargar = async () => {
+      // Se descartan las canchas de la sede anterior para no mostrarlas ni pedir su disponibilidad (SCRUM-141)
+      setCanchas([]);
+      setCanchaSeleccionada(null);
       if (!sedeActiva) return;
       setLoadingCanchas(true);
       try {

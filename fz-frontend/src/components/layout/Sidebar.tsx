@@ -46,6 +46,13 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
     }
   }, [sedeFijaOperador, sedeActiva, setSedeActiva]);
 
+  // Al cerrar el drawer móvil se cierra también la lista de sedes, para que no reaparezca abierta (SCRUM-141)
+  useEffect(() => {
+    if (!mobileOpen) {
+      setSedeDropdownOpen(false);
+    }
+  }, [mobileOpen]);
+
   // Visitante sin sesión ve solo lo público (canchas); usuario con sesión ve según prestaciones
   const modulosVisibles = NAV_ITEMS.filter((item) => {
     if (!usuario) {

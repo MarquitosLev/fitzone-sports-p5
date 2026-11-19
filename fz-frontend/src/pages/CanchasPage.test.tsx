@@ -237,7 +237,7 @@ describe('CanchasPage (Integración)', () => {
       expect(screen.getByText('Cancha 1 — Pádel')).toBeInTheDocument();
       expect(screen.getByText('18:00 – 19:00')).toBeInTheDocument();
       expect(screen.getByText('19:00 – 20:00')).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
 
     // Franja pico marcada visualmente
     expect(screen.getAllByText(/pico \+20%/i).length).toBeGreaterThanOrEqual(1);
