@@ -6,7 +6,7 @@
  * `NavLink` agrega automáticamente la clase "active" al enlace de la ruta actual.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { LogOut, LogIn, ChevronRight, ChevronDown, Lock } from 'lucide-react';
 import { useSede } from '../../context/SedeContext';
@@ -34,6 +34,18 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
     usuario.idSede
   );
 
+  const sedeFijaOperador = esPersonalConSedeFija
+    ? sedes.find((s) => s.idSede === usuario?.idSede) ?? null
+    : null;
+  const sedeMostrada = sedeFijaOperador ?? sedeActiva;
+
+  // Sincronizar sede activa global con la sede asignada al operador de sede fija
+  useEffect(() => {
+    if (sedeFijaOperador && sedeActiva?.idSede !== sedeFijaOperador.idSede) {
+      setSedeActiva(sedeFijaOperador);
+    }
+  }, [sedeFijaOperador, sedeActiva, setSedeActiva]);
+
   // Visitante sin sesión ve solo lo público (canchas); usuario con sesión ve según prestaciones
   const modulosVisibles = NAV_ITEMS.filter((item) => {
     if (!usuario) {
@@ -56,7 +68,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   };
 
   // Contenido de navegación reutilizable tanto para desktop como para mobile drawer
-  const renderNavContent = () => (
+  const renderNavContent = (isMobile = false) => (
     <div className="flex flex-col justify-between h-full">
       <div className="space-y-6">
         {/* Badge / Selector de sede activa */}
@@ -68,13 +80,13 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
             {esPersonalConSedeFija ? (
               <div className="flex items-center justify-between mt-1">
                 <span className="font-extrabold text-fitzone-navy text-sm truncate">
-                  {sedeActiva?.nombre ?? 'Sin sede seleccionada'}
+                  {sedeMostrada?.nombre ?? 'Sin sede seleccionada'}
                 </span>
                 <span title="Sede fija de operador asignada por sistema">
                   <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
                 </span>
               </div>
-            ) : (
+            ) : isMobile ? (
               <button
                 type="button"
                 id="sidebar-sede-selector-btn"
@@ -85,7 +97,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                 aria-label="Selector de sede en navegación"
               >
                 <span className="font-extrabold text-fitzone-navy text-sm truncate group-hover:text-fitzone-coral transition-colors">
-                  {sedeActiva?.nombre ?? 'Seleccionar sede'}
+                  {sedeMostrada?.nombre ?? 'Seleccionar sede'}
                 </span>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className="w-2 h-2 rounded-full bg-fitzone-green animate-pulse" />
@@ -96,11 +108,19 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                   />
                 </div>
               </button>
+            ) : (
+              /* En escritorio (>= lg), la barra lateral mantiene la insignia informativa estática para no duplicar el selector de Header */
+              <div className="flex items-center justify-between mt-1">
+                <span className="font-extrabold text-fitzone-navy text-sm truncate">
+                  {sedeMostrada?.nombre ?? 'Sin sede seleccionada'}
+                </span>
+                <span className="w-2 h-2 rounded-full bg-fitzone-green animate-pulse" />
+              </div>
             )}
           </div>
 
-          {/* Dropdown de sedes en Sidebar */}
-          {sedeDropdownOpen && !esPersonalConSedeFija && (
+          {/* Dropdown de sedes en Sidebar (solo interactivo en drawer móvil) */}
+          {isMobile && sedeDropdownOpen && !esPersonalConSedeFija && (
             <>
               {/* Backdrop para cerrar al hacer click fuera */}
               <div
@@ -120,13 +140,13 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                     key={sede.idSede}
                     type="button"
                     role="option"
-                    aria-selected={sedeActiva?.idSede === sede.idSede}
+                    aria-selected={sedeMostrada?.idSede === sede.idSede}
                     onClick={() => {
                       setSedeActiva(sede);
                       setSedeDropdownOpen(false);
                     }}
                     className={`w-full text-left px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${
-                      sedeActiva?.idSede === sede.idSede
+                      sedeMostrada?.idSede === sede.idSede
                         ? 'bg-fitzone-navy text-white'
                         : 'text-slate-700 hover:bg-slate-50'
                     }`}
@@ -134,7 +154,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                     <span className="block truncate">{sede.nombre}</span>
                     <span
                       className={`text-[11px] font-medium block ${
-                        sedeActiva?.idSede === sede.idSede ? 'text-white/70' : 'text-slate-400'
+                        sedeMostrada?.idSede === sede.idSede ? 'text-white/70' : 'text-slate-400'
                       }`}
                     >
                       Aforo máx.: {sede.aforoMaximo} personas
@@ -216,7 +236,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
     <>
       {/* ── Desktop Sidebar (fijo a la izquierda en pantallas >= lg) ── */}
       <aside className="hidden lg:block w-64 bg-white border-r border-slate-200/80 h-full overflow-y-auto p-4 shrink-0">
-        {renderNavContent()}
+        {renderNavContent(false)}
       </aside>
 
       {/* ── Mobile Sidebar Drawer (overlay emergente en pantallas < lg) ── */}
@@ -233,7 +253,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
             className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white shadow-2xl p-4 flex flex-col justify-between z-10 animate-slide-up overflow-y-auto"
             aria-label="Menú móvil"
           >
-            {renderNavContent()}
+            {renderNavContent(true)}
           </aside>
         </div>
       )}

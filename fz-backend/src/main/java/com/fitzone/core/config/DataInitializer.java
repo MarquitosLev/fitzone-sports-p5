@@ -77,7 +77,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .email("gerente@fitzone.com")
                                         .telefono("+5491100000000")
                                         .tipoUsuario(TipoUsuario.GERENTE)
-                                        .idSede(idSedeCentral)
+                                        .idSede(null)
                                         .authId(null)
                                         .build();
                         usuarioRepository.save(gerente);

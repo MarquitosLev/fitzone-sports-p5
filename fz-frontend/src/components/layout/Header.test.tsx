@@ -152,6 +152,9 @@ describe('Header', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /sede #1/i }));
 
+      const listbox = screen.getByRole('listbox', { name: /selector de sede/i });
+      fireEvent.scroll(listbox, { target: { scrollTop: 500 } });
+
       const ultimaOpcion = screen.getByRole('option', { name: /sede #25/i });
       fireEvent.click(ultimaOpcion);
 
@@ -173,16 +176,16 @@ describe('Header', () => {
       expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     });
 
-    it('un personal con sede fija no puede desplegar el selector y ve el icono de candado', () => {
+    it('un personal con sede fija no puede desplegar el selector y ve su sede asignada (Sede #5) con candado', () => {
       const recepcionistaConSedeFija: UsuarioDTO = {
         ...socio,
         tipoUsuario: 'RECEPCIONISTA',
-        idSede: 1,
+        idSede: 5,
       };
 
       renderHeader(recepcionistaConSedeFija, vi.fn(), muchasSedes);
 
-      const btn = screen.getByRole('button', { name: /sede #1/i });
+      const btn = screen.getByRole('button', { name: /sede #5/i });
       fireEvent.click(btn);
 
       expect(screen.queryByRole('listbox')).not.toBeInTheDocument();

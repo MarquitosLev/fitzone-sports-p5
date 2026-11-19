@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cleanup, render, screen, fireEvent } from '@testing-library/react';
+import { cleanup, render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { AuthContext } from '../../context/AuthContext';
@@ -121,44 +121,75 @@ describe('SCRUM-92: Sidebar muestra solo los módulos del rol', () => {
       );
     }
 
-    it('permite abrir el desplegable y muestra las 25 sedes con contenedor scrolleable', () => {
+    it('en escritorio mantiene la insignia fija sin botón desplegable para no duplicar el selector de Header', () => {
+      render(
+        <MemoryRouter>
+          <AuthContext.Provider
+            value={{
+              usuario: null,
+              token: null,
+              isAuthenticated: false,
+              isLoading: false,
+              login: async () => ({ token: 'x', usuario: {} as UsuarioDTO }),
+              register: async () => ({ token: 'x', usuario: {} as UsuarioDTO }),
+              reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
+              logout: () => {},
+            }}
+          >
+            <SedeProvider sedes={muchasSedes}>
+              <Sidebar mobileOpen={false} />
+            </SedeProvider>
+          </AuthContext.Provider>
+        </MemoryRouter>
+      );
+
+      expect(screen.queryByRole('button', { name: /selector de sede en navegación/i })).toBeNull();
+      expect(screen.getByText('Sede #1')).toBeInTheDocument();
+    });
+
+    it('permite abrir el desplegable y muestra las 25 sedes con contenedor scrolleable en el menú móvil', () => {
       renderSidebarConSedes(null);
 
-      const btn = screen.getAllByRole('button', { name: /selector de sede en navegación/i })[0];
+      const menuMovil = screen.getByLabelText('Menú móvil');
+      const btn = within(menuMovil).getByRole('button', { name: /selector de sede en navegación/i });
       fireEvent.click(btn);
 
-      const listboxes = screen.getAllByRole('listbox', { name: /sedes disponibles/i });
-      expect(listboxes.length).toBeGreaterThan(0);
-      const listbox = listboxes[0];
+      const listbox = within(menuMovil).getByRole('listbox', { name: /sedes disponibles/i });
+      expect(listbox).toBeInTheDocument();
       expect(listbox).toHaveClass('overflow-y-auto');
       expect(listbox).toHaveClass('overscroll-contain');
       expect(listbox.className).toMatch(/max-h-(60|64)/);
 
-      const options = screen.getAllByRole('option');
-      expect(options.length).toBeGreaterThanOrEqual(25);
-      expect(screen.getAllByRole('option', { name: /sede #25/i })[0]).toBeInTheDocument();
+      const options = within(listbox).getAllByRole('option');
+      expect(options).toHaveLength(25);
+      expect(within(listbox).getByRole('option', { name: /sede #25/i })).toBeInTheDocument();
     });
 
-    it('permite seleccionar la última sede (Sede #25) y actualiza la sede activa', () => {
+    it('permite scrollear y seleccionar la última sede (Sede #25) actualizando la sede activa', () => {
       renderSidebarConSedes(null);
 
-      const btn = screen.getAllByRole('button', { name: /selector de sede en navegación/i })[0];
+      const menuMovil = screen.getByLabelText('Menú móvil');
+      const btn = within(menuMovil).getByRole('button', { name: /selector de sede en navegación/i });
       fireEvent.click(btn);
 
-      const opcion25 = screen.getAllByRole('option', { name: /sede #25/i })[0];
+      const listbox = within(menuMovil).getByRole('listbox', { name: /sedes disponibles/i });
+      fireEvent.scroll(listbox, { target: { scrollTop: 500 } });
+
+      const opcion25 = within(listbox).getByRole('option', { name: /sede #25/i });
       fireEvent.click(opcion25);
 
       expect(screen.queryByRole('listbox')).toBeNull();
-      expect(screen.getAllByText('Sede #25')[0]).toBeInTheDocument();
+      expect(within(menuMovil).getByText('Sede #25')).toBeInTheDocument();
     });
 
     it('cierra el desplegable de sedes al hacer clic en el backdrop', () => {
       renderSidebarConSedes(null);
 
-      const btn = screen.getAllByRole('button', { name: /selector de sede en navegación/i })[0];
+      const menuMovil = screen.getByLabelText('Menú móvil');
+      const btn = within(menuMovil).getByRole('button', { name: /selector de sede en navegación/i });
       fireEvent.click(btn);
 
-      expect(screen.getAllByRole('listbox').length).toBeGreaterThan(0);
+      expect(within(menuMovil).getByRole('listbox', { name: /sedes disponibles/i })).toBeInTheDocument();
 
       const backdrop = document.querySelector('.fixed.inset-0.z-40');
       expect(backdrop).not.toBeNull();
@@ -167,7 +198,7 @@ describe('SCRUM-92: Sidebar muestra solo los módulos del rol', () => {
       expect(screen.queryByRole('listbox')).toBeNull();
     });
 
-    it('no permite cambiar la sede si el operador tiene sede fija asignada', () => {
+    it('muestra la sede asignada (Sede #5) con candado para operadores y no permite desplegar', () => {
       const operadorFijo: UsuarioDTO = {
         idUsuario: 2,
         authId: 'auth-op',
@@ -178,13 +209,14 @@ describe('SCRUM-92: Sidebar muestra solo los módulos del rol', () => {
         telefono: '1100000000',
         fotoUrl: null,
         tipoUsuario: 'RECEPCIONISTA',
-        idSede: 1,
+        idSede: 5,
       };
 
       renderSidebarConSedes(operadorFijo);
 
       expect(screen.queryByRole('button', { name: /selector de sede en navegación/i })).toBeNull();
       expect(screen.getAllByTitle(/sede fija de operador/i)[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Sede #5')[0]).toBeInTheDocument();
     });
   });
 });

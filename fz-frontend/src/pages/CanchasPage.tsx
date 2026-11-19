@@ -138,23 +138,37 @@ export function CanchasPage({ initialTab, fechaInicial }: CanchasPageProps) {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const cargarCanchas = async () => {
-    if (!sedeEfectiva) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await listarCanchas(sedeEfectiva.idSede);
-      setCanchas(data);
-    } catch (err: unknown) {
-      const mensaje = err instanceof Error ? err.message : 'Error al cargar canchas';
-      setError(mensaje);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Cargar Canchas con protección contra race conditions al cambiar de sede
   useEffect(() => {
-    void cargarCanchas();
+    let cancelado = false;
+
+    const cargar = async () => {
+      if (!sedeEfectiva) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const idSedePedida = sedeEfectiva.idSede;
+        const data = await listarCanchas(idSedePedida);
+        if (!cancelado && sedeEfectiva.idSede === idSedePedida) {
+          setCanchas(data);
+        }
+      } catch (err: unknown) {
+        if (!cancelado) {
+          const mensaje = err instanceof Error ? err.message : 'Error al cargar canchas';
+          setError(mensaje);
+        }
+      } finally {
+        if (!cancelado) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void cargar();
+
+    return () => {
+      cancelado = true;
+    };
   }, [sedeEfectiva?.idSede]);
 
   // Manejo de toggle de mantenimiento
