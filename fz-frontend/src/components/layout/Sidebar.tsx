@@ -46,6 +46,13 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
     }
   }, [sedeAsignada, sedeActiva?.idSede, setSedeActiva]);
 
+  // Cerrar el dropdown de sedes al cerrar el drawer móvil
+  useEffect(() => {
+    if (!mobileOpen) {
+      setSedeDropdownOpen(false);
+    }
+  }, [mobileOpen]);
+
   // Visitante sin sesión ve solo lo público (canchas); usuario con sesión ve según prestaciones
   const modulosVisibles = NAV_ITEMS.filter((item) => {
     if (!usuario) {

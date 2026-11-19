@@ -105,11 +105,8 @@ export function ReservaCanchaView({
   const [confirmando, setConfirmando] = useState(false);
   const [errorConflicto, setErrorConflicto] = useState<string | null>(null);
 
-  // Referencia a la sede activa para evitar race conditions al cambiar de sede
-  const sedeActivaRef = useRef(sedeActiva);
-  useEffect(() => {
-    sedeActivaRef.current = sedeActiva;
-  }, [sedeActiva]);
+  // Contador de secuencia para evitar race conditions al cambiar de sede (cargarCanchas)
+  const loadSeqRef = useRef(0);
 
   // Cargar Canchas de la Sede
   const cargarCanchas = useCallback(async () => {
@@ -118,14 +115,15 @@ export function ReservaCanchaView({
       setCanchaSeleccionada(null);
       return;
     }
-    const targetIdSede = sedeActiva.idSede;
+    // Limpiar datos de la sede anterior antes de iniciar la carga
+    setCanchas([]);
+    setCanchaSeleccionada(null);
+    const mySeq = ++loadSeqRef.current;
     setLoadingCanchas(true);
     try {
-      const data = await listarCanchas(targetIdSede);
-      // Evitar sobreescritura si la sede activa cambió mientras la petición estaba en vuelo
-      if (sedeActivaRef.current?.idSede !== targetIdSede) {
-        return;
-      }
+      const data = await listarCanchas(sedeActiva.idSede);
+      // Descartar respuestas de peticiones antiguas (A→B→A race condition)
+      if (loadSeqRef.current !== mySeq) return;
       setCanchas(data);
 
       // Si no hay cancha seleccionada o la actual ya no está, elegir la primera disponible
@@ -140,14 +138,14 @@ export function ReservaCanchaView({
         setCanchaSeleccionada(null);
       }
     } catch {
-      if (sedeActivaRef.current?.idSede !== targetIdSede) return;
+      if (loadSeqRef.current !== mySeq) return;
       addToast({
         type: 'error',
         title: 'Error de carga',
         message: 'No se pudieron cargar las canchas de la sede activa.',
       });
     } finally {
-      if (sedeActivaRef.current?.idSede === targetIdSede) {
+      if (loadSeqRef.current === mySeq) {
         setLoadingCanchas(false);
       }
     }
@@ -157,15 +155,23 @@ export function ReservaCanchaView({
     void cargarCanchas();
   }, [cargarCanchas]);
 
+  // Contador de secuencia para evitar race conditions al cambiar de cancha/fecha (cargarDisponibilidad)
+  const availSeqRef = useRef(0);
+
   // Cargar Disponibilidad cuando cambia cancha o fecha
   const cargarDisponibilidad = useCallback(async () => {
     if (!canchaSeleccionada) {
       setFranjas([]);
       return;
     }
+    const targetCanchaId = canchaSeleccionada.idCancha;
+    const targetFecha = fechaSeleccionada;
+    const mySeq = ++availSeqRef.current;
     setLoadingFranjas(true);
     try {
-      const data = await obtenerDisponibilidad(canchaSeleccionada.idCancha, fechaSeleccionada);
+      const data = await obtenerDisponibilidad(targetCanchaId, targetFecha);
+      // Descartar respuesta si la cancha o fecha cambió mientras la petición estaba en vuelo
+      if (availSeqRef.current !== mySeq) return;
       setFranjas(data);
 
       // Si el turno previamente seleccionado ya no está libre en la nueva disponibilidad, deseleccionar
@@ -175,13 +181,16 @@ export function ReservaCanchaView({
         return sigueLibre || null;
       });
     } catch {
+      if (availSeqRef.current !== mySeq) return;
       addToast({
         type: 'error',
         title: 'Error de disponibilidad',
         message: 'No se pudo obtener la disponibilidad para la fecha seleccionada.',
       });
     } finally {
-      setLoadingFranjas(false);
+      if (availSeqRef.current === mySeq) {
+        setLoadingFranjas(false);
+      }
     }
   }, [canchaSeleccionada, fechaSeleccionada, addToast]);
 

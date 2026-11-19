@@ -180,6 +180,52 @@ describe('SCRUM-92: Sidebar muestra solo los módulos del rol', () => {
       expect(drawer.getByText('Sede #25')).toBeInTheDocument();
     });
 
+    it('cierra automáticamente el selector de sedes cuando mobileOpen pasa a false', () => {
+      const auth: AuthContextType = {
+        usuario: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        login: async () => ({ token: 'x', usuario: {} as UsuarioDTO }),
+        register: async () => ({ token: 'x', usuario: {} as UsuarioDTO }),
+        reintentarCuenta: async () => ({ token: null, usuario: {} as UsuarioDTO }),
+        logout: () => {},
+      };
+
+      const { rerender } = render(
+        <MemoryRouter>
+          <AuthContext.Provider value={auth}>
+            <SedeProvider sedes={muchasSedes}>
+              <Sidebar mobileOpen={true} />
+            </SedeProvider>
+          </AuthContext.Provider>
+        </MemoryRouter>
+      );
+
+      const mobileDrawer = screen.getByRole('complementary', { name: 'Menú móvil' });
+      const drawer = within(mobileDrawer);
+
+      // Abrir el desplegable de sedes dentro del drawer móvil
+      const btn = drawer.getByRole('button', { name: /selector de sede en navegación/i });
+      fireEvent.click(btn);
+      expect(drawer.getByRole('listbox', { name: /sedes disponibles/i })).toBeInTheDocument();
+
+      // Cerrar el drawer móvil (mobileOpen pasa a false)
+      rerender(
+        <MemoryRouter>
+          <AuthContext.Provider value={auth}>
+            <SedeProvider sedes={muchasSedes}>
+              <Sidebar mobileOpen={false} />
+            </SedeProvider>
+          </AuthContext.Provider>
+        </MemoryRouter>
+      );
+
+      // El drawer móvil se desmontó y el dropdown quedó cerrado (sin listbox residual en desktop)
+      expect(screen.queryByRole('complementary', { name: 'Menú móvil' })).toBeNull();
+      expect(screen.queryByRole('listbox')).toBeNull();
+    });
+
     it('cierra el desplegable de sedes al hacer clic en el backdrop', () => {
       renderSidebarConSedes(null, muchasSedes, false);
 

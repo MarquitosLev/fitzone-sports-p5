@@ -71,30 +71,30 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Evitar race conditions si la sede activa cambia mientras la petición de canchas está en vuelo
-  const sedeActivaRef = useRef(sedeActiva);
-  useEffect(() => {
-    sedeActivaRef.current = sedeActiva;
-  }, [sedeActiva]);
+  // Contador de secuencia para evitar race conditions al cambiar de sede
+  const loadSeqRef = useRef(0);
 
   const cargarCanchas = async () => {
     if (!sedeActiva) {
       setCanchas([]);
       return;
     }
-    const targetIdSede = sedeActiva.idSede;
+    // Limpiar datos de la sede anterior antes de iniciar la carga
+    setCanchas([]);
+    const mySeq = ++loadSeqRef.current;
     setLoading(true);
     setError(null);
     try {
-      const data = await listarCanchas(targetIdSede);
-      if (sedeActivaRef.current?.idSede !== targetIdSede) return;
+      const data = await listarCanchas(sedeActiva.idSede);
+      // Descartar respuestas de peticiones antiguas (A→B→A race condition)
+      if (loadSeqRef.current !== mySeq) return;
       setCanchas(data);
     } catch (err: unknown) {
-      if (sedeActivaRef.current?.idSede !== targetIdSede) return;
+      if (loadSeqRef.current !== mySeq) return;
       const mensaje = err instanceof Error ? err.message : 'Error al cargar canchas';
       setError(mensaje);
     } finally {
-      if (sedeActivaRef.current?.idSede === targetIdSede) {
+      if (loadSeqRef.current === mySeq) {
         setLoading(false);
       }
     }
@@ -148,12 +148,17 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
   // Submit del formulario (alta o edición)
   const handleSubmitForm = async (datos: CanchaFormData) => {
     if (!sedeActiva) return;
+    // Capturar la sede al inicio de la operación para evitar que un cambio de sede
+    // en vuelo agregue la cancha creada a la lista de otra sede
+    const creationSedeId = sedeActiva.idSede;
     setFormLoading(true);
     setFormError(null);
 
     try {
       if (modalModo === 'alta') {
         const nueva = await crearCancha(sedeActiva.idSede, datos, sedeActiva.nombre);
+        // Descartar resultado si el usuario cambió de sede durante la petición
+        if (sedeActiva?.idSede !== creationSedeId) return;
         setCanchas((prev) => [...prev, nueva]);
         addToast({
           type: 'success',
