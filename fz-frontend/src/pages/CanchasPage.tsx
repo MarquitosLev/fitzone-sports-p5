@@ -71,23 +71,37 @@ export function CanchasPage({ initialTab = 'reservar', fechaInicial }: CanchasPa
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const cargarCanchas = async () => {
-    if (!sedeActiva) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await listarCanchas(sedeActiva.idSede);
-      setCanchas(data);
-    } catch (err: unknown) {
-      const mensaje = err instanceof Error ? err.message : 'Error al cargar canchas';
-      setError(mensaje);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Cargar Canchas con protección contra race conditions al cambiar de sede
   useEffect(() => {
-    void cargarCanchas();
+    let cancelado = false;
+
+    const cargar = async () => {
+      if (!sedeActiva) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const idSedePedida = sedeActiva.idSede;
+        const data = await listarCanchas(idSedePedida);
+        if (!cancelado && sedeActiva.idSede === idSedePedida) {
+          setCanchas(data);
+        }
+      } catch (err: unknown) {
+        if (!cancelado) {
+          const mensaje = err instanceof Error ? err.message : 'Error al cargar canchas';
+          setError(mensaje);
+        }
+      } finally {
+        if (!cancelado) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void cargar();
+
+    return () => {
+      cancelado = true;
+    };
   }, [sedeActiva?.idSede]);
 
   // Manejo de toggle de mantenimiento
