@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LoginForm } from '../components/auth';
@@ -18,6 +18,15 @@ export function LoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showForgotModal, setShowForgotModal] = useState(false);
 
+  // Ref para evitar actualizaciones de estado o navegaciones tardías si el componente se desmontó
+  const montado = useRef(true);
+  useEffect(() => {
+    montado.current = true;
+    return () => {
+      montado.current = false;
+    };
+  }, []);
+
   // Si el usuario ya está autenticado, lo redirige automáticamente a la pantalla de su rol
   useEffect(() => {
     if (isAuthenticated && usuario) {
@@ -30,12 +39,20 @@ export function LoginPage() {
     setErrorMessage(null);
     try {
       const res = await login(credentials);
-      navigate(INICIO_POR_ROL[res.usuario.tipoUsuario], { replace: true });
+      // Guard de desmontaje: si el componente ya no está montado (ej. el usuario navegó
+      // manualmente antes de que el login resolviera), no ejecutamos navigate ni setState.
+      if (montado.current) {
+        navigate(INICIO_POR_ROL[res.usuario.tipoUsuario], { replace: true });
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al iniciar sesión';
-      setErrorMessage(msg);
+      if (montado.current) {
+        const msg = err instanceof Error ? err.message : 'Error al iniciar sesión';
+        setErrorMessage(msg);
+      }
     } finally {
-      setLoading(false);
+      if (montado.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -52,7 +69,9 @@ export function LoginPage() {
           <Link
             to="/canchas"
             aria-label="Ir al inicio — ver canchas disponibles"
-            className="flex flex-col items-center gap-2 group outline-none focus-visible:ring-2 focus-visible:ring-fitzone-coral rounded-2xl"
+            aria-disabled={loading}
+            onClick={(e) => { if (loading) e.preventDefault(); }}
+            className={`flex flex-col items-center gap-2 group outline-none focus-visible:ring-2 focus-visible:ring-fitzone-coral rounded-2xl${loading ? ' pointer-events-none opacity-50' : ''}`}
           >
             <div className="w-14 h-14 rounded-2xl bg-fitzone-navy flex items-center justify-center shadow-md group-hover:opacity-80 transition-opacity">
               <svg width="32" height="32" viewBox="0 0 64 64" fill="none" aria-hidden="true">
@@ -81,14 +100,16 @@ export function LoginPage() {
           isLoading={loading}
           errorMessage={errorMessage}
           onForgotPassword={() => setShowForgotModal(true)}
-          onNavigateToRegister={() => navigate('/registro')}
+          onNavigateToRegister={() => { if (!loading) navigate('/registro'); }}
         />
 
         {/* Enlace de salida para usuarios invitados */}
         <div className="mt-5 text-center">
           <Link
             to="/canchas"
-            className="text-sm text-slate-500 hover:text-fitzone-navy underline underline-offset-2 transition-colors"
+            aria-disabled={loading}
+            onClick={(e) => { if (loading) e.preventDefault(); }}
+            className={`text-sm text-slate-500 underline underline-offset-2 transition-colors${loading ? ' pointer-events-none opacity-50' : ' hover:text-fitzone-navy'}`}
           >
             Continuar sin iniciar sesión
           </Link>
