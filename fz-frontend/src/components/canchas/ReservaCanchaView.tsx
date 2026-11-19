@@ -105,39 +105,52 @@ export function ReservaCanchaView({
   const [confirmando, setConfirmando] = useState(false);
   const [errorConflicto, setErrorConflicto] = useState<string | null>(null);
 
-  // Cargar Canchas de la Sede
-  const cargarCanchas = useCallback(async () => {
-    if (!sedeActiva) return;
-    setLoadingCanchas(true);
-    try {
-      const data = await listarCanchas(sedeActiva.idSede);
-      setCanchas(data);
-
-      // Si no hay cancha seleccionada o la actual ya no está, elegir la primera disponible
-      if (data.length > 0) {
-        const primeraDisponible = data.find((c) => !c.enMantenimiento) || data[0];
-        setCanchaSeleccionada((prev) => {
-          if (!prev) return primeraDisponible;
-          const sigueExistiendo = data.find((c) => c.idCancha === prev.idCancha);
-          return sigueExistiendo || primeraDisponible;
-        });
-      } else {
-        setCanchaSeleccionada(null);
-      }
-    } catch {
-      addToast({
-        type: 'error',
-        title: 'Error de carga',
-        message: 'No se pudieron cargar las canchas de la sede activa.',
-      });
-    } finally {
-      setLoadingCanchas(false);
-    }
-  }, [sedeActiva, addToast]);
-
+  // Cargar Canchas de la Sede con protección contra respuestas obsoletas al cambiar de sede
   useEffect(() => {
-    void cargarCanchas();
-  }, [cargarCanchas]);
+    let cancelado = false;
+
+    const cargar = async () => {
+      if (!sedeActiva) return;
+      setLoadingCanchas(true);
+      try {
+        const idSedePedida = sedeActiva.idSede;
+        const data = await listarCanchas(idSedePedida);
+        if (!cancelado && sedeActiva.idSede === idSedePedida) {
+          setCanchas(data);
+
+          // Si no hay cancha seleccionada o la actual ya no está, elegir la primera disponible
+          if (data.length > 0) {
+            const primeraDisponible = data.find((c) => !c.enMantenimiento) || data[0];
+            setCanchaSeleccionada((prev) => {
+              if (!prev) return primeraDisponible;
+              const sigueExistiendo = data.find((c) => c.idCancha === prev.idCancha);
+              return sigueExistiendo || primeraDisponible;
+            });
+          } else {
+            setCanchaSeleccionada(null);
+          }
+        }
+      } catch {
+        if (!cancelado) {
+          addToast({
+            type: 'error',
+            title: 'Error de carga',
+            message: 'No se pudieron cargar las canchas de la sede activa.',
+          });
+        }
+      } finally {
+        if (!cancelado) {
+          setLoadingCanchas(false);
+        }
+      }
+    };
+
+    void cargar();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [sedeActiva?.idSede, addToast]);
 
   // Cargar Disponibilidad cuando cambia cancha o fecha
   const cargarDisponibilidad = useCallback(async () => {

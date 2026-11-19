@@ -5,7 +5,7 @@
  * El `SedeSelector` usa el `SedeContext` para cambiar la sede activa globalmente.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, ChevronDown, User, LogOut, Menu, X, Lock } from 'lucide-react';
 import { useSede } from '../../context/SedeContext';
@@ -28,6 +28,18 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
     (usuario.tipoUsuario === 'RECEPCIONISTA' || usuario.tipoUsuario === 'GERENTE') &&
     usuario.idSede
   );
+
+  const sedeFijaOperador = esPersonalConSedeFija
+    ? sedes.find((s) => s.idSede === usuario?.idSede) ?? null
+    : null;
+  const sedeMostrada = sedeFijaOperador ?? sedeActiva;
+
+  // Sincronizar sede activa global con la sede fija asignada al operador
+  useEffect(() => {
+    if (sedeFijaOperador && sedeActiva?.idSede !== sedeFijaOperador.idSede) {
+      setSedeActiva(sedeFijaOperador);
+    }
+  }, [sedeFijaOperador, sedeActiva, setSedeActiva]);
 
   const handleLogout = () => {
     setProfileDropdownOpen(false);
@@ -81,7 +93,7 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
           >
             <MapPin className="w-4 h-4 text-fitzone-coral shrink-0" />
             <span className="max-w-[180px] truncate">
-              {sedeActiva?.nombre ?? 'Seleccionar sede'}
+              {sedeMostrada?.nombre ?? 'Seleccionar sede'}
             </span>
             {esPersonalConSedeFija ? (
               <span title="Sede fija de operador asignada por sistema">
@@ -103,7 +115,7 @@ export function Header({ onToggleMobileMenu, isMobileMenuOpen = false }: HeaderP
               <div
                 role="listbox"
                 aria-label="Selector de sede"
-                className="absolute left-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-modal border border-slate-100 py-2 z-50 animate-slide-up"
+                className="absolute left-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-modal border border-slate-100 py-2 z-50 animate-slide-up max-h-64 overflow-y-auto overscroll-contain"
               >
                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-4 pt-1 pb-2">
                   Sedes disponibles
